@@ -14,7 +14,11 @@ $(document).ready(function(){
     var isCounting = localStorage.getItem('isCounting');
 
     if (isCounting === null) {
-        localStorage.setItem('isCounting', 'true');
+        try {
+            localStorage.setItem('isCounting', 'true');
+        } catch(e) {
+            console.log(e);
+        }
     }
 
     var countTotal = 0;
