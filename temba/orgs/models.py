@@ -321,11 +321,14 @@ class Org(SmartModel):
             r = get_redis_connection()
 
             active_topup_keys = [ORG_ACTIVE_TOPUP_REMAINING % (self.pk, topup.pk) for topup in self.topups.all()]
+
+            for key in active_topup_keys:
+                r.delete(key)
+
             return r.delete(ORG_CREDITS_TOTAL_CACHE_KEY % self.pk,
                             ORG_CREDITS_USED_CACHE_KEY % self.pk,
                             ORG_CREDITS_PURCHASED_CACHE_KEY % self.pk,
-                            ORG_ACTIVE_TOPUP_KEY % self.pk,
-                            **active_topup_keys)
+                            ORG_ACTIVE_TOPUP_KEY % self.pk)
         else:
             return 0  # pragma: needs cover
 
