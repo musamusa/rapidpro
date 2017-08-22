@@ -40,19 +40,21 @@ RUN touch `echo $RANDOM`.txt
 
 RUN python manage.py compress --extension=.haml --force
 
-#Nginx setup
+# nginx + gunicorn setup
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+COPY gunicorn /etc/init/gunicorn
+
 RUN rm -f /etc/nginx/sites-enabled/default
-RUN ln -sf /rapidpro/nginx.conf /etc/nginx/sites-enabled/
+RUN ln -sf /rapidpro/nginx /etc/nginx/sites-enabled/
 
 RUN rm -f /rapidpro/temba/settings.pyc
 
 EXPOSE 8000
-EXPOSE 80
+EXPOSE 8080
 
 ENTRYPOINT ["/rapidpro/entrypoint.sh"]
 
-CMD ["supervisor"]
+CMD ["runserver"]
 
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*[~]$ 
