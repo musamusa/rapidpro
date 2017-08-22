@@ -322,13 +322,15 @@ class Org(SmartModel):
 
             active_topup_keys = [ORG_ACTIVE_TOPUP_REMAINING % (self.pk, topup.pk) for topup in self.topups.all()]
 
+            key_counter = 0
             for key in active_topup_keys:
                 r.delete(key)
+                key_counter += 1
 
             return r.delete(ORG_CREDITS_TOTAL_CACHE_KEY % self.pk,
                             ORG_CREDITS_USED_CACHE_KEY % self.pk,
                             ORG_CREDITS_PURCHASED_CACHE_KEY % self.pk,
-                            ORG_ACTIVE_TOPUP_KEY % self.pk)
+                            ORG_ACTIVE_TOPUP_KEY % self.pk) + key_counter
         else:
             return 0  # pragma: needs cover
 
