@@ -3,10 +3,10 @@ set -e
 
 case $1 in
  runserver)
-  cd /rapidpro; gunicorn --bind 0.0.0.0:8000 temba.wsgi:application
+  cd /rapidpro; exec gunicorn --workers 3 --bind 0.0.0.0:8000 temba.wsgi:application
   ;;
  gunicorn)
-  service gunicorn start; service ngnix restart
+  exec gunicorn --workers 3 --bind unix:/rapidpro/rapidpro.sock temba.wsgi:application; exec service nginx start
   ;;
 esac
 

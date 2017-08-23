@@ -21,7 +21,6 @@ RUN . env/bin/activate
 ADD pip-freeze.txt /rapidpro/pip-freeze.txt
 RUN pip install --upgrade pip
 RUN pip install -r pip-freeze.txt --upgrade
-RUN pip install uwsgi
 ADD . /rapidpro
 COPY settings.py.pre /rapidpro/temba/settings.py
 
@@ -42,7 +41,6 @@ RUN python manage.py compress --extension=.haml --force
 
 # nginx + gunicorn setup
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
-COPY gunicorn /etc/init/gunicorn
 
 RUN rm -f /etc/nginx/sites-enabled/default
 RUN ln -sf /rapidpro/nginx /etc/nginx/sites-enabled/
@@ -50,11 +48,12 @@ RUN ln -sf /rapidpro/nginx /etc/nginx/sites-enabled/
 RUN rm -f /rapidpro/temba/settings.pyc
 
 EXPOSE 8000
-EXPOSE 8080
 
-ENTRYPOINT ["/rapidpro/entrypoint.sh"]
+COPY entrypoint.sh /
 
-CMD ["runserver"]
+ENTRYPOINT ["/entrypoint.sh"]
+
+CMD ["gunicorn"]
 
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*[~]$ 
