@@ -22,7 +22,7 @@ ADD pip-freeze.txt /rapidpro/pip-freeze.txt
 RUN pip install --upgrade pip
 RUN pip install -r pip-freeze.txt --upgrade
 ADD . /rapidpro
-COPY settings.py.pre /rapidpro/temba/settings.py
+COPY docker.settings.prod /rapidpro/temba/settings.py
 
 RUN python manage.py migrate
 
