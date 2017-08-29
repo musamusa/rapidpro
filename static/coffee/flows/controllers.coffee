@@ -211,6 +211,15 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
         showDialog('Invalid Format', 'Audio attachments must be encoded as mp3 files.')
         return
 
+    if (!String.prototype.endsWith)
+      String.prototype.endsWith = (searchString, position) ->
+          subjectString = this.toString()
+          if (typeof position != 'number' || !isFinite(position) || Math.floor(position) != position || position > subjectString.length)
+            position = subjectString.length
+          position -= searchString.length
+          lastIndex = subjectString.indexOf(searchString, position)
+          return lastIndex != -1 && lastIndex == position
+
     if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
       return
