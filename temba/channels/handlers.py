@@ -90,6 +90,7 @@ class TwimlAPIHandler(BaseChannelHandler):
         from twilio.util import RequestValidator
         from temba.flows.models import FlowSession
         from temba.msgs.models import Msg
+        from coordinates_extractor import CoordinatesExtractor
 
         signature = request.META.get('HTTP_X_TWILIO_SIGNATURE', '')
         url = "https://" + settings.TEMBA_HOST + "%s" % request.get_full_path()
@@ -247,6 +248,12 @@ class TwimlAPIHandler(BaseChannelHandler):
             # download any attached media
             for i in range(int(request.POST.get('NumMedia', 0))):
                 attachments.append(client.download_media(request.POST['MediaUrl%d' % i]))
+
+            coordinates = CoordinatesExtractor(text=body)
+            if coordinates.text_check():
+                (lat, long) = coordinates.get_coordinates()
+                if lat and long:
+                    body = '%s,%s' % (lat, long)
 
             Msg.create_incoming(channel, urn, body, attachments=attachments)
 
