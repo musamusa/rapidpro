@@ -1,0 +1,70 @@
+#
+# NOTE: This docker-compose is not used for building the rapidpro docker
+#       releases, it is a compose file for local development purposes.
+#
+
+version: '2'
+services:
+  rapidpro:
+    build: .
+    #image: greatnonprofits/rapidpro:develop
+    depends_on:
+      - redis
+      - postgresql
+    ports:
+      - '8000:8000'
+    environment:
+      - DOMAIN_NAME=localhost
+      #- DOMAIN_NAME='demo.communityconnectlabs.com'
+      - ALLOWED_HOSTS=localhost
+      - TEMBA_HOST=localhost
+      #- TEMBA_HOST='demo.communityconnectlabs.com'
+      - DJANGO_DEBUG=off
+      - DATABASE_URL=postgresql://postgres:postgres@postgresql/rapidpro
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=super-secret-key
+      - MANAGEPY_COLLECTSTATIC=on
+      - MANAGEPY_COMPRESS=on
+      - MANAGEPY_INIT_DB=on
+      - MANAGEPY_MIGRATE=on
+      - EMAIL_HOST=smtp.sendgrid.net
+      - EMAIL_PORT=587
+      - DEFAULT_FROM_EMAIL='support@communityconnectlabs.com'
+      - EMAIL_HOST_PASSWORD=ENTER_EMAIL_HOST_PASSWORD_HERE
+      - EMAIL_USE_TLS = True
+      - FLOW_FROM_EMAIL='no-reply@citizeninsights.org'
+      - AWS_BUCKET_DOMAIN=demo.communityconnectlabs.com/media
+      - RAVEN_CONFIG_DSN=ENTER_RAVEN_CONFIG_HERE
+      - RAPIDPRO_VERSION=master
+  celery:
+    build: .
+    #image: greatnonprofits/rapidpro:develop
+    depends_on:
+      - rapidpro
+    links:
+      - redis
+      - postgresql
+    environment:
+      - RAVEN_CONFIG_DSN=ENTER_RAVEN_CONFIG_HERE
+      - DATABASE_URL=postgresql://postgres:postgres@postgresql/rapidpro
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=super-secret-key
+      - RAPIDPRO_VERSION=master
+    command: ["celery", "--beat", "--app=temba", "worker", "--loglevel=INFO", "--queues=celery,msgs,flows,handler"]
+  redis:
+    image: redis:alpine
+  postgresql:
+    image: mdillon/postgis:9.6
+    environment:
+      - POSTGRES_DB=rapidpro
+  mage:
+   image: rapidpro/mage
+   depends_on:
+     - rapidpro
+   links:
+     - redis
+     - postgresql
+   environment:
+     - DATABASE_URL=postgresql://postgres:postgres@postgresql/rapidpro
+     - REDIS_URL=redis://redis/
+     - REDIS_DATABASE=8
