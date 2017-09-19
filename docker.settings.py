@@ -12,7 +12,7 @@ import django_cache_url
 from temba.settings_common import *  # noqa
 
 DEBUG = env('DJANGO_DEBUG', 'off') == 'on'
-IS_PROD = False # DC ADDED / True
+IS_PROD = True
 
 #DC ADDED
 RAVEN_CONFIG = {'dsn': env('RAVEN_CONFIG_DSN', '')}
@@ -95,6 +95,10 @@ SEND_EMAILS = env('SEND_EMAILS', 'off') == 'on'
 SEND_AIRTIME = env('SEND_AIRTIME', 'off') == 'on'
 SEND_CALLS = env('SEND_CALLS', 'off') == 'on'
 IP_ADDRESSES = tuple(filter(None, env('IP_ADDRESSES', '').split(',')))
+
+CELERY_ALWAYS_EAGER = False
+CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
+BROKER_BACKEND = 'redis'
 
 EMAIL_HOST = env('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', 'server@temba.io')
