@@ -2323,7 +2323,8 @@ class OrgCRUDL(SmartCRUDL):
                                     help_text=_("Select which organization to receive the credits"))
 
             amount = forms.IntegerField(required=True, label=_('Credits'),
-                                        help_text=_("How many credits to transfer"))
+                                        help_text=_("How many credits to transfer"),
+                                        widget=forms.NumberInput(attrs=dict(min=1)))
 
             def __init__(self, *args, **kwargs):
                 org = kwargs['org']
@@ -2342,6 +2343,8 @@ class OrgCRUDL(SmartCRUDL):
 
                     if cleaned_data['amount'] > from_org.get_credits_remaining():
                         raise ValidationError(_("Sorry, %(org_name)s doesn't have enough credits for this transfer. Pick a different organization to transfer from or reduce the transfer amount.") % dict(org_name=from_org.name))
+                    elif int(cleaned_data['amount']) < 0:
+                        raise ValidationError(_("Sorry, but you need to inform a value higher than 0."))
 
         success_url = '@orgs.org_sub_orgs'
         form_class = TransferForm
