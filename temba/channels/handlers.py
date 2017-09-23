@@ -249,11 +249,24 @@ class TwimlAPIHandler(BaseChannelHandler):
             for i in range(int(request.POST.get('NumMedia', 0))):
                 attachments.append(client.download_media(request.POST['MediaUrl%d' % i]))
 
-            coordinates = CoordinatesExtractor(text=body)
-            if coordinates.text_check():
-                (lat, long) = coordinates.get_coordinates()
-                if lat and long:
-                    body = '%s,%s' % (lat, long)
+            try:
+                vcards = [vcard.replace('text/x-vcard:', '') for vcard in attachments if 'text/x-vcard' in vcard]
+                if vcards:
+                    vcard_first = vcards[0]
+                    split_path = vcard_first.split('%s' % settings.AWS_BUCKET_DOMAIN)
+                    vcard_full_path = '%s%s' % (settings.MEDIA_ROOT, split_path[-1])
+                    coordinates = CoordinatesExtractor(file_path=vcard_full_path)
+                    (lat, long) = coordinates.get_coordinates_from_file()
+                    if lat and long:
+                        body = '%s,%s' % (lat, long)
+                else:
+                    coordinates = CoordinatesExtractor(text=body)
+                    if coordinates.text_check():
+                        (lat, long) = coordinates.get_coordinates()
+                        if lat and long:
+                            body = '%s,%s' % (lat, long)
+            except Exception as e:
+                print(e.args)
 
             Msg.create_incoming(channel, urn, body, attachments=attachments)
 
