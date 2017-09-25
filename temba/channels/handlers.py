@@ -258,13 +258,13 @@ class TwimlAPIHandler(BaseChannelHandler):
                     coordinates = CoordinatesExtractor(file_path=vcard_full_path)
                     (lat, long) = coordinates.get_coordinates_from_file()
                     if lat and long:
-                        body = '%s,%s' % (lat, long)
+                        body = '%s (%s,%s)' % (body, lat, long)
                 else:
                     coordinates = CoordinatesExtractor(text=body)
                     if coordinates.text_check():
                         (lat, long) = coordinates.get_coordinates()
                         if lat and long:
-                            body = '%s,%s' % (lat, long)
+                            body = '%s (%s,%s)' % (body, lat, long)
             except Exception as e:
                 print(e.args)
 
