@@ -1547,6 +1547,9 @@ class Flow(TembaModel):
         if flow_start:  # pragma: needs cover
             flow_start.update_status()
 
+        if start_msg:
+            Msg.mark_handled(start_msg)
+
         return runs
 
     def start_call_flow(self, all_contact_ids, start_msg=None, extra=None, flow_start=None, parent_run=None):
@@ -2668,7 +2671,7 @@ class FlowRun(models.Model):
                 msg = self.get_last_msg(OUTGOING)
 
                 # check that our last outgoing msg was sent and our timeout is in the past, otherwise reschedule
-                if msg and (not msg.sent_on or timezone.now() < msg.sent_on + timedelta(minutes=timeout) - timedelta(seconds=5)):
+                if msg and (not msg.sent_on or timezone.now() < msg.sent_on + timedelta(seconds=timeout) - timedelta(seconds=5)):
                     self.update_timeout(msg.sent_on if msg.sent_on else timezone.now(), timeout)
 
                 # look good, lets resume this run
@@ -2752,15 +2755,15 @@ class FlowRun(models.Model):
         self.is_active = False
         self.save(update_fields=('exit_type', 'exited_on', 'modified_on', 'is_active'))
 
-    def update_timeout(self, now, minutes):
+    def update_timeout(self, now, time):
         """
         Updates our timeout for our run, either clearing it or setting it appropriately
         """
-        if not minutes and self.timeout_on:
+        if not time and self.timeout_on:
             self.timeout_on = None
             self.save(update_fields=['timeout_on', 'modified_on'])
-        elif minutes:
-            self.timeout_on = now + timedelta(minutes=minutes)
+        elif time:
+            self.timeout_on = now + timedelta(seconds=time)
             self.save(update_fields=['timeout_on', 'modified_on'])
 
     def update_expiration(self, point_in_time=None):

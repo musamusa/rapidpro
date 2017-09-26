@@ -24,8 +24,6 @@ RUN pip install -r pip-freeze.txt --upgrade
 ADD . /rapidpro
 COPY docker.settings.prod /rapidpro/temba/settings.py
 
-RUN python manage.py migrate
-
 RUN apt-get install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
 RUN apt-get install -y nodejs
@@ -38,6 +36,8 @@ RUN python manage.py collectstatic --noinput
 RUN touch `echo $RANDOM`.txt
 
 RUN python manage.py compress --extension=.haml --force
+
+RUN python manage.py migrate
 
 # nginx + gunicorn setup
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
