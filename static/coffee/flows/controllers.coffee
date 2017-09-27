@@ -1016,8 +1016,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     ruleset.rules[0].category[Flow.flow.base_language] = 'All Responses'
 
   formData.timeoutOptions = [
-    {value:5, text:'5 seconds'},
     {value:10, text:'10 seconds'},
+    {value:20, text:'20 seconds'},
     {value:30, text:'30 seconds'},
     {value:45, text:'45 seconds'},
     {value:60, text:'1 minute'},
