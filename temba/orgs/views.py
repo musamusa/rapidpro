@@ -2344,7 +2344,7 @@ class OrgCRUDL(SmartCRUDL):
                     if cleaned_data['amount'] > from_org.get_credits_remaining():
                         raise ValidationError(_("Sorry, %(org_name)s doesn't have enough credits for this transfer. Pick a different organization to transfer from or reduce the transfer amount.") % dict(org_name=from_org.name))
                     elif int(cleaned_data['amount']) < 0:
-                        raise ValidationError(_("Sorry, but you need to inform a value higher than 0."))
+                        raise ValidationError(_("Sorry, please enter a value greater than 0."))
 
         success_url = '@orgs.org_sub_orgs'
         form_class = TransferForm
