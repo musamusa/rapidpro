@@ -799,14 +799,17 @@ table.list-table {
       -ms-box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.2);
       -o-box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.2);
       opacity: 0;
-      -webkit-transition: all 0.5s linear 0s;
-      -moz-transition: all 0.5s linear 0s;
-      -ms-transition: all 0.5s linear 0s;
-      -o-transition: all 0.5s linear 0s;
-      transition: all 0.5s linear 0s;
+      -webkit-transition: all 0.3s linear 0s;
+      -moz-transition: all 0.3s linear 0s;
+      -ms-transition: all 0.3s linear 0s;
+      -o-transition: all 0.3s linear 0s;
+      transition: all 0.3s linear 0s;
+      z-index: 10;
+      visibility: hidden;
 
       &.active {
         opacity: 1;
+        visibility: visible;
       }
 
       div.custom-tooltip-arrow {
@@ -1532,7 +1535,6 @@ input[type='text'].search-query {
   padding-top: 2;
   font-size: 14px;
   font-weight: 200;
-
 }
 
 // *******************************
