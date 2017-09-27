@@ -95,8 +95,6 @@
       -if not debug and not testing
         %script{src:"{{ STATIC_URL }}lib/raven.min.js"}
 
-      %script{src:"{{ STATIC_URL }}js/ai-helper.js"}
-
     -compress js
       %script{src:"{{ STATIC_URL }}js/omnibox.js"}
       %script{src:"{{ STATIC_URL }}js/temba.js"}
@@ -321,6 +319,15 @@
 
     :javascript
       $(document).ready(function() {
+
+        $('ul#top-menu li a').mouseenter(function() {
+          var elem = $(this);
+          elem.parent().children('.custom-tooltip').addClass('active');
+        }).mouseleave(function(){
+          var elem = $(this);
+          elem.parent().children('.custom-tooltip').removeClass('active');
+        });
+
         if (navigator.appVersion.indexOf("Win")!=-1) {
           $("html").addClass("windows");
         }
