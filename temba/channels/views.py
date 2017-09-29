@@ -2162,6 +2162,7 @@ class ChannelCRUDL(SmartCRUDL):
         title = _("Channels")
         fields = ('name', 'address', 'last_seen')
         search_fields = ('name', 'address', 'org__created_by__email')
+        link_url = 'uuid@channels.channel_read'
 
         def get_queryset(self, **kwargs):
             queryset = super(ChannelCRUDL.List, self).get_queryset(**kwargs)

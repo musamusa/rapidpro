@@ -90,6 +90,7 @@ class TwimlAPIHandler(BaseChannelHandler):
         from twilio.util import RequestValidator
         from temba.flows.models import FlowSession
         from temba.msgs.models import Msg
+        from coordinates_extractor import CoordinatesExtractor
 
         signature = request.META.get('HTTP_X_TWILIO_SIGNATURE', '')
         url = "https://" + settings.TEMBA_HOST + "%s" % request.get_full_path()
@@ -249,6 +250,28 @@ class TwimlAPIHandler(BaseChannelHandler):
                 attachments.append(client.download_media(request.POST['MediaUrl%d' % i]))
 
             Msg.create_incoming(channel, urn, body, attachments=attachments)
+
+            try:
+                vcards = [vcard.replace('text/x-vcard:', '') for vcard in attachments if 'text/x-vcard' in vcard]
+                if vcards:
+                    vcard_first = vcards[0]
+                    split_path = vcard_first.split('%s' % settings.AWS_BUCKET_DOMAIN)
+                    vcard_full_path = '%s%s' % (settings.MEDIA_ROOT, split_path[-1])
+                    coordinates = CoordinatesExtractor(file_path=vcard_full_path)
+                    (lat, long) = coordinates.get_coordinates_from_file()
+                    if lat and long:
+                        body = '%s,%s' % (lat, long)
+                        Msg.create_incoming(channel, urn, body)
+                else:
+                    coordinates = CoordinatesExtractor(text=body)
+                    if coordinates.text_check():
+                        (lat, long) = coordinates.get_coordinates()
+                        if lat and long:
+                            body = '%s,%s' % (lat, long)
+                            Msg.create_incoming(channel, urn, body)
+
+            except Exception as e:
+                print(e.args)
 
             return HttpResponse("", status=201)
 

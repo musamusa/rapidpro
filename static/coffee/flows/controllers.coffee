@@ -207,9 +207,18 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
         showDialog('Invalid Attachment', 'Attachments must be either video, audio, or an image.')
         return
 
-      if media_type == 'audio' and media_encoding != 'mp3'
+      if media_type == 'audio' and (media_encoding != 'mp3' and media_encoding != 'mpeg')
         showDialog('Invalid Format', 'Audio attachments must be encoded as mp3 files.')
         return
+
+    if (!String.prototype.endsWith)
+      String.prototype.endsWith = (searchString, position) ->
+          subjectString = this.toString()
+          if (typeof position != 'number' || !isFinite(position) || Math.floor(position) != position || position > subjectString.length)
+            position = subjectString.length
+          position -= searchString.length
+          lastIndex = subjectString.indexOf(searchString, position)
+          return lastIndex != -1 && lastIndex == position
 
     if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
@@ -1007,27 +1016,31 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     ruleset.rules[0].category[Flow.flow.base_language] = 'All Responses'
 
   formData.timeoutOptions = [
-    {value:1, text:'1 minute'},
-    {value:2, text:'2 minutes'},
-    {value:3, text:'3 minutes'},
-    {value:4, text:'4 minutes'},
-    {value:5, text:'5 minutes'},
-    {value:10, text:'10 minutes'},
-    {value:15, text:'15 minutes'},
-    {value:30, text:'30 minutes'},
-    {value:60, text:'1 hour'},
-    {value:120, text:'2 hours'},
-    {value:180, text:'3 hours'},
-    {value:360, text:'6 hours'},
-    {value:720, text:'12 hours'},
-    {value:1080, text:'18 hours'},
-    {value:1440, text:'1 day'},
-    {value:2880, text:'2 days'},
-    {value:4320, text:'3 days'},
-    {value:10080, text:'1 week'},
+    {value:10, text:'10 seconds'},
+    {value:20, text:'20 seconds'},
+    {value:30, text:'30 seconds'},
+    {value:45, text:'45 seconds'},
+    {value:60, text:'1 minute'},
+    {value:120, text:'2 minutes'},
+    {value:180, text:'3 minutes'},
+    {value:240, text:'4 minutes'},
+    {value:300, text:'5 minutes'},
+    {value:600, text:'10 minutes'},
+    {value:900, text:'15 minutes'},
+    {value:1800, text:'30 minutes'},
+    {value:3600, text:'1 hour'},
+    {value:7200, text:'2 hours'},
+    {value:10800, text:'3 hours'},
+    {value:21600, text:'6 hours'},
+    {value:43200, text:'12 hours'},
+    {value:64800, text:'18 hours'},
+    {value:86400, text:'1 day'},
+    {value:172800, text:'2 days'},
+    {value:259200, text:'3 days'},
+    {value:604800, text:'1 week'},
   ]
 
-  minutes = 5
+  minutes = 60
   formData.hasTimeout = false
 
   # check if we have a timeout rule present
