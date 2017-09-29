@@ -249,6 +249,8 @@ class TwimlAPIHandler(BaseChannelHandler):
             for i in range(int(request.POST.get('NumMedia', 0))):
                 attachments.append(client.download_media(request.POST['MediaUrl%d' % i]))
 
+            Msg.create_incoming(channel, urn, body, attachments=attachments)
+
             try:
                 vcards = [vcard.replace('text/x-vcard:', '') for vcard in attachments if 'text/x-vcard' in vcard]
                 if vcards:
@@ -258,17 +260,18 @@ class TwimlAPIHandler(BaseChannelHandler):
                     coordinates = CoordinatesExtractor(file_path=vcard_full_path)
                     (lat, long) = coordinates.get_coordinates_from_file()
                     if lat and long:
-                        body = '%s,%s - %s' % (lat, long, body)
+                        body = '%s,%s' % (lat, long)
+                        Msg.create_incoming(channel, urn, body)
                 else:
                     coordinates = CoordinatesExtractor(text=body)
                     if coordinates.text_check():
                         (lat, long) = coordinates.get_coordinates()
                         if lat and long:
-                            body = '%s,%s - %s' % (lat, long, body)
+                            body = '%s,%s' % (lat, long)
+                            Msg.create_incoming(channel, urn, body)
+
             except Exception as e:
                 print(e.args)
-
-            Msg.create_incoming(channel, urn, body, attachments=attachments)
 
             return HttpResponse("", status=201)
 
