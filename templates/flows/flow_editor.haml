@@ -422,6 +422,10 @@
                   %span.attn
                     [[action.label]]
 
+                // stopping contacts
+                %span{ng-show:'action.type == "stop_contact"'}
+                  Stop contact
+
                 // sending emails
                 %span{ng-show:'action.type == "email"'}
                   .subject

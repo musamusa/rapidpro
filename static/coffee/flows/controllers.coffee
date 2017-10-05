@@ -1981,6 +1981,13 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
 
+  $scope.saveStopContact = () ->
+    $scope.action.type = 'stop_contact'
+    $scope.action.value = true
+
+    Flow.saveAction(actionset, $scope.action)
+    $modalInstance.close()
+
   # save a webhook action
   $scope.saveWebhook = (method, url) ->
     $scope.action.type = 'api'
