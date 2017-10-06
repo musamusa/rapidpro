@@ -157,6 +157,15 @@
         -if form_field.errors
           %span.help-block.field-errors= form_field.errors
 
+      %label
+        -trans "Custom"
+      -with form|field:'is_custom' as form_field
+        {{form_field}}
+        %p
+          -trans "If this organization is custom"
+        -if form_field.errors
+          %span.help-block.field-errors= form_field.errors
+
       %br
       %input#form-two-submit.btn.btn-primary{type:'submit', value:'Save'}
 

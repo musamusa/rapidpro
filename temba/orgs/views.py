@@ -225,7 +225,8 @@ class OrgSignupForm(forms.ModelForm):
                                help_text=_("Your password, at least eight letters please"))
     name = forms.CharField(label=_("Organization"),
                            help_text=_("The name of your organization"))
-    custom = forms.CheckboxInput()
+    is_custom = forms.CharField(widget=forms.CheckboxInput, label=_("Custom"),
+                                help_text=_("If this organization is custom"), required=False)
 
     def __init__(self, *args, **kwargs):
         if 'branding' in kwargs:
@@ -1748,7 +1749,7 @@ class OrgCRUDL(SmartCRUDL):
     class Grant(SmartCreateView):
         title = _("Create Organization Account")
         form_class = OrgGrantForm
-        fields = ('first_name', 'last_name', 'email', 'password', 'name', 'timezone', 'credits')
+        fields = ('first_name', 'last_name', 'email', 'password', 'name', 'timezone', 'credits', 'is_custom')
         success_message = 'Organization successfully created.'
         submit_button_name = _("Create")
         permission = 'orgs.org_grant'
