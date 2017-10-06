@@ -244,7 +244,7 @@ class Org(SmartModel):
     parent = models.ForeignKey('orgs.Org', null=True, blank=True, help_text=_('The parent org that manages this org'))
 
     is_custom = models.BooleanField(verbose_name=_('Custom'), default=False,
-                                    help_text=_("If this organization has custom configurations"))
+                                    help_text=_("If this organization is custom"))
 
     @classmethod
     def get_unique_slug(cls, name):
