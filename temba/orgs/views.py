@@ -226,7 +226,7 @@ class OrgSignupForm(forms.ModelForm):
     name = forms.CharField(label=_("Organization"),
                            help_text=_("The name of your organization"))
     is_custom = forms.CharField(widget=forms.CheckboxInput, label=_("Custom"),
-                                help_text=_("If this organization is custom"), required=False)
+                                help_text=_("Check if this organization is custom"), required=False)
 
     def __init__(self, *args, **kwargs):
         if 'branding' in kwargs:

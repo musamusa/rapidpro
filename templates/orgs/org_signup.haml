@@ -162,7 +162,7 @@
       -with form|field:'is_custom' as form_field
         {{form_field}}
         %p
-          -trans "If this organization is custom"
+          {{form_field.help_text}}
         -if form_field.errors
           %span.help-block.field-errors= form_field.errors
 
