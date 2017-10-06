@@ -2,16 +2,16 @@
 
 %ul#top-menu
 
-  -if org_perms.orgs.org_home and not request.user.is_superuser
+  -if org_perms.orgs.org_dashboard and not request.user.is_superuser
     %li.nav-dashboard
-      %a.icon-nav-home{href:"{% url 'dashboard.dashboard_home' %}", class:"{% active request 'home' %}"}
+      %a.icon-nav-dashboard{href:"{% url 'dashboard.dashboard_home' %}", class:"{% active request 'dashboard/home' %}"}
         .title
           -trans "dashboard"
       %div.custom-tooltip
         %div.custom-tooltip-arrow
         %span.custom-tooltip-icon
           %div.around
-            %i.icon-nav-home-inverted
+            %i.icon-nav-dashboard-inverted
         %span.custom-tooltip-title
           -trans "Dashboard"
         %div.custom-tooltip-separator
@@ -74,14 +74,14 @@
 
   -if org_perms.orgs.org_home and not request.user.is_superuser
     %li.nav-account
-      %a.icon-more{href:"{% url 'orgs.org_home' %}", class:"{% active request 'home' %}"}
+      %a.icon-nav-home{href:"{% url 'orgs.org_home' %}", class:"{% active request 'org/home' %}"}
         .title
           -trans "account"
       %div.custom-tooltip
         %div.custom-tooltip-arrow
         %span.custom-tooltip-icon
           %div.around
-            %i.icon-more_inverted
+            %i.icon-nav-home-inverted
         %span.custom-tooltip-title
           -trans "Account"
         %div.custom-tooltip-separator
