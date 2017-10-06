@@ -224,6 +224,7 @@ class OrgSignupForm(forms.ModelForm):
                                help_text=_("Your password, at least eight letters please"))
     name = forms.CharField(label=_("Organization"),
                            help_text=_("The name of your organization"))
+    custom = forms.CheckboxInput()
 
     def __init__(self, *args, **kwargs):
         if 'branding' in kwargs:

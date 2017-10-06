@@ -182,7 +182,10 @@
       .name
         {{brand.name}}
 
-    -include 'includes/nav.html'
+    -if user_org.is_custom
+      -include 'includes/custom_nav.html'
+    -else
+      -include 'includes/nav.html'
 
     -if user_org
       .org-header
