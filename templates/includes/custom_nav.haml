@@ -18,9 +18,9 @@
         %span.custom-tooltip-description
           -trans "See the details about sending/receiving messages"
 
-  -if org_perms.flows.flow_list and not request.user.is_superuser
+  -if org_perms.flows.flow_survey_list and not request.user.is_superuser
     %li.nav-flows
-      %a.icon-nav-flows{href:"{% url 'flows.flow_list' %}", class:"{% active request '(?<!msg)/flow' %}"}
+      %a.icon-nav-flows{href:"{% url 'flows.flow_survey_list' %}", class:"{% active request '(?<!msg)/flow' %}"}
         .title
           -trans "surveys"
       -if flows_unread_count

@@ -177,6 +177,7 @@ class Flow(TembaModel):
     VOICE = 'V'
     SURVEY = 'S'
     USSD = 'U'
+    SIMPLE_SURVEY = 'Y'
 
     RULES_ENTRY = 'R'
     ACTIONS_ENTRY = 'A'
@@ -185,6 +186,7 @@ class Flow(TembaModel):
                   (MESSAGE, _("Single Message Flow")),
                   (VOICE, _("Phone call flow")),
                   (SURVEY, _("Android Survey")),
+                  (SIMPLE_SURVEY, _("Simple Survey")),
                   (USSD, _("USSD flow")))
 
     ENTRY_TYPES = ((RULES_ENTRY, "Rules"),

@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action')
+               'upload_media_action', 'survey_list', 'survey_archived',)
 
     model = Flow
 
@@ -753,7 +753,7 @@ class FlowCRUDL(SmartCRUDL):
 
         def derive_queryset(self, *args, **kwargs):
             queryset = super(FlowCRUDL.List, self).derive_queryset(*args, **kwargs)
-            queryset = queryset.filter(is_active=True, is_archived=False)
+            queryset = queryset.filter(is_active=True, is_archived=False).exclude(flow_type=Flow.SIMPLE_SURVEY)
             types = self.request.GET.getlist('flow_type')
             if types:
                 queryset = queryset.filter(flow_type__in=types)
@@ -1601,6 +1601,71 @@ class FlowCRUDL(SmartCRUDL):
                              restart_participants=form.cleaned_data['restart_participants'],
                              include_active=form.cleaned_data['include_active'])
             return flow
+
+    class SurveyList(BaseList, OrgPermsMixin):
+        title = _("Surveys")
+        actions = ('archive', 'label')
+        default_template = 'surveys/survey_list.html'
+
+        def derive_queryset(self, *args, **kwargs):
+            queryset = super(FlowCRUDL.SurveyList, self).derive_queryset(*args, **kwargs)
+            queryset = queryset.filter(is_active=True, is_archived=False, flow_type=Flow.SIMPLE_SURVEY)
+            types = self.request.GET.getlist('flow_type')
+            if types:
+                queryset = queryset.filter(flow_type__in=types)
+            return queryset
+
+        def get_context_data(self, **kwargs):
+            context = super(FlowCRUDL.SurveyList, self).get_context_data(**kwargs)
+            context['org_has_surveys'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True,
+                                                             flow_type=Flow.SIMPLE_SURVEY).count()
+            context['folders'] = self.get_folders()
+            context['labels'] = self.get_flow_labels()
+            context['campaigns'] = self.get_campaigns()
+            context['request_url'] = self.request.path
+            context['actions'] = self.actions
+
+            # decorate flow objects with their run activity stats
+            for flow in context['object_list']:
+                flow.run_stats = flow.get_run_stats()
+
+            return context
+
+        def get_campaigns(self):
+            from temba.campaigns.models import CampaignEvent
+            org = self.request.user.get_org()
+            events = CampaignEvent.objects.filter(campaign__org=org, is_active=True, campaign__is_active=True,
+                                                  flow__is_archived=False, flow__is_active=True,
+                                                  flow__flow_type=Flow.SIMPLE_SURVEY)
+            return events.values('campaign__name', 'campaign__id').annotate(count=Count('id')).order_by(
+                'campaign__name')
+
+        def get_flow_labels(self):
+            labels = []
+            for label in FlowLabel.objects.filter(org=self.request.user.get_org(), parent=None):
+                labels.append(
+                    dict(pk=label.pk, label=label.name, count=label.get_flows_count(), children=label.children.all()))
+            return labels
+
+        def get_folders(self):
+            org = self.request.user.get_org()
+
+            return [
+                dict(label="Active", url=reverse('flows.flow_survey_list'),
+                     count=Flow.objects.filter(is_active=True, flow_type=Flow.SIMPLE_SURVEY, is_archived=False,
+                                               org=org).count()),
+                dict(label="Archived", url=reverse('flows.flow_survey_archived'),
+                     count=Flow.objects.filter(is_active=True, flow_type=Flow.SIMPLE_SURVEY, is_archived=True,
+                                               org=org).count())
+            ]
+
+    class SurveyArchived(SurveyList, OrgPermsMixin):
+        actions = ('restore',)
+        default_order = ('-created_on',)
+
+        def derive_queryset(self, *args, **kwargs):
+            queryset = super(FlowCRUDL.SurveyArchived, self).derive_queryset(*args, **kwargs)
+            return queryset.filter(is_active=True, is_archived=True, flow_type=Flow.SIMPLE_SURVEY)
 
 
 # this is just for adhoc testing of the preprocess url
