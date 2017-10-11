@@ -455,6 +455,7 @@ PERMISSIONS = {
                    'upload_media_action',
                    'survey_list',
                    'survey_archived',
+                   'survey_filter',
                    ),
 
     'flows.ruleset': ('analytics',
