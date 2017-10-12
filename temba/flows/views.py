@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'survey_list', 'survey_archived', 'survey_filter',)
+               'upload_media_action', 'survey_list', 'survey_filter',)
 
     model = Flow
 
@@ -1651,23 +1651,12 @@ class FlowCRUDL(SmartCRUDL):
             return [
                 dict(label="Active", url=reverse('flows.flow_survey_list'),
                      count=Flow.objects.filter(is_active=True, flow_type=Flow.SIMPLE_SURVEY, is_archived=False,
-                                               org=org).count()),
-                dict(label="Archived", url=reverse('flows.flow_survey_archived'),
-                     count=Flow.objects.filter(is_active=True, flow_type=Flow.SIMPLE_SURVEY, is_archived=True,
                                                org=org).count())
             ]
 
     class SurveyList(SurveyBaseList, OrgPermsMixin):
-        title = _("Surveys")
-        actions = ('archive', 'label')
-
-    class SurveyArchived(SurveyBaseList, OrgPermsMixin):
-        actions = ('restore',)
-        default_order = ('-created_on',)
-
-        def derive_queryset(self, *args, **kwargs):
-            queryset = super(FlowCRUDL.SurveyBaseList, self).derive_queryset(*args, **kwargs)
-            return queryset.filter(is_active=True, is_archived=True, flow_type=Flow.SIMPLE_SURVEY)
+        title = _('Surveys')
+        actions = ('label',)
 
     class SurveyFilter(SurveyBaseList, OrgPermsMixin):
         add_button = True

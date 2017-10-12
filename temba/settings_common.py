@@ -454,7 +454,6 @@ PERMISSIONS = {
                    'upload_action_recording',
                    'upload_media_action',
                    'survey_list',
-                   'survey_archived',
                    'survey_filter',
                    ),
 
@@ -827,7 +826,6 @@ GROUP_PERMISSIONS = {
         'flows.ruleset_results',
         'flows.ruleset_choropleth',
         'flows.flow_survey_list',
-        'flows.flow_survey_archived',
 
         'msgs.broadcast_schedule_list',
         'msgs.broadcast_schedule_read',
