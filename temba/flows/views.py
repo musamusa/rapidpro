@@ -17,6 +17,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import Count, Min, Max, Sum
 from django import forms
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
@@ -739,6 +740,27 @@ class FlowCRUDL(SmartCRUDL):
                                                                                is_archived=True,
                                                                                org=org).count())
             ]
+
+        def render_to_response(self, context, **response_kwargs):
+            if self.request.GET.get('_format', 'html') == 'select2':
+                results = []
+                for obj in context['object_list']:
+                    result = None
+                    if hasattr(obj, 'as_select2'):
+                        result = obj.as_select2()
+
+                    if not result:
+                        result = dict(id=obj.pk, text="%s" % obj)
+
+                    results.append(result)
+
+                json_data = dict(results=results, err='nil', more=context['page_obj'].has_next())
+                return JsonResponse(json_data)
+            # otherwise, return normally
+            else:
+                if self.org.is_custom:
+                    return redirect(reverse('flows.flow_survey_list'))
+                return super(SmartListView, self).render_to_response(context)
 
     class Archived(BaseList):
         actions = ('restore',)
@@ -1653,6 +1675,27 @@ class FlowCRUDL(SmartCRUDL):
                      count=Flow.objects.filter(is_active=True, flow_type=Flow.SIMPLE_SURVEY, is_archived=False,
                                                org=org).count())
             ]
+
+        def render_to_response(self, context, **response_kwargs):
+            if self.request.GET.get('_format', 'html') == 'select2':
+                results = []
+                for obj in context['object_list']:
+                    result = None
+                    if hasattr(obj, 'as_select2'):
+                        result = obj.as_select2()
+
+                    if not result:
+                        result = dict(id=obj.pk, text="%s" % obj)
+
+                    results.append(result)
+
+                json_data = dict(results=results, err='nil', more=context['page_obj'].has_next())
+                return JsonResponse(json_data)
+            # otherwise, return normally
+            else:
+                if not self.org.is_custom:
+                    return redirect(reverse('flows.flow_list'))
+                return super(SmartListView, self).render_to_response(context)
 
     class SurveyList(SurveyBaseList, OrgPermsMixin):
         title = _('Surveys')
