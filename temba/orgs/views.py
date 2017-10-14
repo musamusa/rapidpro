@@ -1459,6 +1459,8 @@ class OrgCRUDL(SmartCRUDL):
 
             if org in self.get_user_orgs():
                 self.request.session['org_id'] = org.pk
+                if org.is_custom:
+                    return HttpResponseRedirect(reverse('msgs.msg_survey_inbox'))
             else:
                 return HttpResponseRedirect(reverse('orgs.org_choose'))
 
