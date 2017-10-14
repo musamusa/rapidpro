@@ -1703,7 +1703,7 @@ class FlowCRUDL(SmartCRUDL):
 
     class SurveyFilter(SurveyBaseList, OrgPermsMixin):
         add_button = True
-        actions = ('unlabel', 'label',)
+        actions = ('label',)
         default_template = 'surveys/survey_filter.html'
 
         def get_gear_links(self):

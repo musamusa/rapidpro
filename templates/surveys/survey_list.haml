@@ -75,7 +75,7 @@
                     %span.btn-group
                       %a.object-btn-unlabel{href:'#'}
                         %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Unlabel" %}'}
-                          .glyph.icon-box
+                          .glyph.icon-tag-2
 
                   - if 'restore' in actions and org_perms.flows.flow_update
                     %span.btn-group
@@ -112,7 +112,7 @@
                             %a.lbl-menu.add-label
                               -trans "Add Label"
 
-                  %span.btn-group.pull-right
+                  %span.btn-group.pull-right{'style': 'margin-right: 5px'}
                     %a.object-btn-export{'href':'#', onclick:'exportFlows()'}
                       %button.btn
                         -trans "Export Results"
@@ -151,14 +151,14 @@
                       -if not object.run_stats.total
                         %td.value-status
                         %td.value-status
-                          -trans "No runs"
+                          -trans "No responses"
 
                       -else
                         %td.value-status
                           {% blocktrans count run_count=object.run_stats.total %}
-                            {{ run_count }} run
+                            {{ run_count }} response
                           {% plural %}
-                            {{ run_count }} runs
+                            {{ run_count }} responses
                           {% endblocktrans %}
 
                         %td.value-status
