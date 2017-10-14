@@ -145,9 +145,18 @@ class InboxView(OrgPermsMixin, SmartListView):
 
         context = super(InboxView, self).get_context_data(**kwargs)
 
+        if org.is_custom:
+            custom_folder = [dict(label='General Messages', reverse='msgs.msg_survey_inbox'),
+                             dict(label='Survey Replies', reverse='msgs.msg_survey_replies')]
+        else:
+            custom_folder = [dict(label='Inbox', reverse='msgs.msg_inbox'),
+                             dict(label='Flows', reverse='msgs.msg_flow')]
+
         folders = [
-            dict(count=counts[SystemLabel.TYPE_INBOX], label=_("Inbox"), url=reverse('msgs.msg_inbox')),
-            dict(count=counts[SystemLabel.TYPE_FLOWS], label=_("Flows"), url=reverse('msgs.msg_flow')),
+            dict(count=counts[SystemLabel.TYPE_INBOX], label=_(custom_folder[0]['label']),
+                 url=reverse(custom_folder[0]['reverse'])),
+            dict(count=counts[SystemLabel.TYPE_FLOWS], label=_(custom_folder[1]['label']),
+                 url=reverse(custom_folder[1]['reverse'])),
             dict(count=counts[SystemLabel.TYPE_ARCHIVED], label=_("Archived"), url=reverse('msgs.msg_archived')),
             dict(count=counts[SystemLabel.TYPE_OUTBOX], label=_("Outbox"), url=reverse('msgs.msg_outbox')),
             dict(count=counts[SystemLabel.TYPE_SENT], label=_("Sent"), url=reverse('msgs.msg_sent')),
@@ -155,6 +164,10 @@ class InboxView(OrgPermsMixin, SmartListView):
             dict(count=counts[SystemLabel.TYPE_SCHEDULED], label=_("Schedules"), url=reverse('msgs.broadcast_schedule_list')),
             dict(count=counts[SystemLabel.TYPE_FAILED], label=_("Failed"), url=reverse('msgs.msg_failed'))
         ]
+
+        if org.is_custom:
+            del folders[5]
+            del folders[5]
 
         context['org'] = org
         context['folders'] = folders
@@ -476,7 +489,8 @@ class ExportForm(Form):
 
 class MsgCRUDL(SmartCRUDL):
     model = Msg
-    actions = ('inbox', 'flow', 'archived', 'outbox', 'sent', 'failed', 'filter', 'test', 'export')
+    actions = ('inbox', 'flow', 'archived', 'outbox', 'sent', 'failed', 'filter', 'test', 'export',
+               'survey_inbox', 'survey_replies',)
 
     class Export(ModalMixin, OrgPermsMixin, SmartFormView):
 
@@ -688,6 +702,28 @@ class MsgCRUDL(SmartCRUDL):
             qs = super(MsgCRUDL.Filter, self).get_queryset(**kwargs)
             qs = self.derive_label().filter_messages(qs).filter(visibility=Msg.VISIBILITY_VISIBLE)
 
+            return qs.order_by('-created_on').prefetch_related('labels', 'steps__run__flow').select_related('contact')
+
+    class SurveyInbox(MsgActionMixin, InboxView):
+        title = _("Messages")
+        template_name = 'msgs/message_box.haml'
+        system_label = SystemLabel.TYPE_INBOX
+        actions = ['archive', 'label']
+        allow_export = True
+
+        def get_queryset(self, **kwargs):
+            qs = super(MsgCRUDL.SurveyInbox, self).get_queryset(**kwargs)
+            return qs.order_by('-created_on').prefetch_related('labels').select_related('contact')
+
+    class SurveyReplies(MsgActionMixin, InboxView):
+        title = _("Survey Replies")
+        template_name = 'msgs/message_box.haml'
+        system_label = SystemLabel.TYPE_FLOWS
+        actions = ['label']
+        allow_export = True
+
+        def get_queryset(self, **kwargs):
+            qs = super(MsgCRUDL.SurveyReplies, self).get_queryset(**kwargs)
             return qs.order_by('-created_on').prefetch_related('labels', 'steps__run__flow').select_related('contact')
 
 

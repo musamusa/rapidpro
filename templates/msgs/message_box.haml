@@ -80,7 +80,7 @@
             - if org_perms.msgs.label_create
               %a.btn.btn-block.add-label
                 - trans "Create Label"
-            - if org_perms.msgs.label_create_folder
+            - if org_perms.msgs.label_create_folder and not org.is_custom
               %a.btn.btn-block.add-folder
                 - trans "Create Folder"
 

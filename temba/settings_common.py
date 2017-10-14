@@ -476,6 +476,8 @@ PERMISSIONS = {
                  'sent',
                  'test',
                  'update',
+                 'survey_inbox',
+                 'survey_replies',
                  ),
 
     'msgs.broadcast': ('api',
@@ -668,6 +670,8 @@ GROUP_PERMISSIONS = {
         'msgs.msg_outbox',
         'msgs.msg_sent',
         'msgs.msg_update',
+        'msgs.msg_survey_inbox',
+        'msgs.msg_survey_replies',
 
         'triggers.trigger.*',
 
@@ -771,6 +775,8 @@ GROUP_PERMISSIONS = {
         'msgs.msg_outbox',
         'msgs.msg_sent',
         'msgs.msg_update',
+        'msgs.msg_survey_inbox',
+        'msgs.msg_survey_replies',
 
         'triggers.trigger.*',
 
@@ -837,6 +843,8 @@ GROUP_PERMISSIONS = {
         'msgs.msg_inbox',
         'msgs.msg_outbox',
         'msgs.msg_sent',
+        'msgs.msg_survey_inbox',
+        'msgs.msg_survey_replies',
 
         'triggers.trigger_archived',
         'triggers.trigger_list',

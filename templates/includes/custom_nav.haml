@@ -39,7 +39,7 @@
 
   -if org_perms.msgs.msg_inbox and not request.user.is_superuser
     %li.nav-messages
-      %a.icon-nav-messages{href:"{% url 'msgs.msg_inbox' %}", class:"{% active request 'inbox|outbox|broadcast|call|msg/filter|msg/flow|msg/archived|failed' %}"}
+      %a.icon-nav-messages{href:"{% url 'msgs.msg_survey_inbox' %}", class:"{% active request 'inbox|outbox|broadcast|call|msg/filter|msg/survey_replies|msg/archived|sent|failed' %}"}
         .title
           -trans "messages"
       -if msgs_unread_count
