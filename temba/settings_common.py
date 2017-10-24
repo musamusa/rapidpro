@@ -456,6 +456,8 @@ PERMISSIONS = {
                    'survey_list',
                    'survey_filter',
                    'survey_create',
+                   'survey_read',
+                   'survey_editor',
                    ),
 
     'flows.ruleset': ('analytics',

@@ -375,7 +375,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'survey_list', 'survey_filter', 'survey_create',)
+               'upload_media_action', 'survey_list', 'survey_filter', 'survey_create', 'survey_read', 'survey_editor',)
 
     model = Flow
 
@@ -1803,6 +1803,68 @@ class FlowCRUDL(SmartCRUDL):
 
         def post_save(self, obj):
             return obj
+
+    class SurveyRead(OrgObjPermsMixin, SmartReadView):
+        slug_url_kwarg = 'uuid'
+
+        def derive_title(self):
+            return self.object.name
+
+        def get_context_data(self, *args, **kwargs):
+
+            flow = self.get_object(self.get_queryset())
+
+            org = self.request.user.get_org()
+            context = super(FlowCRUDL.SurveyRead, self).get_context_data(*args, **kwargs)
+
+            initial = flow.as_json(expand_contacts=True)
+            initial['archived'] = self.object.is_archived
+            context['initial'] = json.dumps(initial)
+            context['flows'] = Flow.objects.filter(org=org, is_active=True, flow_type__in=[Flow.SIMPLE_SURVEY],
+                                                   is_archived=False)
+
+            if org:
+                languages = org.languages.all().order_by('orgs')
+                for lang in languages:
+                    if self.get_object().base_language == lang.iso_code:
+                        context['base_language'] = lang
+
+            context['can_edit'] = False
+
+            if self.has_org_perm('flows.flow_json') and not self.request.user.is_superuser:
+                context['can_edit'] = True
+
+            # are there pending starts?
+            starting = False
+            start = self.object.starts.all().order_by('-created_on')
+            if start.exists() and start[0].status in [FlowStart.STATUS_STARTING,
+                                                      FlowStart.STATUS_PENDING]:  # pragma: needs cover
+                starting = True
+            context['starting'] = starting
+            context['has_ussd_channel'] = True if org and org.get_ussd_channel() else False
+
+            return context
+
+    class SurveyEditor(SurveyRead):
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.SurveyEditor, self).get_context_data(*args, **kwargs)
+
+            # are there pending starts?
+            starting = False
+            start = self.object.starts.all().order_by('-created_on')
+            if start.exists() and start[0].status in [FlowStart.STATUS_STARTING,
+                                                      FlowStart.STATUS_PENDING]:  # pragma: needs cover
+                starting = True
+            context['starting'] = starting
+            context['mutable'] = False
+            if self.has_org_perm('flows.flow_update') and not self.request.user.is_superuser:
+                context['mutable'] = True
+
+            flow = self.get_object()
+            return context
+
+        def get_template_names(self):
+            return "surveys/survey_editor.haml"
 
 
 # this is just for adhoc testing of the preprocess url
