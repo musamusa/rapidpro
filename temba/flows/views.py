@@ -375,7 +375,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'survey_list', 'survey_filter',)
+               'upload_media_action', 'survey_list', 'survey_filter', 'survey_create',)
 
     model = Flow
 
@@ -1750,6 +1750,59 @@ class FlowCRUDL(SmartCRUDL):
             qs = qs.filter(labels__in=self.get_label_filter(), is_archived=False).distinct()
 
             return qs
+
+    class SurveyCreate(ModalMixin, OrgPermsMixin, SmartCreateView):
+        class SurveyCreateForm(BaseFlowForm):
+
+            def __init__(self, user, *args, **kwargs):
+                super(FlowCRUDL.SurveyCreate.SurveyCreateForm, self).__init__(*args, **kwargs)
+                self.user = user
+
+            class Meta:
+                model = Flow
+                fields = ('name',)
+
+        form_class = SurveyCreateForm
+        success_url = '@flows.flow_survey_list'
+        success_message = ''
+        field_config = dict(name=dict(help=_("Choose a name to describe this flow, e.g. Demographic Survey")))
+
+        def derive_exclude(self):
+            org = self.request.user.get_org()
+            exclude = []
+
+            if not org.primary_language:
+                exclude.append('base_language')
+
+            return exclude
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.SurveyCreate, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            return kwargs
+
+        def get_context_data(self, **kwargs):
+            context = super(FlowCRUDL.SurveyCreate, self).get_context_data(**kwargs)
+            context['has_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True,
+                                                       flow_type=Flow.SIMPLE_SURVEY).count() > 0
+            return context
+
+        def save(self, obj):
+            analytics.track(self.request.user.username, 'temba.flow_created', dict(name=obj.name))
+            org = self.request.user.get_org()
+
+            obj.flow_type = Flow.SIMPLE_SURVEY
+            obj.base_language = 'base'
+
+            # default expiration is a week
+            expires_after_minutes = 60 * 24 * 7
+
+            self.object = Flow.create(org, self.request.user, obj.name,
+                                      flow_type=obj.flow_type, expires_after_minutes=expires_after_minutes,
+                                      base_language=obj.base_language)
+
+        def post_save(self, obj):
+            return obj
 
 
 # this is just for adhoc testing of the preprocess url

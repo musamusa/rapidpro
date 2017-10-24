@@ -28,7 +28,7 @@
       .row-fluid
         .span3.sidebox
           %div{style:"margin-bottom: 10px"}
-            - if org_perms.flows.flow_create
+            - if org_perms.flows.flow_survey_create
               %a.btn.btn-primary.btn-block.create_flow.new-flow{href:"#"}
                 -trans "Create Survey"
 
@@ -220,7 +220,7 @@
 
       {% if org_perms.flows.flow_create %}
       $(".create_flow").live('click', function() {
-        var modal = new Modax('{% trans "Create Survey" %}', '{% url "flows.flow_create" %}');
+        var modal = new Modax('{% trans "Create Survey" %}', '{% url "flows.flow_survey_create" %}');
         modal.setIcon('icon-tree');
         modal.setRedirectOnSuccess(true);
         modal.show();
