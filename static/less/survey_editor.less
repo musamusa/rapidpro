@@ -1,0 +1,161 @@
+@color-response:@flat-mutedblue;
+@color-ussd:@flat-darkblue;
+@color-say:@flat-blue;
+@color-play:@flat-yellow;
+@color-message:@flat-mutedpurple;
+@color-add-label:@flat-lightblue;
+@color-add-to-group: @flat-mutedgreen;
+@color-remove-from-group:@flat-mutedred;
+@color-rules:@flat-grey + #333;
+@color-send-email:@flat-mutedpurple;
+@color-webhook:@flat-mutedorange;
+@color-passive:@flat-darkwhite;
+@color-subflow:@flat-darkwhite;
+@color-missing:@flat-mutedred + #444;
+@color-save-to-contact: #00ac9a;
+@color-start-flow: #c05093;
+@color-trigger-flow: #c05093;
+
+@color-upload-hover: @flat-mutedgreen;
+
+// z-Index for our components
+@z-connection: 200;
+@z-node: 700;
+@z-action-controls: 800;
+@z-source: 900;
+@z-activity: 980;
+@z-action-media: 985;
+@z-sticky-notes: 990;
+@z-endpoint: 997;
+@z-status-message: 998;
+@z-recent-messages: 999;
+@z-drop-overlay: 1000;
+@z-node-dragging: 1100;
+@z-connection-dragging: 1200;
+@z-mask: 2000;
+@z-revisions: 2100;
+@z-flip-button:2200;
+
+.border-inset() {
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+#header {
+  margin-bottom: 5px;
+}
+
+#toolbar {
+  height: 80px;
+  padding: 20px;
+
+  .icon-phone, .icon-mobile {
+    margin-right:26px;
+    color: @color-font-lightgrey;
+  }
+
+  h2 {
+    margin-top: -5px;
+  }
+
+  .actions {
+    margin-right:30px;
+  }
+
+  .options {
+    margin-top:-7px;
+    .subtext {
+      font-size: 12px;
+    }
+
+  }
+
+}
+
+#flow {
+  margin: 0;
+  width: 100%;
+  height: 200px;
+  position: relative;
+  left: 0;
+  top: 0;
+  color: @color-font-flow;
+
+  #question-container {
+    width: 500px;
+    float: left;
+    margin: 0 0 0 50px;
+    position: relative;
+
+    .question {
+      width: 100%;
+      display: inline-table;
+      position: relative;
+      margin: 0 0 50px 0;
+
+      .header {
+        width: 100%;
+        display: inline-block;
+        margin: 0 0 15px 0;
+
+        span.title {
+          float: left;
+          font-weight: bold;
+          font-size: 14px;
+        }
+
+        span.close {
+          float: right;
+
+          a {
+            font-weight: bold;
+            font-size: 14px;
+            text-decoration: none;
+            color: @color-font-flow;
+            cursor: pointer;
+          }
+
+        }
+
+      }
+
+      .field {
+        width: 100%;
+        display: inline-block;
+
+        label {
+          margin: 0 0 10px 0;
+          display: inline-block;
+          width: 100%;
+        }
+
+        textarea{
+          width: 100%;
+          height: 120px;
+          resize: none;
+          .border-inset();
+        }
+
+        p.help {
+          margin: 0;
+          display: inline-block;
+          width: 100%;
+          text-align: right;
+          font-size: 14px;
+        }
+
+        .select2-container{
+          margin: 15px 0 0 0;
+          width: 100%;
+        }
+
+      }
+
+    }
+
+  }
+
+}
+
+

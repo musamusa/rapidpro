@@ -1,0 +1,219 @@
+{% extends "smartmin/base.html" %}
+
+-load compress temba i18n
+
+-block html-tag
+  <html lang="en" ng-app="app">
+
+-block extra-less
+  -compress css
+    {% lessblock %}
+      :plain
+        .empty {
+          margin-left: 30px;
+
+          .option {
+            border: 0px solid green;
+            width: 350px;
+            padding: 5px;
+            padding-top:0px;
+
+            .button {
+              margin-top: 12px;
+            }
+
+          }
+        }
+
+    {% endlessblock %}
+
+-block extra-script
+  {{ block.super }}
+
+  -compress js
+    %script{type:'text/javascript', src:'{{ STATIC_URL }}bower/jsPlumb/dist/js/dom.jsPlumb-1.7.5.js'}
+    %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/jquery-autosize/jquery.autosize.js"}
+    %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/angular-elastic/elastic.js"}
+    %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/angular-ui-sortable/sortable.js"}
+    %script{type:'text/javascript', src:"{{ STATIC_URL }}js/temba-ui-bootstrap-tpls.js"}
+
+  %script{src:"{{ STATIC_URL }}js/excellent.js"}
+
+  :javascript
+    window.flowId = {{ object.pk }};
+    window.simulateURL = '{% url "flows.flow_simulate" object.pk %}';
+    window.activityURL = '{% url "flows.flow_activity" object.pk %}';
+    window.uploadURL = '{% url "flows.flow_upload_action_recording" object.pk %}';
+    window.uploadMediaURL = '{% url "flows.flow_upload_media_action" object.pk %}';
+    window.mutable = {{mutable|lower}};
+    window.ivr = '{{object.flow_type}}' == 'V';
+    window.ussd = '{{object.flow_type}}' == 'U';
+    window.has_ussd_channel = {{has_ussd_channel|lower}};
+    window.flow_type = 'Y';
+    window.mediaURL = '{{media_url}}';
+    // window.hasAirtimeService = {{has_airtime_service|lower}};
+    // window.connectAirtimeServiceURL = '{% url "orgs.org_home" %}#id-transferto';
+
+    $('.draggable').draggable();
+    // TODO: All inline javascript below should be replaced with corresponding angular implementations
+
+    // Editing the flow
+    {% if org_perms.flows.flow_update %}
+    $(".update-rulesflow").live('click', function(){
+      var modal = new Modax('Update Flow', '{% url "flows.flow_update" object.pk %}');
+      modal.setIcon('icon-users-2');
+      modal.setListeners({
+        onSuccess: function(data) {location.reload(); },
+        onFormLoaded: function() {
+          $('#id_label').children("option:first-child").before("<option></option>");
+          $('#id_label').select2({minimumResultsForSearch: -1, placeholder: "No Label Selected"});}
+      });
+      modal.show();
+    });
+    {% endif %}
+
+    function broadcastToNode(nodeUUID, nodeRecipientCount) {
+      showCompose(false, null, nodeUUID, nodeRecipientCount);
+      return false;
+    }
+
+    $(document).ready(function() {
+      {% if starting %}
+        $("html").scope().pending = 'P';
+      {% endif %}
+    })
+
+
+  -compress js
+    %script{src:"{{ STATIC_URL }}coffee/flows/app.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/flows/validation.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/flows/widgets.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/flows/services.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/flows/controllers.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/flows/directives.coffee", type:'text/coffeescript'}
+    %script{src:"{{ STATIC_URL }}coffee/simulator.coffee", type:'text/coffeescript'}
+
+
+  :javascript
+    $(document).ready(function(){
+      window.setTimeout(function(){
+        window.wsOffset = $("#flow").offset();
+      }, 100)
+    });
+
+    $(window).bind('beforeunload', function(e) {
+      scope = $('html').scope();
+      if (scope && scope.saving) {
+        return "Your flow is still saving, are you sure you want to leave?"
+      }
+    });
+
+-block page-container
+
+  -if user_org
+    #show-simulator.btn.btn-primary
+      .icon-mobile
+      .message.hide
+        -trans "Run in"
+        %br
+        -trans "Simulator"
+
+  #ctlr{ng-controller:'FlowController', ng-show:'flow', ng-mousemove:'mouseMove($event)', ng-cloak:'', ng-init:"init()"}
+    -include "flows/simulator.html"
+
+    #toolbar
+
+      %h2
+        -if flow.flow_type == 'V'
+          .icon-phone
+        -elif flow.flow_type == 'S'
+          .icon-mobile
+        {{ flow.name }}
+
+    #workspace{ng-dblclick:'addNote($event); $event.stopPropagation();'}
+      #flow
+        %form
+          #question-container
+            .question
+              .header
+                %span.title
+                  -trans "QUESTION 1"
+                %span.close
+                  %a
+                    -trans "[x] Discard"
+
+              .field
+                %label
+                  -trans "Message"
+
+                %textarea{class:'msg'}
+                %p{class:'help'}
+                  -trans "0/160 characters"
+
+                %select{class:'reply',select2:''}
+                  %option
+                    -trans "Yes/No"
+                  %option
+                    -trans "Multiple Choice"
+                  %option
+                    -trans "Open Text Input"
+
+            .question
+              .header
+                %span.title
+                  -trans "QUESTION 2"
+                %span.close
+                  %a
+                    -trans "[x] Discard"
+
+              .field
+                %label
+                  -trans "Message"
+
+                %textarea{class:'msg'}
+                %p{class:'help'}
+                  -trans "0/160 characters"
+
+                %select{class:'reply',select2:''}
+                  %option
+                    -trans "Multiple Choice"
+                  %option
+                    -trans "Yes/No"
+                  %option
+                    -trans "Open Text Input"
+
+            .question
+              .header
+                %span.title
+                  -trans "QUESTION 3"
+                %span.close
+                  %a
+                    -trans "[x] Discard"
+
+              .field
+                %label
+                  -trans "Message"
+
+                %textarea{class:'msg'}
+                %p{class:'help'}
+                  -trans "0/160 characters"
+
+                %select{class:'reply',select2:''}
+                  %option
+                    -trans "Open Text Input"
+                  %option
+                    -trans "Multiple Choice"
+                  %option
+                    -trans "Yes/No"
+
+            %a{class:'btn btn-secondary'}
+              -trans "+ Add Question"
+
+-block extra-style
+  -compress css
+    {% lessblock %}
+      :plain
+        @import "flow_editor.less";
+        @import "simulator.less";
+        @import "survey_editor.less";
+    {% endlessblock %}
