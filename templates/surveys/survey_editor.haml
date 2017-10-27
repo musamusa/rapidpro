@@ -110,24 +110,12 @@
 
 -block page-container
 
-  -if user_org
-    #show-simulator.btn.btn-primary
-      .icon-mobile
-      .message.hide
-        -trans "Run in"
-        %br
-        -trans "Simulator"
-
   #ctlr{ng-controller:'FlowController', ng-show:'flow', ng-mousemove:'mouseMove($event)', ng-cloak:'', ng-init:"init()"}
-    -include "flows/simulator.html"
+    -include "surveys/simulator.html"
 
     #toolbar
 
       %h2
-        -if flow.flow_type == 'V'
-          .icon-phone
-        -elif flow.flow_type == 'S'
-          .icon-mobile
         {{ flow.name }}
 
     #workspace{ng-dblclick:'addNote($event); $event.stopPropagation();'}
@@ -181,6 +169,24 @@
                     -trans "Yes/No"
                   %option
                     -trans "Open Text Input"
+
+                .reply-options
+                  .option
+                    %label{class:'option-label'}
+                      -trans 'Reply "A" for'
+                    %input{type:'text'}
+                  .option
+                    %label{class:'option-label'}
+                      -trans 'Reply "B" for'
+                    %input{type:'text'}
+                  .option
+                    %label{class:'option-label'}
+                      -trans 'Reply "C" for'
+                    %input{type:'text'}
+
+                  .block
+                    %a{href:'javascript:;'}
+                      -trans "+ Add Reply"
 
             .question
               .header
