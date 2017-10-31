@@ -336,7 +336,8 @@ class UpdateContactForm(ContactForm):
 class ContactCRUDL(SmartCRUDL):
     model = Contact
     actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
-               'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete', 'history')
+               'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
+               'history', 'invite',)
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -867,6 +868,21 @@ class ContactCRUDL(SmartCRUDL):
             org = self.request.user.get_org()
 
             context['actions'] = ('label', 'block')
+            context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
+            return context
+
+    class Invite(ContactActionMixin, ContactListView):
+        title = _("Invite Participants")
+        system_group = ContactGroup.TYPE_ALL
+
+        def get_gear_links(self):
+            return []
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(ContactCRUDL.Invite, self).get_context_data(*args, **kwargs)
+            org = self.request.user.get_org()
+
+            context['actions'] = None
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 

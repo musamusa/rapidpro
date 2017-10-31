@@ -13,19 +13,21 @@
   %span.title-icon
     .glyph.icon-users
 
+-block above-bar
+  -block top-form
+    %form{method:'get'}
+      %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{search}}"}
+
 -block content
   #pjax
     -block pjax
       .row-fluid
         .span3.sidebox
           %div.contacts{style:"margin-bottom: 10px"}
-            - if org_perms.contacts.contact_import
-              %a#id_import_contacts.btn.btn-primary.btn-block{href:"{% url 'contacts.contact_import' %}"}
-                -trans "Import Contacts"
 
-            - if org_perms.contacts.contact_invite
-              %a#id_import_contacts.btn.btn-default.btn-block{href:"{% url 'contacts.contact_invite' %}"}
-                -trans "Invite Participants"
+            - if org_perms.contacts.contact_list
+              %a#id_import_contacts.btn.btn-default.btn-block{href:"{% url 'contacts.contact_list' %}"}
+                -trans "Manage Contacts"
 
           #sidebar-nav
             %ul.nav.nav-list
@@ -42,14 +44,6 @@
                 %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
                   %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
                     {{group.label}} ({{ group.count | intcomma }})
-
-          %div{style:"margin-top: 10px"}
-            - if org_perms.contacts.contact_create
-              %a#add-contact.btn.btn-block
-                -trans "Create Contact"
-            - if org_perms.contacts.contactgroup_create
-              %a#id_add_group.btn.btn-block
-                -trans "Create Group"
 
         - if has_contacts
           - block contacts-list
@@ -273,18 +267,18 @@
     }
     {% endif %}
 
-    
+
     // keeps track if we are on a link or not
     var onLink = false;
 
     {% if org_perms.contacts.contact_update %}
-    
+
     function addContactToGroup(groupId){
       var contactIds = getCheckedIds();
       var groupedIds = getLabeledIds(groupId);
 
       var addGroup = true;
-    
+
       // find the intersection of contactIds and groupedIds
       var contactIdsWithGroup = intersect(contactIds, groupedIds);
 
@@ -295,7 +289,7 @@
       jQuery.ajaxSettings.traditional = true;
       fetchPJAXContent("", "#pjax", { postData: {objects: contactIds, label: groupId, add: addGroup, action: 'label', pjax: 'true'}, forceReload: true });
     }
-   
+
     {% endif %}
 
     {% if org_perms.contacts.contact_create %}
@@ -323,7 +317,7 @@
       modal.show()
     }
     {% endif %}
-    
+
 
     {% if org_perms.msgs.broadcast_send %}
     $(".send-button").click(function(){
