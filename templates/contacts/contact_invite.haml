@@ -13,11 +13,6 @@
   %span.title-icon
     .glyph.icon-users
 
--block above-bar
-  -block top-form
-    %form{method:'get'}
-      %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{search}}"}
-
 -block content
   #pjax
     -block pjax
@@ -42,7 +37,7 @@
                 -trans "Groups"
               - for group in groups
                 %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
-                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                  %a{'href':'{% url "contacts.contact_invite_filter" group.uuid %}'}
                     {{group.label}} ({{ group.count | intcomma }})
 
         - if has_contacts
@@ -56,83 +51,9 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
-                - if org_perms.contacts.contact_update
-                  .list-buttons-container
-                    .list-buttons
-                      - if 'block' in actions
-                        %span.btn-group
-                          %a.object-btn-block{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user-block
-                              -trans "Block"
-
-                      - if 'unblock' in actions
-                        %span.btn-group
-                          %a.object-btn-unblock{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user
-                              -trans "Unblock"
-
-                      - if 'unstop' in actions
-                        %span.btn-group
-                          %a.object-btn-unstop{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user
-                              -trans "Unstop"
-
-                      - if 'delete' in actions
-                        %span.btn-group
-                          %a.contacts-btn-delete{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user-delete
-                              -trans "Delete"
-
-                      - if 'unlabel' in actions
-                        %span.btn-group
-                          %a{'href':'#', onclick:'unlabelObjectRows({{current_group.pk}})'}
-                            %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Remove from Group" %}'}
-                              .glyph.icon-user-remove
-
-                      - if 'label' in actions
-                        %span.btn-group
-                          %button.btn.dropdown-toggle{'data-toggle':"dropdown", data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Contact Groups" %}'}
-                            .glyph.icon-users-2
-                            %span.caret
-                          %ul.dropdown-menu.label-menu
-                            - for group in groups
-                              - if not group.is_dynamic
-                                %li
-                                  %a.lbl-menu{'href':'#', onclick:'addContactToGroup({{group.pk}})', data-id:'{{group.pk}}'}
-                                    .glyph.label-checkbox
-                                    = group.label
-                            - if org_perms.contacts.contactgroup_create
-                              - if groups
-                                %li.divider
-                              %li
-                                %a.lbl-menu.add-group{ href:'#' }
-                                  - trans "New Group..."
-
-                      - if org_perms.msgs.broadcast_send and not reply_disabled
-                        %span.btn-group
-                          %button.send-button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Send Message" %}'}
-                            .glyph.icon-bubble-replu
-
-              .search-details
-                -if search_error
-                  %span.search-error
-                    =search_error
-                -elif search
-                  -blocktrans count results_count=paginator.count
-                    Found {{ results_count }} contact matching <i>{{search}}</i>.
-                    -plural
-                      Found {{ results_count }} contacts matching <i>{{search}}</i>.
-
               .list-container
                 %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
                   %tr.contacts
-                    - if org_perms.contacts.contact_update
-                      %th
-
                     %th
                     %th
                     -for field in contact_fields
@@ -143,13 +64,17 @@
                       - if object_list
                         -trans "Created On"
 
+                    %th
+                      - if object_list
+                        -trans "Invited On"
+
+                    %th
+                      - if object_list
+                        -trans ""
+
                   %tbody
                     - for object in contacts
                       %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
-
-                        - if org_perms.contacts.contact_update or org_perms.msgs.broadcast_send
-                          %td.contact.checkbox.object-row-checkbox
-                            .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
 
                         %td.value-text.field_name
                           {{ object|name:user_org }}
@@ -167,6 +92,18 @@
                           %nobr
                             {{ object.created_on|gmail_time }}
 
+                        %td.value-received.field_received
+                          %nobr
+                            -if object.invited_on
+                              {{ object.invited_on }}
+                            -else
+                              -trans "-"
+
+                        %td.value-received.field_received
+                          %nobr
+                            %a.btn.btn-primary
+                              -trans "Invite"
+
                         // This is needed for action buttons
                         %td.hide
                           .value-labels
@@ -174,7 +111,7 @@
                               - for group in object.all_groups.all
                                 - if group.group_type == 'U'
                                   %span.label.label-info.lbl{ data-id: '{{group.id}}'}
-                                    %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                                    %a{'href':'{% url "contacts.contact_invite_filter" group.uuid %}'}
                                       {{group.name}}
 
                     -empty
@@ -235,6 +172,7 @@
 
     .span9 .object-list tbody td.value-text {
       min-width: 30px;
+      width: 55%;
     }
 
     .modal .modal-body .control-group .control-label {

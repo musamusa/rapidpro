@@ -337,7 +337,7 @@ class ContactCRUDL(SmartCRUDL):
     model = Contact
     actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
                'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
-               'history', 'invite',)
+               'history', 'invite', 'invite_filter')
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -874,6 +874,7 @@ class ContactCRUDL(SmartCRUDL):
     class Invite(ContactActionMixin, ContactListView):
         title = _("Invite Participants")
         system_group = ContactGroup.TYPE_ALL
+        template_name = 'contacts/contact_invite.haml'
 
         def get_gear_links(self):
             return []
@@ -881,10 +882,53 @@ class ContactCRUDL(SmartCRUDL):
         def get_context_data(self, *args, **kwargs):
             context = super(ContactCRUDL.Invite, self).get_context_data(*args, **kwargs)
             org = self.request.user.get_org()
+            counts = ContactGroup.get_system_group_counts(org)
+
+            if self.system_group and 'search' not in self.request.GET:
+                self.object_list.count = lambda: counts[self.system_group]
+
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
 
             context['actions'] = None
+            context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
+
+    class InviteFilter(ContactActionMixin, ContactListView):
+        template_name = 'contacts/contact_invite_filter.haml'
+
+        def get_gear_links(self):
+            return []
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(ContactCRUDL.InviteFilter, self).get_context_data(*args, **kwargs)
+            org = self.request.user.get_org()
+            group = self.derive_group()
+
+            counts = ContactGroup.get_system_group_counts(org)
+
+            if self.system_group and 'search' not in self.request.GET:
+                self.object_list.count = lambda: counts[self.system_group]
+
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
+
+            context['actions'] = []
+            context['folders'] = folders
+            context['current_group'] = group
+            return context
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r'^%s/%s/(?P<group>[^/]+)/$' % (path, action)
+
+        def derive_group(self):
+            return ContactGroup.user_groups.get(uuid=self.kwargs['group'])
 
     class Blocked(ContactActionMixin, ContactListView):
         title = _("Blocked Contacts")

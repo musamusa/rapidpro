@@ -480,6 +480,9 @@ class Contact(TembaModel):
     language = models.CharField(max_length=3, verbose_name=_("Language"), null=True, blank=True,
                                 help_text=_("The preferred language for this contact"))
 
+    invited_on = models.DateTimeField(editable=False, blank=True, null=True,
+                                      help_text="When this item was originally invited")
+
     simulation = False
 
     NAME = 'name'
