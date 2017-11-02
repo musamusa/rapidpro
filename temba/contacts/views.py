@@ -878,6 +878,19 @@ class ContactCRUDL(SmartCRUDL):
 
         def get_gear_links(self):
             return []
+        
+        def post(self, request, *args, **kwargs):
+            invitation_text = request.POST.get('invitation-text', None)
+
+            if invitation_text:
+                org_config = self.org.config_json()
+                if org_config:
+                    org_config.update(dict(invitation_text=invitation_text))
+                    self.org.config = json.dumps(org_config)
+                    self.org.save()
+                    messages.success(request, _('Invitation text have been saved'))
+
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
         def get_context_data(self, *args, **kwargs):
             context = super(ContactCRUDL.Invite, self).get_context_data(*args, **kwargs)
@@ -892,6 +905,9 @@ class ContactCRUDL(SmartCRUDL):
                      url=reverse('contacts.contact_invite')),
             ]
 
+            org_config = self.org.config_json()
+
+            context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = None
             context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
@@ -902,6 +918,19 @@ class ContactCRUDL(SmartCRUDL):
 
         def get_gear_links(self):
             return []
+
+        def post(self, request, *args, **kwargs):
+            invitation_text = request.POST.get('invitation-text', None)
+
+            if invitation_text:
+                org_config = self.org.config_json()
+                if org_config:
+                    org_config.update(dict(invitation_text=invitation_text))
+                    self.org.config = json.dumps(org_config)
+                    self.org.save()
+                    messages.success(request, _('Invitation text have been saved'))
+
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
         def get_context_data(self, *args, **kwargs):
             context = super(ContactCRUDL.InviteFilter, self).get_context_data(*args, **kwargs)
@@ -918,6 +947,9 @@ class ContactCRUDL(SmartCRUDL):
                      url=reverse('contacts.contact_invite')),
             ]
 
+            org_config = self.org.config_json()
+
+            context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = []
             context['folders'] = folders
             context['current_group'] = group

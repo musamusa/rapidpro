@@ -59,8 +59,7 @@
                 %span.counter
                   -trans "0/160"
 
-                %textarea
-                  Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this number? Please reply "Y" for yes or "N" for no.
+                %textarea{name: 'invitation-text', id: 'invitation-text'}
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
 
               .list-container
@@ -229,6 +228,10 @@
 
     $(document).on('click', '.search-query', function() {
       $(this).animate({ width: '600px'}, 200);
+    });
+
+    $(document).ready(function() {
+      $('textarea#invitation-text').html('{{ invitation_text }}');
     });
 
     {% if org_perms.contacts.contact_create %}

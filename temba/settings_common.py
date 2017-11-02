@@ -1189,3 +1189,6 @@ COURIER_CHANNELS = set()
 # Chatbase integration
 # -----------------------------------------------------------------------------------
 CHATBASE_API_URL = 'https://chatbase.com/api/message'
+
+DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this ' \
+                     'number? Please reply "Y" for yes or "N" for no.'
