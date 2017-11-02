@@ -51,6 +51,18 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
+              %form{id: 'opt-in', class: 'span5', action: '', method: 'POST'}
+
+                %label
+                  -trans "Invitation text"
+
+                %span.counter
+                  -trans "0/160"
+
+                %textarea
+                  Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this number? Please reply "Y" for yes or "N" for no.
+                %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
+
               .list-container
                 %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
                   %tr.contacts
@@ -181,6 +193,32 @@
 
     .search-error {
       color: #da4f49;
+    }
+
+    form#opt-in {
+      margin: 0;
+      position: relative;
+    }
+
+    form#opt-in label {
+      color: #666;
+      font-weight: bold;
+    }
+
+    form#opt-in textarea {
+      width: 100%;
+      height: 100px;
+      resize: none;
+      -webkit-box-sizing:border-box;
+      -moz-box-sizing:border-box;
+      -ms-box-sizing:border-box;
+      box-sizing:border-box;
+    }
+
+    form#opt-in span.counter {
+      position: absolute;
+      top: 0;
+      right: 0;
     }
 
 
