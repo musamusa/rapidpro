@@ -59,7 +59,7 @@
                 %span.counter
                   -trans "0/160"
 
-                %textarea{name: 'invitation-text', id: 'invitation-text'}
+                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
 
               .list-container
@@ -231,8 +231,19 @@
     });
 
     $(document).ready(function() {
-      $('textarea#invitation-text').html('{{ invitation_text }}');
+      var textarea_invitation_text = $('textarea#invitation-text');
+      textarea_invitation_text.html('{{ invitation_text }}');
+      countChar(textarea_invitation_text, true);
     });
+
+    function countChar(val, onready) {
+      if (onready) {
+        var len = val[0].value.length;
+      } else {
+        var len = val.value.length;
+      }
+      $('span.counter').text(len + '/160');
+    };
 
     {% if org_perms.contacts.contact_create %}
     if($(location).attr('hash') == '#contact') {
