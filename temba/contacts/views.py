@@ -920,7 +920,7 @@ class ContactCRUDL(SmartCRUDL):
             contact_id = kwargs['id']
 
             existing_contact = Contact.objects.filter(id=contact_id).first()
-            invitation_text = org_config.get('invitation_text', None)
+            invitation_text = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
 
             if existing_contact and invitation_text:
                 existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
