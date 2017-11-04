@@ -110,10 +110,14 @@
                             -else
                               -trans "-"
 
-                        %td.value-received.field_received
+                        %td.value-received.field_received.button-invitation
                           %nobr
-                            %a.btn.btn-primary
-                              -trans "Invite"
+                            -if not object.invited_on
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this))', data-id: '{{ object.id }}'}
+                                -trans "Invite"
+                            -else
+                              %a{href: 'javascript:;', onclick: 'inviteContact($(this))', data-id: '{{ object.id }}'}
+                                -trans "Re-Invite"
 
                         // This is needed for action buttons
                         %td.hide
@@ -235,6 +239,27 @@
       textarea_invitation_text.html('{{ invitation_text }}');
       countChar(textarea_invitation_text, true);
     });
+
+    function inviteContact(element) {
+      var contactId = element[0].dataset.id;
+
+      var headers = { 'X-PJAX': true };
+      var type = 'GET';
+      var url = '/contact/invite_send/' + contactId;
+      var data = undefined;
+
+      $.ajax({
+          headers: headers,
+          type: type,
+          url: url,
+          data: data,
+          success: function(data, status, jqXHR) {},
+          error: function(err) {
+            console.log(err);
+          }
+      });
+
+    }
 
     function countChar(val, onready) {
       if (onready) {
@@ -359,7 +384,7 @@
     $('.select-row').live('mouseover', function(){
       url = '/contact/read/' + $(this).data('uuid');
 
-      $(this).find('td').not(':first-child').each(function(){
+      $(this).find('td').not(':first-child').not('.button-invitation').each(function(){
         $(this).attr('onClick', "document.location.href=url;");
       });
     });

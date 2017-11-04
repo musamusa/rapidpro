@@ -337,7 +337,7 @@ class ContactCRUDL(SmartCRUDL):
     model = Contact
     actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
                'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
-               'history', 'invite', 'invite_filter')
+               'history', 'invite', 'invite_filter', 'invite_send')
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -912,6 +912,31 @@ class ContactCRUDL(SmartCRUDL):
             context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
+
+    class InviteSend(OrgObjPermsMixin, SmartReadView):
+        title = _("Invite Send")
+        slug_url_kwarg = 'id'
+
+        def get(self, *args, **kwargs):
+            from datetime import datetime
+
+            org = self.request.user.get_org()
+            org_config = self.org.config_json()
+            contact_id = kwargs['id']
+
+            existing_contact = Contact.objects.filter(id=contact_id).first()
+            invitation_text = org_config.get('invitation_text', None)
+
+            if existing_contact and invitation_text:
+                existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
+                invited_on = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                existing_contact.invited_on = invited_on
+                existing_contact.save(update_fields=['invited_on'])
+                result = dict(sent=True)
+            else:
+                result = dict(sent=False)
+
+            return HttpResponse(json.dumps(result), content_type='application/json')
 
     class InviteFilter(ContactActionMixin, ContactListView):
         template_name = 'contacts/contact_invite_filter.haml'

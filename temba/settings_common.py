@@ -357,6 +357,7 @@ PERMISSIONS = {
                          'update_fields_input',
                          'invite',
                          'invite_filter',
+                         'invite_send',
                          ),
 
     'contacts.contactfield': ('api',
@@ -579,6 +580,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_update_fields_input',
         'contacts.contact_invite',
         'contacts.contact_invite_filter',
+        'contacts.contact_invite_send',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
