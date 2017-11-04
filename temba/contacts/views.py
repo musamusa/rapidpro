@@ -900,16 +900,11 @@ class ContactCRUDL(SmartCRUDL):
             if self.system_group and 'search' not in self.request.GET:
                 self.object_list.count = lambda: counts[self.system_group]
 
-            folders = [
-                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
-                     url=reverse('contacts.contact_invite')),
-            ]
-
             org_config = self.org.config_json()
 
             context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = None
-            context['folders'] = folders
+            context['folders'] = []
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 
@@ -967,16 +962,11 @@ class ContactCRUDL(SmartCRUDL):
             if self.system_group and 'search' not in self.request.GET:
                 self.object_list.count = lambda: counts[self.system_group]
 
-            folders = [
-                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
-                     url=reverse('contacts.contact_invite')),
-            ]
-
             org_config = self.org.config_json()
 
             context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = []
-            context['folders'] = folders
+            context['folders'] = []
             context['current_group'] = group
             return context
 

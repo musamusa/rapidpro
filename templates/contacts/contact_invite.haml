@@ -27,13 +27,6 @@
           #sidebar-nav
             %ul.nav.nav-list
               %li.nav-header
-                -trans "Contacts"
-              - for folder in folders
-                %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
-                  %a{'href':'{{folder.url}}'}
-                    {{folder.label}} ({{ folder.count | intcomma }})
-
-              %li.nav-header
                 -trans "Groups"
               - for group in groups
                 %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
