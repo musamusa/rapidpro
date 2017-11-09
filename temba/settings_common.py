@@ -711,6 +711,8 @@ GROUP_PERMISSIONS = {
         'contacts.contact_update_fields',
         'contacts.contact_update_fields_input',
         'contacts.contact_invite',
+        'contacts.contact_invite_filter',
+        'contacts.contact_invite_send',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -1112,6 +1114,7 @@ SEND_CHATBASE = False
 SEND_CALLS = False
 
 MESSAGE_HANDLERS = [
+    'temba.contacts.handlers.InvitationHandler',
     'temba.triggers.handlers.TriggerHandler',
     'temba.flows.handlers.FlowHandler',
     'temba.triggers.handlers.CatchAllHandler'
@@ -1194,3 +1197,7 @@ CHATBASE_API_URL = 'https://chatbase.com/api/message'
 
 DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this ' \
                      'number? Please reply "Y" for yes or "N" for no.'
+
+INVITATION_ACCEPT_REPLY = 'y'
+INVITATION_REJECT_REPLY = 'n'
+INVITATION_REJECTED_GROUP_NAME = 'Contacts Rejected'

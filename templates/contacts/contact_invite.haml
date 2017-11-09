@@ -92,25 +92,31 @@
                             %td.field
                               {{ object|contact_field:field.key }}
 
-                        %td.value-received.field_received
+                        %td.value-received.field_received.value-date
                           %nobr
                             {{ object.created_on|gmail_time }}
 
-                        %td.value-received.field_received
+                        %td.value-received.field_received.value-date
                           %nobr
                             -if object.invited_on
-                              {{ object.invited_on }}
+                              {{ object.invited_on|gmail_time }}
                             -else
                               -trans "-"
 
                         %td.value-received.field_received.button-invitation
                           %nobr
                             -if not object.invited_on
-                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this))', data-id: '{{ object.id }}'}
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this), false)', data-id: '{{ object.id }}'}
                                 -trans "Invite"
-                            -else
-                              %a{href: 'javascript:;', onclick: 'inviteContact($(this))', data-id: '{{ object.id }}'}
+                            -elif object.invitation_status == 'S'
+                              %a{href: 'javascript:;', onclick: 'inviteContact($(this), true)', data-id: '{{ object.id }}'}
                                 -trans "Re-Invite"
+                            -elif object.invitation_status == 'A'
+                              %a{style: 'color: green'}
+                                -trans "Accepted"
+                            -elif object.invitation_status == 'R'
+                              %a{style: 'color: red'}
+                                -trans "Rejected"
 
                         // This is needed for action buttons
                         %td.hide
@@ -183,6 +189,10 @@
       width: 55%;
     }
 
+    .span9 .object-list tbody td.value-date, .span9 .object-list tbody td.button-invitation {
+      text-align: center;
+    }
+
     .modal .modal-body .control-group .control-label {
       display:none;
     }
@@ -233,8 +243,16 @@
       countChar(textarea_invitation_text, true);
     });
 
-    function inviteContact(element) {
+    function inviteContact(element, re_invitation) {
       var contactId = element[0].dataset.id;
+
+      if (!re_invitation) {
+        element.removeClass('btn');
+        element.removeClass('btn-primary');
+        element.attr('onclick', 'inviteContact($(this), true)');
+        element.removeAttr('data-id');
+        element.html('Re-Invite');
+      }
 
       var headers = { 'X-PJAX': true };
       var type = 'GET';
@@ -377,7 +395,7 @@
     $('.select-row').live('mouseover', function(){
       url = '/contact/read/' + $(this).data('uuid');
 
-      $(this).find('td').not(':first-child').not('.button-invitation').each(function(){
+      $(this).find('td').not('.button-invitation').each(function(){
         $(this).attr('onClick', "document.location.href=url;");
       });
     });

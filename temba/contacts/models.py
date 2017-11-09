@@ -31,6 +31,7 @@ from temba.utils.export import BaseExportAssetStore, BaseExportTask, TableExport
 from temba.utils.profiler import time_monitor
 from temba.utils.text import clean_string, truncate
 from temba.values.models import Value
+from temba_expressions.utils import tokenize
 
 
 logger = logging.getLogger(__name__)
@@ -462,6 +463,16 @@ NEW_CONTACT_VARIABLE = "@new_contact"
 
 @six.python_2_unicode_compatible
 class Contact(TembaModel):
+    INVITATION_SENT = 'S'
+    INVITATION_ACCEPTED = 'A'
+    INVITATION_REJECTED = 'R'
+
+    INVITATION_STATUS = (
+        (INVITATION_SENT, _('Sent')),
+        (INVITATION_ACCEPTED, _('Accepted')),
+        (INVITATION_REJECTED, _('Rejected')),
+    )
+
     name = models.CharField(verbose_name=_("Name"), max_length=128, blank=True, null=True,
                             help_text=_("The name of this contact"))
 
@@ -482,6 +493,9 @@ class Contact(TembaModel):
 
     invited_on = models.DateTimeField(editable=False, blank=True, null=True,
                                       help_text="When this item was originally invited")
+
+    invitation_status = models.CharField(choices=INVITATION_STATUS, null=True, max_length=1,
+                                         help_text="The invitation status of this contact")
 
     simulation = False
 
@@ -776,6 +790,40 @@ class Contact(TembaModel):
 
     def set_cached_field_value(self, key, value):
         setattr(self, '__field__%s' % key, value)
+
+    @classmethod
+    def find_and_handle(cls, msg):
+        from django.conf import settings
+
+        reply = msg.text
+        words = tokenize(reply)
+
+        handled = False
+        contact = msg.contact
+
+        if not words:
+            return handled
+
+        str_reply = '%s' % reply
+
+        if contact.is_test:
+            handled = False
+        else:
+            existing_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
+                                                        name=settings.INVITATION_REJECTED_GROUP_NAME)
+
+            if contact.invited_on and str_reply.lower() == settings.INVITATION_ACCEPT_REPLY:
+                contact.invitation_status = Contact.INVITATION_ACCEPTED
+                contact.save(update_fields=['invitation_status'])
+                handled = True
+            elif contact.invited_on and str_reply.lower() == settings.INVITATION_REJECT_REPLY:
+                contact.invitation_status = Contact.INVITATION_REJECTED
+                contact.save(update_fields=['invitation_status'])
+                contact.clear_all_groups(msg.contact.created_by)
+                existing_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
+                handled = True
+
+        return handled
 
     def handle_update(self, attrs=(), urns=(), field=None, group=None):
         """

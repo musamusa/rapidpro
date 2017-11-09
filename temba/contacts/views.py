@@ -915,7 +915,6 @@ class ContactCRUDL(SmartCRUDL):
         def get(self, *args, **kwargs):
             from datetime import datetime
 
-            org = self.request.user.get_org()
             org_config = self.org.config_json()
             contact_id = kwargs['id']
 
@@ -926,7 +925,8 @@ class ContactCRUDL(SmartCRUDL):
                 existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
                 invited_on = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                 existing_contact.invited_on = invited_on
-                existing_contact.save(update_fields=['invited_on'])
+                existing_contact.invitation_status = Contact.INVITATION_SENT
+                existing_contact.save(update_fields=['invited_on', 'invitation_status'])
                 result = dict(sent=True)
             else:
                 result = dict(sent=False)
@@ -1079,7 +1079,7 @@ class ContactCRUDL(SmartCRUDL):
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = UpdateContactForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")
