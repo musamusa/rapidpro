@@ -889,7 +889,7 @@ class ContactCRUDL(SmartCRUDL):
                 org_config = self.org.config_json()
                 org_config['invitation_text'] = invitation_text[:160]
                 self.org.config = json.dumps(org_config)
-                self.org.save()
+                self.org.save(update_fields=['config'])
                 messages.success(request, _('Text saved'))
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
@@ -949,7 +949,7 @@ class ContactCRUDL(SmartCRUDL):
                 org_config = self.org.config_json()
                 org_config['invitation_text'] = invitation_text[:160]
                 self.org.config = json.dumps(org_config)
-                self.org.save()
+                self.org.save(update_fields=['config'])
                 messages.success(request, _('Text saved'))
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
