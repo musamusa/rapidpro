@@ -148,8 +148,11 @@ class ContactListView(OrgPermsMixin, SmartListView):
         contacts = list(context['object_list'])
         Contact.bulk_cache_initialize(org, contacts, for_show_only=True)
 
+        all_groups = self.get_user_groups(org)
+
         context['contacts'] = contacts
-        context['groups'] = self.get_user_groups(org)
+        context['groups'] = all_groups
+        context['first_group'] = all_groups[0] if all_groups else None
         context['folders'] = folders
         context['has_contacts'] = contacts or org.has_contacts()
         context['search_error'] = self.search_error
@@ -934,6 +937,7 @@ class ContactCRUDL(SmartCRUDL):
             return HttpResponse(json.dumps(result), content_type='application/json')
 
     class InviteFilter(ContactActionMixin, ContactListView):
+        title = _("Invite Participants")
         template_name = 'contacts/contact_invite_filter.haml'
 
         def get_gear_links(self):

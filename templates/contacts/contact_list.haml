@@ -28,8 +28,8 @@
               %a#id_import_contacts.btn.btn-primary.btn-block{href:"{% url 'contacts.contact_import' %}"}
                 -trans "Import Contacts"
 
-            - if org_perms.contacts.contact_invite
-              %a#id_import_contacts.btn.btn-default.btn-block{href:"{% url 'contacts.contact_invite' %}"}
+            - if org_perms.contacts.contact_invite and first_group
+              %a#id_import_contacts.btn.btn-default.btn-block{href:'{% url "contacts.contact_invite_filter" first_group.uuid %}'}
                 -trans "Invite Participants"
 
           #sidebar-nav

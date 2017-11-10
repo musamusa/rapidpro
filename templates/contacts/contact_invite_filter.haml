@@ -2,21 +2,9 @@
 -load smartmin
 -load i18n
 
--block title
-  -if current_group.is_dynamic
-    // TODO new icon for dynamic groups?
-    %span.title-icon
-      .glyph.icon-users-2
-  -else
-    %span.title-icon
-      .glyph.icon-users-2
-  %h2.header-margin
-    {{current_group.name}}
-
-  -if current_group.is_dynamic
-    %h5.header-margin
-      -trans "Dynamic group based on:"
-      %i {{current_group.query}}
+-block title-icon
+  %span.title-icon
+    .glyph.icon-users
 
 -block post-content
   {{ block.super }}

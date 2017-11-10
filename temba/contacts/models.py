@@ -809,14 +809,14 @@ class Contact(TembaModel):
         if contact.is_test:
             handled = False
         else:
-            existing_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
-                                                        name=settings.INVITATION_REJECTED_GROUP_NAME)
-
             if contact.invited_on and str_reply.lower() == settings.INVITATION_ACCEPT_REPLY:
                 contact.invitation_status = Contact.INVITATION_ACCEPTED
                 contact.save(update_fields=['invitation_status'])
                 handled = True
             elif contact.invited_on and str_reply.lower() == settings.INVITATION_REJECT_REPLY:
+                existing_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
+                                                            name=settings.INVITATION_REJECTED_GROUP_NAME)
+
                 contact.invitation_status = Contact.INVITATION_REJECTED
                 contact.save(update_fields=['invitation_status'])
                 contact.clear_all_groups(msg.contact.created_by)

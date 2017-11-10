@@ -1200,4 +1200,4 @@ DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasiona
 
 INVITATION_ACCEPT_REPLY = 'y'
 INVITATION_REJECT_REPLY = 'n'
-INVITATION_REJECTED_GROUP_NAME = 'Contacts Rejected'
+INVITATION_REJECTED_GROUP_NAME = 'Opted-Out'
