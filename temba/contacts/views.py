@@ -887,11 +887,10 @@ class ContactCRUDL(SmartCRUDL):
 
             if invitation_text:
                 org_config = self.org.config_json()
-                if org_config:
-                    org_config.update(dict(invitation_text=invitation_text[:160]))
-                    self.org.config = json.dumps(org_config)
-                    self.org.save()
-                    messages.success(request, _('Text saved'))
+                org_config['invitation_text'] = invitation_text[:160]
+                self.org.config = json.dumps(org_config)
+                self.org.save()
+                messages.success(request, _('Text saved'))
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
@@ -948,11 +947,10 @@ class ContactCRUDL(SmartCRUDL):
 
             if invitation_text:
                 org_config = self.org.config_json()
-                if org_config:
-                    org_config.update(dict(invitation_text=invitation_text[:160]))
-                    self.org.config = json.dumps(org_config)
-                    self.org.save()
-                    messages.success(request, _('Text saved'))
+                org_config['invitation_text'] = invitation_text[:160]
+                self.org.config = json.dumps(org_config)
+                self.org.save()
+                messages.success(request, _('Text saved'))
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
