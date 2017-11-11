@@ -1070,6 +1070,37 @@ class OrgCRUDL(SmartCRUDL):
 
             return links
 
+        def form_valid(self, form):
+            self.object = form.save(commit=False)
+
+            try:
+                json.loads(form.cleaned_data.get('config'))
+                json.loads(form.cleaned_data.get('webhook'))
+
+                self.object = self.pre_save(self.object)
+                self.save(self.object)
+                self.object = self.post_save(self.object)
+
+                messages.success(self.request, self.derive_success_message())
+                if 'HTTP_X_FORMAX' not in self.request.META:
+                    return HttpResponseRedirect(self.get_success_url())
+                else:
+                    response = self.render_to_response(self.get_context_data(form=form))
+                    response['REDIRECT'] = self.get_success_url()
+                    return response
+
+            except ValueError as e:
+                message = str(e).capitalize()
+                errors = self.form._errors.setdefault(forms.forms.NON_FIELD_ERRORS, forms.utils.ErrorList())
+                errors.append(message)
+                return self.render_to_response(self.get_context_data(form=form))
+
+            except IntegrityError as e:
+                message = str(e).capitalize()
+                errors = self.form._errors.setdefault(forms.forms.NON_FIELD_ERRORS, forms.utils.ErrorList())
+                errors.append(message)
+                return self.render_to_response(self.get_context_data(form=form))
+
         def post(self, request, *args, **kwargs):
             if 'status' in request.POST:
                 if request.POST.get('status', None) == SUSPENDED:
