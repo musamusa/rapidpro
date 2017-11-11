@@ -1198,6 +1198,11 @@ CHATBASE_API_URL = 'https://chatbase.com/api/message'
 DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this ' \
                      'number? Please reply "Y" for yes or "N" for no.'
 
+DEFAULT_MSG_INVITATION_ACCEPTED = 'Thank you for confirming that you agree to receive occasional messages from us.'
+DEFAULT_MSG_INVITATION_REJECTED = 'We will not send you further automated messages. If you change you mind, please ' \
+                                  'reply with "yes" to opt in to receiving occasional automated messages from us.'
+
 INVITATION_ACCEPT_REPLY = 'y'
 INVITATION_REJECT_REPLY = 'n'
+INVITATION_ACCEPTED_GROUP_NAME = 'Opted-In'
 INVITATION_REJECTED_GROUP_NAME = 'Opted-Out'

@@ -806,21 +806,45 @@ class Contact(TembaModel):
 
         str_reply = '%s' % reply
 
+        another_possible_responses = dict(yes='y', yep='y', yeah='y', no='n', nops='n')
+        another_possible_responses['not'] = 'n'
+
         if contact.is_test:
             handled = False
         else:
-            if contact.invited_on and str_reply.lower() == settings.INVITATION_ACCEPT_REPLY:
+            was_accepted = str_reply.lower() == settings.INVITATION_ACCEPT_REPLY \
+                           or another_possible_responses.get(str_reply.lower()) == settings.INVITATION_ACCEPT_REPLY
+
+            was_rejected = str_reply.lower() == settings.INVITATION_REJECT_REPLY \
+                           or another_possible_responses.get(str_reply.lower()) == settings.INVITATION_REJECT_REPLY
+
+            existing_rejected_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
+                                                                 name=settings.INVITATION_REJECTED_GROUP_NAME)
+
+            existing_accepted_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
+                                                                 name=settings.INVITATION_ACCEPTED_GROUP_NAME)
+
+            if contact.invited_on and was_accepted and contact.invitation_status != Contact.INVITATION_ACCEPTED:
                 contact.invitation_status = Contact.INVITATION_ACCEPTED
                 contact.save(update_fields=['invitation_status'])
-                handled = True
-            elif contact.invited_on and str_reply.lower() == settings.INVITATION_REJECT_REPLY:
-                existing_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
-                                                            name=settings.INVITATION_REJECTED_GROUP_NAME)
+                contact.send(text=settings.DEFAULT_MSG_INVITATION_ACCEPTED, user=msg.contact.created_by,
+                             trigger_send=True)
 
+                # Update groups
+                existing_rejected_group.remove_contacts(user=msg.contact.created_by, contacts=[contact])
+                existing_accepted_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
+
+                handled = True
+            elif contact.invited_on and was_rejected and contact.invitation_status == Contact.INVITATION_SENT:
                 contact.invitation_status = Contact.INVITATION_REJECTED
                 contact.save(update_fields=['invitation_status'])
+                contact.send(text=settings.DEFAULT_MSG_INVITATION_REJECTED, user=msg.contact.created_by,
+                             trigger_send=True)
+
+                # Update groups
                 contact.clear_all_groups(msg.contact.created_by)
-                existing_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
+                existing_rejected_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
+
                 handled = True
 
         return handled
