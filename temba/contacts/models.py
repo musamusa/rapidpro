@@ -842,7 +842,7 @@ class Contact(TembaModel):
                              trigger_send=True)
 
                 # Update groups
-                contact.clear_all_groups(msg.contact.created_by)
+                existing_accepted_group.remove_contacts(user=msg.contact.created_by, contacts=[contact])
                 existing_rejected_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
 
                 handled = True
