@@ -148,11 +148,8 @@ class ContactListView(OrgPermsMixin, SmartListView):
         contacts = list(context['object_list'])
         Contact.bulk_cache_initialize(org, contacts, for_show_only=True)
 
-        all_groups = self.get_user_groups(org)
-
         context['contacts'] = contacts
-        context['groups'] = all_groups
-        context['first_group'] = all_groups[0] if all_groups else None
+        context['groups'] = self.get_user_groups(org)
         context['folders'] = folders
         context['has_contacts'] = contacts or org.has_contacts()
         context['search_error'] = self.search_error
@@ -904,9 +901,14 @@ class ContactCRUDL(SmartCRUDL):
 
             org_config = self.org.config_json()
 
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
+
             context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = None
-            context['folders'] = []
+            context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 
@@ -966,9 +968,14 @@ class ContactCRUDL(SmartCRUDL):
 
             org_config = self.org.config_json()
 
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
+
             context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
             context['actions'] = []
-            context['folders'] = []
+            context['folders'] = folders
             context['current_group'] = group
             return context
 
@@ -1052,7 +1059,7 @@ class ContactCRUDL(SmartCRUDL):
     class Create(ModalMixin, OrgPermsMixin, SmartCreateView):
         form_class = ContactForm
         exclude = ('is_active', 'uuid', 'language', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
         success_message = ''
         submit_button_name = _("Create")
 
