@@ -320,6 +320,11 @@
     :javascript
       $(document).ready(function() {
 
+        $('a.close[data-dismiss="alert"]').click(function() {
+          var elem = $(this);
+          elem.parent().remove();
+        });
+
         $('ul#top-menu li a').mouseenter(function() {
           var elem = $(this);
           elem.parent().children('.custom-tooltip').addClass('active');

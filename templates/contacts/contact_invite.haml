@@ -27,6 +27,13 @@
           #sidebar-nav
             %ul.nav.nav-list
               %li.nav-header
+                -trans "Contacts"
+              - for folder in folders
+                %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
+                  %a{'href':'{{folder.url}}'}
+                    {{folder.label}} ({{ folder.count | intcomma }})
+
+              %li.nav-header
                 -trans "Groups"
               - for group in groups
                 %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
@@ -44,7 +51,7 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
-              %form{id: 'opt-in', class: 'span5', action: '', method: 'POST'}
+              %form{id: 'opt-in', class: 'span6', action: '', method: 'POST'}
 
                 %label
                   -trans "Invitation text"
