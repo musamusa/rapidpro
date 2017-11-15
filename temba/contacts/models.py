@@ -463,6 +463,10 @@ NEW_CONTACT_VARIABLE = "@new_contact"
 
 @six.python_2_unicode_compatible
 class Contact(TembaModel):
+    ORDER_SENT = 1
+    ORDER_ACCEPTED = 2
+    ORDER_REJECTED = 3
+
     INVITATION_SENT = 'S'
     INVITATION_ACCEPTED = 'A'
     INVITATION_REJECTED = 'R'
@@ -496,6 +500,8 @@ class Contact(TembaModel):
 
     invitation_status = models.CharField(choices=INVITATION_STATUS, null=True, max_length=1,
                                          help_text="The invitation status of this contact")
+
+    invitation_order = models.IntegerField(editable=False, blank=True, null=True, help_text="Order", default=0)
 
     simulation = False
 
@@ -826,7 +832,8 @@ class Contact(TembaModel):
 
             if contact.invited_on and was_accepted and contact.invitation_status != Contact.INVITATION_ACCEPTED:
                 contact.invitation_status = Contact.INVITATION_ACCEPTED
-                contact.save(update_fields=['invitation_status'])
+                contact.invitation_order = Contact.ORDER_ACCEPTED
+                contact.save(update_fields=['invitation_status', 'invitation_order'])
                 contact.send(text=settings.DEFAULT_MSG_INVITATION_ACCEPTED, user=msg.contact.created_by,
                              trigger_send=True)
 
@@ -837,7 +844,8 @@ class Contact(TembaModel):
                 handled = True
             elif contact.invited_on and was_rejected and contact.invitation_status == Contact.INVITATION_SENT:
                 contact.invitation_status = Contact.INVITATION_REJECTED
-                contact.save(update_fields=['invitation_status'])
+                contact.invitation_order = Contact.ORDER_REJECTED
+                contact.save(update_fields=['invitation_status', 'invitation_order'])
                 contact.send(text=settings.DEFAULT_MSG_INVITATION_REJECTED, user=msg.contact.created_by,
                              trigger_send=True)
 

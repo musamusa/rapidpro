@@ -878,7 +878,7 @@ class ContactCRUDL(SmartCRUDL):
 
         def get_gear_links(self):
             return []
-        
+
         def post(self, request, *args, **kwargs):
             invitation_text = request.POST.get('invitation-text', None)
 
@@ -912,6 +912,24 @@ class ContactCRUDL(SmartCRUDL):
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 
+        def get_queryset(self, **kwargs):
+            org = self.request.user.get_org()
+            group = self.derive_group()
+            self.search_error = None
+
+            # contact list views don't use regular field searching but use more complex contact searching
+            search_query = self.request.GET.get('search', None)
+            if search_query:
+                try:
+                    qs = Contact.search(org, search_query, group)
+                except SearchException as e:
+                    self.search_error = six.text_type(e)
+                    qs = Contact.objects.none()
+            else:
+                qs = group.contacts.all()
+
+            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
+
     class InviteSend(OrgObjPermsMixin, SmartReadView):
         title = _("Invite Send")
         slug_url_kwarg = 'id'
@@ -930,7 +948,8 @@ class ContactCRUDL(SmartCRUDL):
                 invited_on = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                 existing_contact.invited_on = invited_on
                 existing_contact.invitation_status = Contact.INVITATION_SENT
-                existing_contact.save(update_fields=['invited_on', 'invitation_status'])
+                existing_contact.invitation_order = Contact.ORDER_SENT
+                existing_contact.save(update_fields=['invited_on', 'invitation_status', 'invitation_order'])
                 result = dict(sent=True)
             else:
                 result = dict(sent=False)
@@ -985,6 +1004,24 @@ class ContactCRUDL(SmartCRUDL):
 
         def derive_group(self):
             return ContactGroup.user_groups.get(uuid=self.kwargs['group'])
+
+        def get_queryset(self, **kwargs):
+            org = self.request.user.get_org()
+            group = self.derive_group()
+            self.search_error = None
+
+            # contact list views don't use regular field searching but use more complex contact searching
+            search_query = self.request.GET.get('search', None)
+            if search_query:
+                try:
+                    qs = Contact.search(org, search_query, group)
+                except SearchException as e:
+                    self.search_error = six.text_type(e)
+                    qs = Contact.objects.none()
+            else:
+                qs = group.contacts.all()
+
+            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
 
     class Blocked(ContactActionMixin, ContactListView):
         title = _("Blocked Contacts")
