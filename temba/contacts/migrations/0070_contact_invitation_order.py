@@ -14,6 +14,7 @@ def populate_contact_field_invitation_order(apps, schema_editor):
     num_updated = 0
 
     for contact in all_contacts:
+        invitation_order = 0
         if contact.invitation_status == 'S':
             invitation_order = 1
         elif contact.invitation_status == 'A':
