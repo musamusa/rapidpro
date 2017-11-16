@@ -1199,7 +1199,7 @@ DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasiona
                      'number? Please reply "Y" for yes or "N" for no.'
 
 DEFAULT_MSG_INVITATION_ACCEPTED = 'Thank you for confirming that you agree to receive occasional messages from us.'
-DEFAULT_MSG_INVITATION_REJECTED = 'We will not send you further automated messages. If you change you mind, please ' \
+DEFAULT_MSG_INVITATION_REJECTED = 'We will not send you further automated messages. If you change your mind, please ' \
                                   'reply with "yes" to opt in to receiving occasional automated messages from us.'
 
 INVITATION_ACCEPT_REPLY = 'y'
