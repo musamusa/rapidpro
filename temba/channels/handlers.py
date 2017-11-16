@@ -2458,7 +2458,6 @@ class FacebookHandler(BaseChannelHandler):
 
     def post(self, request, *args, **kwargs):
         from temba.msgs.models import Msg
-        from temba.msgs.models import HANDLED
 
         channel = self.lookup_channel(kwargs)
         if not channel:
