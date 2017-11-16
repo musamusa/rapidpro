@@ -119,10 +119,10 @@
                               %a{href: 'javascript:;', onclick: 'inviteContact($(this), true)', data-id: '{{ object.id }}'}
                                 -trans "Re-Invite"
                             -elif object.invitation_status == 'A'
-                              %a{style: 'color: green'}
+                              %a.not-link{style: 'color: green;'}
                                 -trans "Accepted"
                             -elif object.invitation_status == 'R'
-                              %a{style: 'color: red'}
+                              %a.not-link{style: 'color: red;'}
                                 -trans "Rejected"
 
                         // This is needed for action buttons
@@ -232,6 +232,14 @@
       position: absolute;
       top: 0;
       right: 0;
+    }
+
+    a.not-link {
+      cursor: text;
+    }
+
+    a.not-link:hover {
+      text-decoration: none;
     }
 
 
