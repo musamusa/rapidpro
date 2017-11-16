@@ -812,7 +812,7 @@ class Contact(TembaModel):
 
         str_reply = '%s' % reply
 
-        another_possible_responses = dict(yes='y', yep='y', yeah='y', no='n', nops='n')
+        another_possible_responses = dict(yes='y', yep='y', yeah='y', yup='y', no='n', nops='n', nope='n', nah='n')
         another_possible_responses['not'] = 'n'
 
         if contact.is_test:
