@@ -59,7 +59,7 @@
                 %span.counter
                   -trans "0/160"
 
-                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}
+                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}= invitation_text
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
 
               .list-container
@@ -254,7 +254,6 @@
 
     $(document).ready(function() {
       var textarea_invitation_text = $('textarea#invitation-text');
-      textarea_invitation_text.html('{{ invitation_text }}');
       countChar(textarea_invitation_text, true);
     });
 
