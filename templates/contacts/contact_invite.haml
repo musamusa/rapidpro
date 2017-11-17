@@ -113,10 +113,10 @@
                         %td.value-received.field_received.button-invitation
                           %nobr
                             -if not object.invited_on
-                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this), false)', data-id: '{{ object.id }}'}
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this), false);return false;', data-id: '{{ object.id }}'}
                                 -trans "Invite"
                             -elif object.invitation_status == 'S'
-                              %a{href: 'javascript:;', onclick: 'inviteContact($(this), true)', data-id: '{{ object.id }}'}
+                              %a{href: 'javascript:;', onclick: 'inviteContact($(this), true);return false;', data-id: '{{ object.id }}'}
                                 -trans "Re-Invite"
                             -elif object.invitation_status == 'A'
                               %a.not-link{style: 'color: green;'}
@@ -258,12 +258,12 @@
     });
 
     function inviteContact(element, re_invitation) {
-      var contactId = element[0].dataset.id;
+      var contactId = element.data('id');
 
       if (!re_invitation) {
         element.removeClass('btn');
         element.removeClass('btn-primary');
-        element.attr('onclick', 'inviteContact($(this), true)');
+        element.attr('onclick', 'inviteContact($(this), true);return false;');
         element.html('Re-Invite');
       }
 
