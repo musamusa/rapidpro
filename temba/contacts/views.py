@@ -336,7 +336,8 @@ class UpdateContactForm(ContactForm):
 class ContactCRUDL(SmartCRUDL):
     model = Contact
     actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
-               'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete', 'history')
+               'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
+               'history', 'invite', 'invite_filter', 'invite_send')
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -870,6 +871,158 @@ class ContactCRUDL(SmartCRUDL):
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 
+    class Invite(ContactActionMixin, ContactListView):
+        title = _("Invite Participants")
+        system_group = ContactGroup.TYPE_ALL
+        template_name = 'contacts/contact_invite.haml'
+
+        def get_gear_links(self):
+            return []
+
+        def post(self, request, *args, **kwargs):
+            invitation_text = request.POST.get('invitation-text', None)
+
+            if invitation_text:
+                org_config = self.org.config_json()
+                org_config['invitation_text'] = invitation_text[:160]
+                self.org.config = json.dumps(org_config)
+                self.org.save(update_fields=['config'])
+                messages.success(request, _('Text saved'))
+
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(ContactCRUDL.Invite, self).get_context_data(*args, **kwargs)
+            org = self.request.user.get_org()
+            counts = ContactGroup.get_system_group_counts(org)
+
+            if self.system_group and 'search' not in self.request.GET:
+                self.object_list.count = lambda: counts[self.system_group]
+
+            org_config = self.org.config_json()
+
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
+
+            context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
+            context['actions'] = None
+            context['folders'] = folders
+            context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
+            return context
+
+        def get_queryset(self, **kwargs):
+            org = self.request.user.get_org()
+            group = self.derive_group()
+            self.search_error = None
+
+            # contact list views don't use regular field searching but use more complex contact searching
+            search_query = self.request.GET.get('search', None)
+            if search_query:
+                try:
+                    qs = Contact.search(org, search_query, group)
+                except SearchException as e:
+                    self.search_error = six.text_type(e)
+                    qs = Contact.objects.none()
+            else:
+                qs = group.contacts.all()
+
+            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
+
+    class InviteSend(OrgObjPermsMixin, SmartReadView):
+        title = _("Invite Send")
+        slug_url_kwarg = 'id'
+
+        def get(self, *args, **kwargs):
+            from datetime import datetime
+
+            org_config = self.org.config_json()
+            contact_id = kwargs['id']
+
+            existing_contact = Contact.objects.filter(id=contact_id).first()
+            invitation_text = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
+
+            if existing_contact and invitation_text:
+                existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
+                invited_on = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                existing_contact.invited_on = invited_on
+                existing_contact.invitation_status = Contact.INVITATION_SENT
+                existing_contact.invitation_order = Contact.ORDER_SENT
+                existing_contact.save(update_fields=['invited_on', 'invitation_status', 'invitation_order'])
+                result = dict(sent=True)
+            else:
+                result = dict(sent=False)
+
+            return HttpResponse(json.dumps(result), content_type='application/json')
+
+    class InviteFilter(ContactActionMixin, ContactListView):
+        title = _("Invite Participants")
+        template_name = 'contacts/contact_invite_filter.haml'
+
+        def get_gear_links(self):
+            return []
+
+        def post(self, request, *args, **kwargs):
+            invitation_text = request.POST.get('invitation-text', None)
+
+            if invitation_text:
+                org_config = self.org.config_json()
+                org_config['invitation_text'] = invitation_text[:160]
+                self.org.config = json.dumps(org_config)
+                self.org.save(update_fields=['config'])
+                messages.success(request, _('Text saved'))
+
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(ContactCRUDL.InviteFilter, self).get_context_data(*args, **kwargs)
+            org = self.request.user.get_org()
+            group = self.derive_group()
+
+            counts = ContactGroup.get_system_group_counts(org)
+
+            if self.system_group and 'search' not in self.request.GET:
+                self.object_list.count = lambda: counts[self.system_group]
+
+            org_config = self.org.config_json()
+
+            folders = [
+                dict(count=counts[ContactGroup.TYPE_ALL], label=_("All Contacts"),
+                     url=reverse('contacts.contact_invite')),
+            ]
+
+            context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
+            context['actions'] = []
+            context['folders'] = folders
+            context['current_group'] = group
+            return context
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r'^%s/%s/(?P<group>[^/]+)/$' % (path, action)
+
+        def derive_group(self):
+            return ContactGroup.user_groups.get(uuid=self.kwargs['group'])
+
+        def get_queryset(self, **kwargs):
+            org = self.request.user.get_org()
+            group = self.derive_group()
+            self.search_error = None
+
+            # contact list views don't use regular field searching but use more complex contact searching
+            search_query = self.request.GET.get('search', None)
+            if search_query:
+                try:
+                    qs = Contact.search(org, search_query, group)
+                except SearchException as e:
+                    self.search_error = six.text_type(e)
+                    qs = Contact.objects.none()
+            else:
+                qs = group.contacts.all()
+
+            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
+
     class Blocked(ContactActionMixin, ContactListView):
         title = _("Blocked Contacts")
         template_name = 'contacts/contact_list.haml'
@@ -943,7 +1096,7 @@ class ContactCRUDL(SmartCRUDL):
     class Create(ModalMixin, OrgPermsMixin, SmartCreateView):
         form_class = ContactForm
         exclude = ('is_active', 'uuid', 'language', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
         success_message = ''
         submit_button_name = _("Create")
 
@@ -972,7 +1125,7 @@ class ContactCRUDL(SmartCRUDL):
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = UpdateContactForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")

@@ -420,7 +420,10 @@ class Org(SmartModel):
 
     def config_json(self):
         if self.config:
-            return json.loads(self.config)
+            try:
+                return json.loads(self.config)
+            except:
+                return dict()
         else:
             return dict()
 
@@ -614,7 +617,10 @@ class Org(SmartModel):
         """
         Returns a string with webhook url.
         """
-        return json.loads(self.webhook).get('url') if self.webhook else None
+        try:
+            return json.loads(self.webhook).get('url') if self.webhook else None
+        except:
+            return None
 
     def get_webhook_headers(self):
         """
@@ -622,7 +628,10 @@ class Org(SmartModel):
         {'Authorization': 'Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==',
          'X-My-Special-Header': 'woo'}
         """
-        return json.loads(self.webhook).get('headers', dict()) if self.webhook else dict()
+        try:
+            return json.loads(self.webhook).get('headers', dict()) if self.webhook else dict()
+        except:
+            return dict()
 
     def get_channel_countries(self):
         channel_countries = []

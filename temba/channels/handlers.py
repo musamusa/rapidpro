@@ -2560,6 +2560,7 @@ class FacebookHandler(BaseChannelHandler):
                         postback = None
                         referrer_id = None
                         trigger_extra = None
+                        location = None
 
                         if 'message' in envelope:
                             if 'text' in envelope['message']:
@@ -2573,6 +2574,10 @@ class FacebookHandler(BaseChannelHandler):
                                         if 'title' in attachment and attachment['title']:
                                             urls.append(attachment['title'])
                                         urls.append(attachment['url'])
+
+                                    if attachment['payload'] and attachment.get('type') == 'location':
+                                        location = '%s,%s' % (attachment['payload']['coordinates']['lat'],
+                                                              attachment['payload']['coordinates']['long'])
 
                                 content = '\n'.join(urls)
 
@@ -2618,7 +2623,12 @@ class FacebookHandler(BaseChannelHandler):
                             msg_date = datetime.fromtimestamp(envelope['timestamp'] / 1000.0).replace(tzinfo=pytz.utc)
                             msg = Msg.create_incoming(channel, urn, content, date=msg_date, contact=contact)
                             Msg.objects.filter(pk=msg.id).update(external_id=envelope['message']['mid'])
+
                             status.append("Msg %d accepted." % msg.id)
+
+                            if location:
+                                Msg.create_incoming(channel=channel, urn=urn, text=location, date=msg_date, 
+                                                    contact=contact)
 
                         # conversation started with a referrer_id that catches a trigger
                         elif referrer_id:
