@@ -993,6 +993,10 @@ class FlowCRUDL(SmartCRUDL):
                 links.append(dict(title=_("Export"),
                                   href='%s?flow=%s' % (reverse('orgs.org_export'), flow.id)))
 
+            if self.has_org_perm('orgs.org_export'):
+                links.append(dict(title=_("Export to PDF"),
+                                  href='%s?flow=%s' % (reverse('orgs.org_export'), flow.id)))
+
             if self.has_org_perm('flows.flow_revisions'):
                 links.append(dict(divider=True)),
                 links.append(dict(title=_("Revision History"),
