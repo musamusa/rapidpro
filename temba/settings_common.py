@@ -453,6 +453,7 @@ PERMISSIONS = {
                    'simulate',
                    'upload_action_recording',
                    'upload_media_action',
+                   'pdf_export',
                    ),
 
     'flows.ruleset': ('analytics',

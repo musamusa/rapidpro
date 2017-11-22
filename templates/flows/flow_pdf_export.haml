@@ -10,6 +10,11 @@
   -compress css
     {% lessblock %}
       :plain
+
+        .print-header, .logo, #header, #big-logo, ul#top-menu, .org-header, .languages, #show-simulator {
+          display: none;
+        }
+
         .empty {
           margin-left: 30px;
 
@@ -70,10 +75,6 @@
           $('#id_label').select2({minimumResultsForSearch: -1, placeholder: "No Label Selected"});}
       });
       modal.show();
-    });
-
-    $('a.pdf_export_submit').on('click', function() {
-      $('form.pdf_export').submit();
     });
     {% endif %}
 
@@ -156,9 +157,6 @@
 
   -include "msgs/msg_send_modal.html"
   -include "delete_modal_include.html"
-
-  %form{method:'POST', class:'pdf_export hide'}
-    -csrf_token
 
   #drag-helper.hide
     .tail

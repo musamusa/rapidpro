@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action')
+               'upload_media_action', 'pdf_export')
 
     model = Flow
 
@@ -993,9 +993,10 @@ class FlowCRUDL(SmartCRUDL):
                 links.append(dict(title=_("Export"),
                                   href='%s?flow=%s' % (reverse('orgs.org_export'), flow.id)))
 
-            if self.has_org_perm('orgs.org_export'):
+            if self.has_org_perm('flows.flow_pdf_export'):
                 links.append(dict(title=_("Export to PDF"),
-                                  href='%s?flow=%s' % (reverse('orgs.org_export'), flow.id)))
+                                  href='javascript:;',
+                                  js_class='pdf_export_submit'))
 
             if self.has_org_perm('flows.flow_revisions'):
                 links.append(dict(divider=True)),
@@ -1039,6 +1040,82 @@ class FlowCRUDL(SmartCRUDL):
 
         def get_template_names(self):
             return "flows/flow_editor.haml"
+
+        def post(self, request, *args, **kwargs):
+            import os
+            import pdfkit
+
+            self.object = self.get_object()
+
+            protocol = 'http' if settings.DEBUG else 'https'
+
+            csrftoken = '%s' % request.COOKIES.get('csrftoken')
+            sessionid = '%s' % request.session.session_key
+
+            options = {
+                'page-size': 'A4',
+                'margin-top': '0.1in',
+                'margin-right': '0.1in',
+                'margin-bottom': '0.1in',
+                'margin-left': '0.1in',
+                'encoding': "UTF-8",
+                'no-outline': None,
+                'orientation': 'Landscape',
+                'dpi': '600',
+                'viewport-size': '800x800',
+                'javascript-delay': 2000,
+                'cookie': [
+                    ('csrftoken', csrftoken),
+                    ('sessionid', sessionid),
+                ]
+            }
+
+            slug_flow = slugify(self.object.name)
+
+            url = '%s://%s%s' % (protocol, settings.HOSTNAME, reverse('flows.flow_pdf_export', args=[self.object.uuid]))
+            output_dir = '%s/flow_pdf' % settings.MEDIA_ROOT
+            output_path = '%s/%s.pdf' % (output_dir, slug_flow)
+
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            pdfkit.from_url(url=url, output_path=output_path, options=options)
+
+            with open(output_path, 'r') as pdf:
+                response = HttpResponse(pdf.read(), content_type='application/pdf')
+                response['Content-Disposition'] = 'attachment; filename=%s.pdf' % slug_flow
+                return response
+
+    class PdfExport(Read):
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.PdfExport, self).get_context_data(*args, **kwargs)
+
+            context['media_url'] = '%s://%s/' % ('http' if settings.DEBUG else 'https', settings.AWS_BUCKET_DOMAIN)
+
+            # are there pending starts?
+            starting = False
+            start = self.object.starts.all().order_by('-created_on')
+            if start.exists() and start[0].status in [FlowStart.STATUS_STARTING, FlowStart.STATUS_PENDING]:  # pragma: needs cover
+                starting = True
+            context['starting'] = starting
+            context['mutable'] = False
+            if self.has_org_perm('flows.flow_update') and not self.request.user.is_superuser:
+                context['mutable'] = True
+
+            context['has_airtime_service'] = bool(self.object.org.is_connected_to_transferto())
+
+            flow = self.get_object()
+            can_start = True
+            if flow.flow_type == Flow.VOICE and not flow.org.supports_ivr():  # pragma: needs cover
+                can_start = False
+            context['can_start'] = can_start
+            return context
+
+        def get_template_names(self):
+            return "flows/flow_pdf_export.haml"
+
+        def get_gear_links(self):
+            return []
 
     class ExportResults(ModalMixin, OrgPermsMixin, SmartFormView):
         class ExportForm(forms.Form):
