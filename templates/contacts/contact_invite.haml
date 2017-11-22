@@ -13,24 +13,16 @@
   %span.title-icon
     .glyph.icon-users
 
--block above-bar
-  -block top-form
-    %form{method:'get'}
-      %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{search}}"}
-
 -block content
   #pjax
     -block pjax
       .row-fluid
         .span3.sidebox
           %div.contacts{style:"margin-bottom: 10px"}
-            - if org_perms.contacts.contact_import
-              %a#id_import_contacts.btn.btn-primary.btn-block{href:"{% url 'contacts.contact_import' %}"}
-                -trans "Import Contacts"
 
-            - if org_perms.contacts.contact_invite
-              %a#id_import_contacts.btn.btn-default.btn-block{href:'{% url "contacts.contact_invite" %}'}
-                -trans "Invite Participants"
+            - if org_perms.contacts.contact_list
+              %a#id_import_contacts.btn.btn-default.btn-block{href:"{% url 'contacts.contact_list' %}"}
+                -trans "Manage Contacts"
 
           #sidebar-nav
             %ul.nav.nav-list
@@ -45,16 +37,8 @@
                 -trans "Groups"
               - for group in groups
                 %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
-                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                  %a{'href':'{% url "contacts.contact_invite_filter" group.uuid %}'}
                     {{group.label}} ({{ group.count | intcomma }})
-
-          %div{style:"margin-top: 10px"}
-            - if org_perms.contacts.contact_create
-              %a#add-contact.btn.btn-block
-                -trans "Create Contact"
-            - if org_perms.contacts.contactgroup_create
-              %a#id_add_group.btn.btn-block
-                -trans "Create Group"
 
         - if has_contacts
           - block contacts-list
@@ -67,83 +51,20 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
-                - if org_perms.contacts.contact_update
-                  .list-buttons-container
-                    .list-buttons
-                      - if 'block' in actions
-                        %span.btn-group
-                          %a.object-btn-block{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user-block
-                              -trans "Block"
+              %form{id: 'opt-in', class: 'span6', action: '', method: 'POST'}
 
-                      - if 'unblock' in actions
-                        %span.btn-group
-                          %a.object-btn-unblock{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user
-                              -trans "Unblock"
+                %label
+                  -trans "Invitation text"
 
-                      - if 'unstop' in actions
-                        %span.btn-group
-                          %a.object-btn-unstop{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user
-                              -trans "Unstop"
+                %span.counter
+                  -trans "0/160"
 
-                      - if 'delete' in actions
-                        %span.btn-group
-                          %a.contacts-btn-delete{'href':'#'}
-                            %button.btn
-                              .glyph.icon-user-delete
-                              -trans "Delete"
-
-                      - if 'unlabel' in actions
-                        %span.btn-group
-                          %a{'href':'#', onclick:'unlabelObjectRows({{current_group.pk}})'}
-                            %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Remove from Group" %}'}
-                              .glyph.icon-user-remove
-
-                      - if 'label' in actions
-                        %span.btn-group
-                          %button.btn.dropdown-toggle{'data-toggle':"dropdown", data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Contact Groups" %}'}
-                            .glyph.icon-users-2
-                            %span.caret
-                          %ul.dropdown-menu.label-menu
-                            - for group in groups
-                              - if not group.is_dynamic
-                                %li
-                                  %a.lbl-menu{'href':'#', onclick:'addContactToGroup({{group.pk}})', data-id:'{{group.pk}}'}
-                                    .glyph.label-checkbox
-                                    = group.label
-                            - if org_perms.contacts.contactgroup_create
-                              - if groups
-                                %li.divider
-                              %li
-                                %a.lbl-menu.add-group{ href:'#' }
-                                  - trans "New Group..."
-
-                      - if org_perms.msgs.broadcast_send and not reply_disabled
-                        %span.btn-group
-                          %button.send-button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Send Message" %}'}
-                            .glyph.icon-bubble-replu
-
-              .search-details
-                -if search_error
-                  %span.search-error
-                    =search_error
-                -elif search
-                  -blocktrans count results_count=paginator.count
-                    Found {{ results_count }} contact matching <i>{{search}}</i>.
-                    -plural
-                      Found {{ results_count }} contacts matching <i>{{search}}</i>.
+                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}= invitation_text
+                %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
 
               .list-container
                 %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
                   %tr.contacts
-                    - if org_perms.contacts.contact_update
-                      %th
-
                     %th
                     %th
                     -for field in contact_fields
@@ -154,13 +75,17 @@
                       - if object_list
                         -trans "Created On"
 
+                    %th
+                      - if object_list
+                        -trans "Invited On"
+
+                    %th
+                      - if object_list
+                        -trans ""
+
                   %tbody
                     - for object in contacts
                       %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
-
-                        - if org_perms.contacts.contact_update or org_perms.msgs.broadcast_send
-                          %td.contact.checkbox.object-row-checkbox
-                            .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
 
                         %td.value-text.field_name
                           {{ object|name:user_org }}
@@ -174,9 +99,31 @@
                             %td.field
                               {{ object|contact_field:field.key }}
 
-                        %td.value-received.field_received
+                        %td.value-received.field_received.value-date
                           %nobr
                             {{ object.created_on|gmail_time }}
+
+                        %td.value-received.field_received.value-date
+                          %nobr
+                            -if object.invited_on
+                              {{ object.invited_on|gmail_time }}
+                            -else
+                              -trans "-"
+
+                        %td.value-received.field_received.button-invitation
+                          %nobr
+                            -if not object.invited_on
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this), false);return false;', data-id: '{{ object.id }}'}
+                                -trans "Invite"
+                            -elif object.invitation_status == 'S'
+                              %a{href: 'javascript:;', onclick: 'inviteContact($(this), true);return false;', data-id: '{{ object.id }}'}
+                                -trans "Re-Invite"
+                            -elif object.invitation_status == 'A'
+                              %a.not-link{style: 'color: green;'}
+                                -trans "Accepted"
+                            -elif object.invitation_status == 'R'
+                              %a.not-link{style: 'color: red;'}
+                                -trans "Rejected"
 
                         // This is needed for action buttons
                         %td.hide
@@ -185,7 +132,7 @@
                               - for group in object.all_groups.all
                                 - if group.group_type == 'U'
                                   %span.label.label-info.lbl{ data-id: '{{group.id}}'}
-                                    %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                                    %a{'href':'{% url "contacts.contact_invite_filter" group.uuid %}'}
                                       {{group.name}}
 
                     -empty
@@ -246,6 +193,11 @@
 
     .span9 .object-list tbody td.value-text {
       min-width: 30px;
+      width: 55%;
+    }
+
+    .span9 .object-list tbody td.value-date, .span9 .object-list tbody td.button-invitation {
+      text-align: center;
     }
 
     .modal .modal-body .control-group .control-label {
@@ -254,6 +206,40 @@
 
     .search-error {
       color: #da4f49;
+    }
+
+    form#opt-in {
+      margin: 0;
+      position: relative;
+    }
+
+    form#opt-in label {
+      color: #666;
+      font-weight: bold;
+    }
+
+    form#opt-in textarea {
+      width: 100%;
+      height: 100px;
+      resize: none;
+      -webkit-box-sizing:border-box;
+      -moz-box-sizing:border-box;
+      -ms-box-sizing:border-box;
+      box-sizing:border-box;
+    }
+
+    form#opt-in span.counter {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    a.not-link {
+      cursor: text;
+    }
+
+    a.not-link:hover {
+      text-decoration: none;
     }
 
 
@@ -265,6 +251,48 @@
     $(document).on('click', '.search-query', function() {
       $(this).animate({ width: '600px'}, 200);
     });
+
+    $(document).ready(function() {
+      var textarea_invitation_text = $('textarea#invitation-text');
+      countChar(textarea_invitation_text, true);
+    });
+
+    function inviteContact(element, re_invitation) {
+      var contactId = element.data('id');
+
+      if (!re_invitation) {
+        element.removeClass('btn');
+        element.removeClass('btn-primary');
+        element.attr('onclick', 'inviteContact($(this), true);return false;');
+        element.html('Re-Invite');
+      }
+
+      var headers = { 'X-PJAX': true };
+      var type = 'GET';
+      var url = '/contact/invite_send/' + contactId;
+      var data = undefined;
+
+      $.ajax({
+          headers: headers,
+          type: type,
+          url: url,
+          data: data,
+          success: function(data, status, jqXHR) {},
+          error: function(err) {
+            console.log(err);
+          }
+      });
+
+    }
+
+    function countChar(val, onready) {
+      if (onready) {
+        var len = val[0].value.length;
+      } else {
+        var len = val.value.length;
+      }
+      $('span.counter').text(len + '/160');
+    };
 
     {% if org_perms.contacts.contact_create %}
     if($(location).attr('hash') == '#contact') {
@@ -278,18 +306,18 @@
     }
     {% endif %}
 
-    
+
     // keeps track if we are on a link or not
     var onLink = false;
 
     {% if org_perms.contacts.contact_update %}
-    
+
     function addContactToGroup(groupId){
       var contactIds = getCheckedIds();
       var groupedIds = getLabeledIds(groupId);
 
       var addGroup = true;
-    
+
       // find the intersection of contactIds and groupedIds
       var contactIdsWithGroup = intersect(contactIds, groupedIds);
 
@@ -300,7 +328,7 @@
       jQuery.ajaxSettings.traditional = true;
       fetchPJAXContent("", "#pjax", { postData: {objects: contactIds, label: groupId, add: addGroup, action: 'label', pjax: 'true'}, forceReload: true });
     }
-   
+
     {% endif %}
 
     {% if org_perms.contacts.contact_create %}
@@ -328,7 +356,7 @@
       modal.show()
     }
     {% endif %}
-    
+
 
     {% if org_perms.msgs.broadcast_send %}
     $(".send-button").click(function(){
@@ -380,7 +408,7 @@
     $('.select-row').live('mouseover', function(){
       url = '/contact/read/' + $(this).data('uuid');
 
-      $(this).find('td').not(':first-child').each(function(){
+      $(this).find('td').not('.button-invitation').each(function(){
         $(this).attr('onClick', "document.location.href=url;");
       });
     });

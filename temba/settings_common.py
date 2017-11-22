@@ -354,7 +354,10 @@ PERMISSIONS = {
                          'unblock',
                          'unstop',
                          'update_fields',
-                         'update_fields_input'
+                         'update_fields_input',
+                         'invite',
+                         'invite_filter',
+                         'invite_send',
                          ),
 
     'contacts.contactfield': ('api',
@@ -576,6 +579,9 @@ GROUP_PERMISSIONS = {
         'contacts.contact_update',
         'contacts.contact_update_fields',
         'contacts.contact_update_fields_input',
+        'contacts.contact_invite',
+        'contacts.contact_invite_filter',
+        'contacts.contact_invite_send',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -705,6 +711,9 @@ GROUP_PERMISSIONS = {
         'contacts.contact_update',
         'contacts.contact_update_fields',
         'contacts.contact_update_fields_input',
+        'contacts.contact_invite',
+        'contacts.contact_invite_filter',
+        'contacts.contact_invite_send',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -1106,6 +1115,7 @@ SEND_CHATBASE = False
 SEND_CALLS = False
 
 MESSAGE_HANDLERS = [
+    'temba.contacts.handlers.InvitationHandler',
     'temba.triggers.handlers.TriggerHandler',
     'temba.flows.handlers.FlowHandler',
     'temba.triggers.handlers.CatchAllHandler'
@@ -1185,3 +1195,15 @@ COURIER_CHANNELS = set()
 # Chatbase integration
 # -----------------------------------------------------------------------------------
 CHATBASE_API_URL = 'https://chatbase.com/api/message'
+
+DEFAULT_INVITATION = 'Hi. This is Kathy from Community Connect. Can we occasionally send a short survey to this ' \
+                     'number? Please reply "Y" for yes or "N" for no.'
+
+DEFAULT_MSG_INVITATION_ACCEPTED = 'Thank you for confirming that you agree to receive occasional messages from us.'
+DEFAULT_MSG_INVITATION_REJECTED = 'We will not send you further automated messages. If you change your mind, please ' \
+                                  'reply with "yes" to opt in to receiving occasional automated messages from us.'
+
+INVITATION_ACCEPT_REPLY = 'y'
+INVITATION_REJECT_REPLY = 'n'
+INVITATION_ACCEPTED_GROUP_NAME = 'Opted-In'
+INVITATION_REJECTED_GROUP_NAME = 'Opted-Out'
