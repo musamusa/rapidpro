@@ -102,6 +102,44 @@ class ContactCRUDLTest(_CRUDLTest):
         self.assertEqual(list(response.context['object_list']), [])
         self.assertEqual(response.context['search_error'], "Search query contains an error")
 
+        list_url = reverse('contacts.contact_list')
+        response = self.client.get(list_url)
+        self.assertContains(response, 'Invite Participants')
+
+    def testInviteParticipants(self):
+        self.joe = Contact.get_or_create(self.org, self.user, name='Joe', urns=['tel:123'])
+        self.joe.set_field(self.user, 'age', 20)
+        self.joe.set_field(self.user, 'home', 'Kigali')
+        self.frank = Contact.get_or_create(self.org, self.user, name='Frank', urns=['tel:124'])
+        self.frank.set_field(self.user, 'age', 18)
+
+        invite_url = reverse('contacts.contact_invite')
+        response = self.client.get(invite_url)
+        self.assertRedirect(response, '/users/login/')
+
+        self.login(self.user)
+
+        invite_url = reverse('contacts.contact_invite')
+        response = self.client.get(invite_url)
+        self.assertContains(response, 'Manage Contacts')
+        self.assertContains(response, 'Joe')
+        self.assertContains(response, 'Frank')
+        self.assertContains(response, 'Invite')
+
+        group = ContactGroup.create_static(self.org, self.user, "group one")
+
+        invite_filter_url = reverse('contacts.contact_invite_filter', args=[group.uuid])
+        response = self.client.get(invite_filter_url)
+        self.assertContains(response, 'Invitation text')
+        self.assertContains(response, 'Invite Participants')
+
+        invite_send_url = reverse('contacts.contact_invite_send', args=[self.joe.id])
+        response = self.client.get(invite_send_url, dict())
+
+        invite_url = reverse('contacts.contact_invite')
+        response = self.client.get(invite_url)
+        self.assertContains(response, 'Re-Invite')
+
     def testRead(self):
         self.joe = Contact.get_or_create(self.org, self.user, name='Joe', urns=['tel:123'])
 
