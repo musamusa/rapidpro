@@ -17,8 +17,6 @@ from openpyxl import load_workbook
 from smartmin.models import SmartImportRowError
 from smartmin.tests import _CRUDLTest
 from smartmin.csv_imports.models import ImportTask
-from twilio import TwilioRestException
-from twilio.util import RequestValidator
 from temba.api.models import WebHookEvent, WebHookResult
 from temba.campaigns.models import Campaign, CampaignEvent, EventFire
 from temba.channels.models import Channel, ChannelEvent, ChannelLog
@@ -26,7 +24,7 @@ from temba.flows.models import FlowRun
 from temba.ivr.models import IVRCall
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, Label, SystemLabel, Broadcast, BroadcastRecipient
-from temba.orgs.models import Org, APPLICATION_SID, ACCOUNT_TOKEN, ACCOUNT_SID
+from temba.orgs.models import Org
 from temba.schedules.models import Schedule
 from temba.tests import AnonymousOrg, TembaTest
 from temba.triggers.models import Trigger
