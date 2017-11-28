@@ -17,6 +17,8 @@ from openpyxl import load_workbook
 from smartmin.models import SmartImportRowError
 from smartmin.tests import _CRUDLTest
 from smartmin.csv_imports.models import ImportTask
+from twilio import TwilioRestException
+from twilio.util import RequestValidator
 from temba.api.models import WebHookEvent, WebHookResult
 from temba.campaigns.models import Campaign, CampaignEvent, EventFire
 from temba.channels.models import Channel, ChannelEvent, ChannelLog
@@ -24,7 +26,7 @@ from temba.flows.models import FlowRun
 from temba.ivr.models import IVRCall
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, Label, SystemLabel, Broadcast, BroadcastRecipient
-from temba.orgs.models import Org
+from temba.orgs.models import Org, APPLICATION_SID, ACCOUNT_TOKEN, ACCOUNT_SID
 from temba.schedules.models import Schedule
 from temba.tests import AnonymousOrg, TembaTest
 from temba.triggers.models import Trigger
@@ -107,10 +109,17 @@ class ContactCRUDLTest(_CRUDLTest):
         self.assertContains(response, 'Invite Participants')
 
     def testInviteParticipants(self):
-        self.joe = Contact.get_or_create(self.org, self.user, name='Joe', urns=['tel:123'])
+        channel = Channel.create(self.org, self.user, None, 'FCM', 'FCM Channel', 'fcm-channel',
+                                 config=dict(FCM_KEY='123456789', FCM_TITLE='FCM Channel',
+                                             FCM_NOTIFICATION=True),
+                                 uuid='00000000-0000-0000-0000-000000001230')
+
+        receive_url = reverse('handlers.fcm_handler', args=['receive', channel.uuid])
+
+        self.joe = Contact.get_or_create(self.org, self.user, name='Joe', urns=['fcm:123456'])
         self.joe.set_field(self.user, 'age', 20)
         self.joe.set_field(self.user, 'home', 'Kigali')
-        self.frank = Contact.get_or_create(self.org, self.user, name='Frank', urns=['tel:124'])
+        self.frank = Contact.get_or_create(self.org, self.user, name='Frank', urns=['fcm:12345678'])
         self.frank.set_field(self.user, 'age', 18)
 
         invite_url = reverse('contacts.contact_invite')
@@ -126,6 +135,14 @@ class ContactCRUDLTest(_CRUDLTest):
         self.assertContains(response, 'Frank')
         self.assertContains(response, 'Invite')
 
+        invite_url = reverse('contacts.contact_invite')
+        response = self.client.post(invite_url, {'invitation-text': 'Test opt-in module'})
+
+        self.assertEquals(response.status_code, 302)
+
+        org = Org.objects.filter(id=self.org.id).first()
+        self.assertEquals(org.config_json().get('invitation_text'), 'Test opt-in module')
+
         group = ContactGroup.create_static(self.org, self.user, "group one")
 
         invite_filter_url = reverse('contacts.contact_invite_filter', args=[group.uuid])
@@ -136,9 +153,42 @@ class ContactCRUDLTest(_CRUDLTest):
         invite_send_url = reverse('contacts.contact_invite_send', args=[self.joe.id])
         response = self.client.get(invite_send_url, dict())
 
+        self.assertContains(response, 'true')
+
         invite_url = reverse('contacts.contact_invite')
         response = self.client.get(invite_url)
         self.assertContains(response, 'Re-Invite')
+
+        contact = Contact.objects.filter(id=self.joe.id).first()
+
+        self.assertTrue(contact.invited_on)
+        self.assertEquals(contact.invitation_status, 'S')
+
+        data = {'from': '123456', 'msg': 'Yes', 'date': '2017-01-01T08:50:00.000',
+                'fcm_token': '12345678901qwertyuiopq12345'}
+        response = self.client.post(receive_url, data)
+        self.assertEquals(200, response.status_code)
+
+        contact = Contact.objects.filter(id=self.joe.id).first()
+        self.assertEquals(contact.invitation_status, 'A')
+
+        invite_send_url = reverse('contacts.contact_invite_send', args=[self.frank.id])
+        response = self.client.get(invite_send_url, dict())
+
+        self.assertContains(response, 'true')
+
+        contact2 = Contact.objects.filter(id=self.frank.id).first()
+
+        self.assertTrue(contact2.invited_on)
+        self.assertEquals(contact2.invitation_status, 'S')
+
+        data = {'from': '12345678', 'msg': 'No', 'date': '2017-01-01T08:50:01.000',
+                'fcm_token': '12345678901qwertyuiopq54321'}
+        response = self.client.post(receive_url, data)
+        self.assertEquals(200, response.status_code)
+
+        contact2 = Contact.objects.filter(id=self.frank.id).first()
+        self.assertEquals(contact2.invitation_status, 'R')
 
     def testRead(self):
         self.joe = Contact.get_or_create(self.org, self.user, name='Joe', urns=['tel:123'])
