@@ -116,3 +116,7 @@ ansible/site.retry
 
 # sublime projects
 *.sublime*
+
+# Docker
+.env
+docker.settings.prod

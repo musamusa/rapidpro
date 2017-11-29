@@ -2,6 +2,12 @@
 -load smartmin sms contacts
 -load i18n humanize
 
+-block page-title
+  -if current_group
+    {{current_group.name}}
+  -else
+    {{title}}
+  
 -block page-top
   {% render as page_top %}
     {{block.super}}
@@ -27,6 +33,10 @@
             - if org_perms.contacts.contact_import
               %a#id_import_contacts.btn.btn-primary.btn-block{href:"{% url 'contacts.contact_import' %}"}
                 -trans "Import Contacts"
+
+            - if org_perms.contacts.contact_invite
+              %a#id_import_contacts.btn.btn-default.btn-block{href:'{% url "contacts.contact_invite" %}'}
+                -trans "Invite Participants"
 
           #sidebar-nav
             %ul.nav.nav-list

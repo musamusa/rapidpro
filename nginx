@@ -1,0 +1,23 @@
+upstream rapidpro_server {
+  server unix:/rapidpro/rapidpro.sock;
+}
+
+server {
+    server_name 192.168.15.5;
+
+    listen 8000;
+    client_max_body_size 4G;
+
+    location /media {
+        alias /rapidpro/media;
+    }
+
+    location /sitestatic {
+        alias /rapidpro/sitestatic;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://rapidpro_server;
+    }
+}

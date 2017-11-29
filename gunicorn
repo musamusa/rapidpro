@@ -1,0 +1,11 @@
+description "Gunicorn application server handling RapidPro"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+respawn
+setuid ubuntu
+setgid www-data
+chdir /rapidpro
+
+exec gunicorn --workers 3 --bind unix:/rapidpro/rapidpro.sock temba.wsgi:application
