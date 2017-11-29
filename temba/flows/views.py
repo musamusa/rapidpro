@@ -1072,9 +1072,9 @@ class FlowCRUDL(SmartCRUDL):
                 'encoding': "UTF-8",
                 'no-outline': None,
                 'orientation': 'Landscape',
-                'dpi': '400',
-                'zoom': 1,
-                'viewport-size': '1280x900',
+                'dpi': '300',
+                'zoom': 0.8,
+                'viewport-size': '1920x900',
                 'javascript-delay': 2000,
                 'cookie': [
                     ('csrftoken', csrftoken),
