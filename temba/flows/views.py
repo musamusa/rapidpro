@@ -1073,12 +1073,17 @@ class FlowCRUDL(SmartCRUDL):
                 'no-outline': None,
                 'orientation': 'Landscape',
                 'dpi': '300',
-                'zoom': 0.8,
+                'zoom': 0.6,
                 'viewport-size': '1920x900',
+                'no-print-media-type': '',
                 'javascript-delay': 2000,
                 'cookie': [
                     ('csrftoken', csrftoken),
                     ('sessionid', sessionid),
+                ],
+                'quiet': '',
+                'custom-header': [
+                    ('Accept-Encoding', 'gzip')
                 ]
             }
 
