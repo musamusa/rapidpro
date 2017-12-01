@@ -1073,7 +1073,7 @@ class FlowCRUDL(SmartCRUDL):
                 'no-outline': None,
                 'orientation': 'Landscape',
                 'dpi': '300',
-                'zoom': 0.6,
+                'zoom': 0.7,
                 'viewport-size': '1920x900',
                 'javascript-delay': 2000,
                 'cookie': [
