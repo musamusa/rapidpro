@@ -833,6 +833,7 @@ GROUP_PERMISSIONS = {
         'flows.flow_results',
         'flows.flow_run_table',
         'flows.flow_simulate',
+        'flows.flow_pdf_export',
         'flows.ruleset_analytics',
         'flows.ruleset_results',
         'flows.ruleset_choropleth',
