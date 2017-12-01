@@ -80,11 +80,15 @@
       });
       modal.show();
     });
+    {% endif %}
 
     $('a.pdf_export_submit').on('click', function() {
-      $('form.pdf_export').submit();
+      var txt;
+      var r = confirm("{% trans 'If your flow is too large, this can cause some problems in generating the PDF. Do you want to continue?' %}");
+      if (r == true) {
+        $('form.pdf_export').submit();
+      }
     });
-    {% endif %}
 
     // Starting the flow
     {% if org_perms.msgs.broadcast_send %}
