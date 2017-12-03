@@ -12,7 +12,7 @@ RUN wget http://download.osgeo.org/gdal/1.11.0/gdal-1.11.0.tar.gz
 RUN tar xvfz gdal-1.11.0.tar.gz
 RUN cd gdal-1.11.0;./configure --with-python; make -j4; make install
 RUN ldconfig
-RUN rm -rf /tmp/* 
+RUN rm -rf /tmp/*
 
 RUN mkdir /rapidpro
 WORKDIR /rapidpro
@@ -22,10 +22,16 @@ ADD pip-freeze.txt /rapidpro/pip-freeze.txt
 RUN pip install --upgrade pip
 RUN pip install -r pip-freeze.txt --upgrade
 ADD . /rapidpro
-COPY docker.settings.prod /rapidpro/temba/settings.py
+COPY docker.settings /rapidpro/temba/settings.py
 
-RUN apt-get install -y curl
-RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
+#RUN apt-get install -y wkhtmltopdf
+RUN apt-get install -y libxrender1 libxext6
+RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.3/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
+RUN tar vxf wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
+RUN cp wkhtmltox/bin/wk* /usr/local/bin/
+RUN wkhtmltopdf --version
+
+RUN wget -qO- https://deb.nodesource.com/setup_6.x | bash -
 RUN apt-get install -y nodejs
 RUN npm install -g bower
 RUN npm install -g less
@@ -35,9 +41,9 @@ RUN python manage.py collectstatic --noinput
 
 RUN touch `echo $RANDOM`.txt
 
-RUN python manage.py compress --extension=.haml --force
+#RUN python manage.py compress --extension=.haml --force
 
-RUN python manage.py migrate
+#RUN python manage.py migrate
 
 # nginx + gunicorn setup
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
@@ -51,7 +57,7 @@ EXPOSE 8000
 
 COPY entrypoint.sh /
 
-ENTRYPOINT ["/entrypoint.sh"]
-
 RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*[~]$ 
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*[~]$
+
+CMD ["/entrypoint.sh"]

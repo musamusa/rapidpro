@@ -1,8 +1,10 @@
 #!/bin/bash
 
-echo Starting nginx
 echo Starting gunicorn
+gunicorn --workers 3 --bind unix:/rapidpro/rapidpro.sock temba.wsgi:application &
 
-exec gunicorn --workers 3 --bind unix:/rapidpro/rapidpro.sock temba.wsgi:application &
-exec celery worker -A temba -B -Q celery,handler,flows,msgs -n rapidpro.celery -l info &
-exec service nginx start
+echo Starting celery worker
+celery worker -A temba -B -Q celery,handler,flows,msgs -n rapidpro.celery -l info &
+
+echo Starting nginx
+service nginx start
