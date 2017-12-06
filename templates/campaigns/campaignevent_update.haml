@@ -15,10 +15,15 @@
 
       select2div("#id_flow_to_start", "515px", "Flow to Start");
       select2div("#id_relative_to", "249px", "Select a date");
-      select2div("#id_direction", "85px");
-      select2div("#id_unit", "100px");
       select2div("#id_event_type", "515px");
       select2div("#id_delivery_hour", "442px");
+
+      $('#id_date').attr('placeholder', 'Select a date');
+      $('#id_date').attr('data-date-format', 'm/d/yyyy');
+
+      $('#id_date').on('changeDate', function(ev){
+        $(this).datepicker('hide');
+      });
 
       $('.show_language').live('click', function() {
         lang = $(this).data('iso');
@@ -29,8 +34,6 @@
 
         $('.' + lang).show()
       });
-
-      $('#id_unit').on('change', toggleDeliveryHour);
 
       var completions = {{completions|safe}};
       var function_completions = {{function_completions|safe}};
@@ -73,18 +76,7 @@
         $("#message-section").hide();
         $(".modal-body").css('min-height', '150px');
       {% endif %}
-
-      toggleDeliveryHour();
     });
-
-    function toggleDeliveryHour() {
-      var unit = $("#id_unit").val();
-      if (unit == 'D' || unit == 'W') {
-        $("#send-at").show();
-      } else {
-        $("#send-at").hide();
-      }
-    }
 
 
 -block modal-extra-style
@@ -122,6 +114,17 @@
 
     #id_offset {
       width:55px;
+      display:inline-block;
+      text-align:center;
+      font-size:15px;
+      line-height:15px;
+      height:24px;
+      color: #666;
+    }
+
+    #id_date {
+      margin:-5px 0 0 0;
+      width:247px;
       display:inline-block;
       text-align:center;
       font-size:15px;
@@ -207,12 +210,10 @@
     -render_field 'flow_to_start'
 
   #schedule-section
-    -render_field 'offset'
-    -render_field 'unit'
-    -render_field 'direction'
+    -render_field 'date'
     -render_field 'relative_to'
 
-  #send-at.hide
+  #send-at
     .delivered
       Delivered
     -render_field 'delivery_hour'

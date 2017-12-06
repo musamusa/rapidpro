@@ -200,9 +200,11 @@ class EventForm(forms.ModelForm):
                                             (CampaignEvent.TYPE_FLOW, "Start a flow")), required=True)
 
     direction = forms.ChoiceField(choices=(('B', "Before"),
-                                           ('A', "After")), required=True)
+                                           ('A', "After")), required=False)
 
-    unit = forms.ChoiceField(choices=CampaignEvent.UNIT_CHOICES, required=True)
+    unit = forms.ChoiceField(choices=CampaignEvent.UNIT_CHOICES, required=False)
+
+    date = forms.DateField(required=True)
 
     flow_to_start = forms.ModelChoiceField(queryset=Flow.objects.filter(is_active=True), required=False)
 
@@ -407,7 +409,7 @@ class CampaignEventCRUDL(SmartCRUDL):
         success_message = ''
         form_class = EventForm
 
-        default_fields = ['event_type', 'flow_to_start', 'offset', 'unit', 'direction', 'relative_to', 'delivery_hour']
+        default_fields = ['event_type', 'flow_to_start', 'relative_to', 'delivery_hour', 'date']
 
         def get_form_kwargs(self):
             kwargs = super(CampaignEventCRUDL.Update, self).get_form_kwargs()
@@ -438,12 +440,6 @@ class CampaignEventCRUDL(SmartCRUDL):
         def derive_initial(self):
             initial = super(CampaignEventCRUDL.Update, self).derive_initial()
 
-            if self.object.offset < 0:
-                initial['direction'] = 'B'
-                initial['offset'] = abs(self.object.offset)
-            else:
-                initial['direction'] = 'A'
-
             if self.object.event_type == 'F':
                 initial['flow_to_start'] = self.object.flow
 
@@ -473,7 +469,7 @@ class CampaignEventCRUDL(SmartCRUDL):
 
     class Create(OrgPermsMixin, ModalMixin, SmartCreateView):
 
-        default_fields = ['event_type', 'flow_to_start', 'offset', 'unit', 'direction', 'relative_to', 'delivery_hour']
+        default_fields = ['event_type', 'flow_to_start', 'relative_to', 'delivery_hour', 'date']
         form_class = EventForm
         success_message = ""
         template_name = "campaigns/campaignevent_update.haml"
@@ -504,9 +500,6 @@ class CampaignEventCRUDL(SmartCRUDL):
 
         def derive_initial(self):
             initial = super(CampaignEventCRUDL.Create, self).derive_initial()
-            initial['unit'] = 'D'
-            initial['offset'] = '15'
-            initial['direction'] = 'A'
             return initial
 
         def post_save(self, obj):
