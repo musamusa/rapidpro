@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from smartmin.views import SmartCRUDL, SmartListView, SmartUpdateView, SmartCreateView, SmartReadView, SmartDeleteView
 from temba.contacts.models import ContactGroup, ContactField
 from temba.flows.models import Flow
@@ -270,16 +271,11 @@ class EventForm(forms.ModelForm):
             obj.flow = Flow.objects.get(org=org, id=self.cleaned_data['flow_to_start'])
 
     def __init__(self, user, *args, **kwargs):
-        from temba.values.models import Value
 
         self.user = user
         super(EventForm, self).__init__(*args, **kwargs)
 
         org = self.user.get_org()
-
-        relative_to = self.fields['relative_to']
-        relative_to.queryset = ContactField.objects.filter(org=org, is_active=True,
-                                                           value_type=Value.TYPE_DATETIME).order_by('label')
 
         flow = self.fields['flow_to_start']
         flow.queryset = Flow.objects.filter(org=self.user.get_org(), flow_type__in=[Flow.FLOW, Flow.VOICE],
@@ -409,7 +405,7 @@ class CampaignEventCRUDL(SmartCRUDL):
         success_message = ''
         form_class = EventForm
 
-        default_fields = ['event_type', 'flow_to_start', 'relative_to', 'delivery_hour', 'date']
+        default_fields = ['event_type', 'flow_to_start', 'delivery_hour', 'date']
 
         def get_form_kwargs(self):
             kwargs = super(CampaignEventCRUDL.Update, self).get_form_kwargs()
@@ -469,7 +465,7 @@ class CampaignEventCRUDL(SmartCRUDL):
 
     class Create(OrgPermsMixin, ModalMixin, SmartCreateView):
 
-        default_fields = ['event_type', 'flow_to_start', 'relative_to', 'delivery_hour', 'date']
+        default_fields = ['event_type', 'flow_to_start', 'delivery_hour', 'date']
         form_class = EventForm
         success_message = ""
         template_name = "campaigns/campaignevent_update.haml"

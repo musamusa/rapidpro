@@ -16,10 +16,14 @@
       select2div("#id_flow_to_start", "515px", "Flow to Start");
       select2div("#id_relative_to", "249px", "Select a date");
       select2div("#id_event_type", "515px");
-      select2div("#id_delivery_hour", "442px");
+      select2div("#id_delivery_hour", "249px");
+
+      $('#id_date').datepicker({
+        minDate: 0,
+        dateFormat: 'm/d/yy'
+      });
 
       $('#id_date').attr('placeholder', 'Select a date');
-      $('#id_date').attr('data-date-format', 'm/d/yyyy');
 
       $('#id_date').on('changeDate', function(ev){
         $(this).datepicker('hide');
@@ -211,10 +215,4 @@
 
   #schedule-section
     -render_field 'date'
-    -render_field 'relative_to'
-
-  #send-at
-    .delivered
-      Delivered
     -render_field 'delivery_hour'
-
