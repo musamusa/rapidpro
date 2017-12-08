@@ -32,6 +32,8 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.utils.text import slugify
 from django_redis import get_redis_connection
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from enum import Enum
 from requests import Session
 from smartmin.models import SmartModel
@@ -1941,6 +1943,23 @@ class Org(SmartModel):
 
     def __str__(self):
         return self.name
+
+
+@receiver(post_save, sender=Org)
+def org_pos_save(sender, **kwargs):
+    from temba.contacts.models import ContactField
+    from temba.values.models import Value
+
+    instance = kwargs.get('instance')
+    created = kwargs.get('created')
+
+    if created:
+        existing_field = instance.contactfields.filter(key=settings.CAMPAIGN_FIELD).first()
+
+        if not existing_field:
+            ContactField.get_or_create(org=instance, user=instance.created_by, key=settings.CAMPAIGN_FIELD,
+                                       label=settings.CAMPAIGN_FIELD, show_in_table=False,
+                                       value_type=Value.TYPE_DATETIME)
 
 
 # ===================== monkey patch User class with a few extra functions ========================
