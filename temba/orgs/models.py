@@ -429,7 +429,7 @@ class Org(SmartModel):
         if self.config:
             try:
                 return json.loads(self.config)
-            except:
+            except Exception:
                 return dict()
         else:
             return dict()
@@ -626,7 +626,7 @@ class Org(SmartModel):
         """
         try:
             return json.loads(self.webhook).get('url') if self.webhook else None
-        except:
+        except Exception:
             return None
 
     def get_webhook_headers(self):
@@ -637,7 +637,7 @@ class Org(SmartModel):
         """
         try:
             return json.loads(self.webhook).get('headers', dict()) if self.webhook else dict()
-        except:
+        except Exception:
             return dict()
 
     def get_channel_countries(self):
