@@ -103,7 +103,8 @@ redis==2.10.5
 regex==2017.6.7           # via django-hamlpy, rapidpro-expressions
 requests-oauthlib==0.8.0  # via twython, uservoice
 requests-toolbelt==0.8.0  # via pyfcm
-requests==2.18.1
+#requests==2.18.1
+requests[security]
 responses==0.5.1
 rjsmin==1.0.12            # via django-compressor
 s3transfer==0.1.10        # via boto3
