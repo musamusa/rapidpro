@@ -9,6 +9,7 @@ import pytz
 import resource
 import six
 
+from sys import platform
 from dateutil.parser import parse
 from decimal import Decimal
 from django.conf import settings
@@ -431,3 +432,12 @@ def get_anonymous_user():
     """
     from django.contrib.auth.models import User
     return User.objects.get(username=settings.ANONYMOUS_USER_NAME)
+
+
+def get_chrome_drive_suffix():
+    if platform == 'linux' or platform == 'linux2':
+        return 'linux'
+    elif platform == 'darwin':
+        return platform
+    elif platform == 'win32':
+        return '_windows.exe'
