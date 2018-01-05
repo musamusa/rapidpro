@@ -21,6 +21,7 @@ RUN . env/bin/activate
 ADD pip-freeze.txt /rapidpro/pip-freeze.txt
 RUN pip install --upgrade pip
 RUN pip install -r pip-freeze.txt --upgrade
+RUN pip install -U requests[security]
 ADD . /rapidpro
 COPY docker.settings.prod /rapidpro/temba/settings.py
 
