@@ -5,13 +5,29 @@
 -block html-tag
   <html lang="en" ng-app="app">
 
--block page-title
-  {{object.name}}
 
 -block extra-less
   -compress css
     {% lessblock %}
       :plain
+
+        body, html {
+          margin: 0;
+          padding: 0;
+        }
+
+        #flow {
+          height: auto !important;
+        }
+
+        #flow .node.action-node .action, #flow .node.rule-node .rules .rule {
+          color: #333 !important;
+        }
+
+        .print-header, .logo, #header, #big-logo, ul#top-menu, .org-header, .languages, #show-simulator {
+          display: none;
+        }
+
         .empty {
           margin-left: 30px;
 
@@ -33,21 +49,14 @@
 -block extra-script
   {{ block.super }}
 
-  -if org_perms.flows.flow_delete
-    :javascript
-      $(".delete-flow").live('click', function() {    
-        var modal = new Modax('{% trans "Delete Flow" %}', '{% url "flows.flow_delete" flow.id %}');
-        modal.addClass("alert");
-        modal.setRedirectOnSuccess(true);
-        modal.show();
-      });
-
   -compress js
     %script{type:'text/javascript', src:'{{ STATIC_URL }}bower/jsPlumb/dist/js/dom.jsPlumb-1.7.5.js'}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/jquery-autosize/jquery.autosize.js"}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/angular-elastic/elastic.js"}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/angular-ui-sortable/sortable.js"}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}js/temba-ui-bootstrap-tpls.js"}
+
+  %script{src:"{{ STATIC_URL }}js/excellent.js"}
 
   :javascript
     window.flowId = {{ object.pk }};
@@ -81,14 +90,6 @@
       modal.show();
     });
     {% endif %}
-
-    $('a.pdf_export_submit').on('click', function() {
-      var txt;
-      var r = confirm("{% trans 'If your flow is too large, this can cause some problems in generating the PDF. Do you want to continue?' %}");
-      if (r == true) {
-        $('form.pdf_export').submit();
-      }
-    });
 
     // Starting the flow
     {% if org_perms.msgs.broadcast_send %}
@@ -169,9 +170,6 @@
 
   -include "msgs/msg_send_modal.html"
   -include "delete_modal_include.html"
-
-  %form{method:'POST', class:'pdf_export hide'}
-    -csrf_token
 
   #drag-helper.hide
     .tail
@@ -397,7 +395,6 @@
 
                     .node-attachment.viewer-button{ng-class:'{"icon-videocam": action._media.type == "video", "icon-photo": action._media.type=="image", "icon-arrow-right-8": action._media.type=="audio"}', ng-show:'action._media', ng-click:'clickShowActionMedia(action); $event.stopPropagation();'}
                     .node-attachment.icon-attachment{ng-show:'action._attachURL'}
-                    .node-attachment.viewer-button.icon-button-quick-reply{ng-show:'action.quick_replies.length > 0'}
 
                     .uploading{ng-show:'action.uploading'}
                       %img.throbber{ src: "{{ STATIC_URL }}images/loader-bars.gif" }

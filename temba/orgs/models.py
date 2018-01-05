@@ -1954,7 +1954,9 @@ def get_user_orgs(user, brand=None):
         return Org.objects.all()
 
     user_orgs = user.org_admins.all() | user.org_editors.all() | user.org_viewers.all() | user.org_surveyors.all()
-    return user_orgs.filter(brand=brand, is_active=True).distinct().order_by('name')
+    all_orgs_ids = [item.id for item in user_orgs.filter(brand=brand, is_active=True).distinct().order_by('name')
+                    if not item.is_suspended()]
+    return Org.objects.filter(id__in=all_orgs_ids)
 
 
 def get_org(obj):
