@@ -84,7 +84,7 @@
 
     $('a.pdf_export_submit').on('click', function() {
       var txt;
-      var r = confirm("{% trans 'If your flow is too large, this can cause some problems in generating the PDF. Do you want to continue?' %}");
+      var r = confirm("{% trans 'Please note that if your flow is very large, this might cause some problems in generating the PDF. Do you want to continue?' %}");
       if (r == true) {
         $('form.pdf_export').submit();
       }
