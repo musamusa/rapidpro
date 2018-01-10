@@ -240,6 +240,7 @@ INSTALLED_APPS = (
     'temba.ussd',
     'temba.locations',
     'temba.values',
+    'temba.links',
     'temba.airtime',
 )
 
@@ -1232,3 +1233,5 @@ INVITATION_ACCEPT_REPLY = 'y'
 INVITATION_REJECT_REPLY = 'n'
 INVITATION_ACCEPTED_GROUP_NAME = 'Opted-In'
 INVITATION_REJECTED_GROUP_NAME = 'Opted-Out'
+
+GOOGLE_SHORTEN_URL_API_KEY = '__YOUR_GOOGLE_SHORTEN_URL_API_KEY__'
