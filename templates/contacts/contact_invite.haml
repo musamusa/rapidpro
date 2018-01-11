@@ -267,6 +267,13 @@
         element.html('Re-Invite');
       }
 
+      if (re_invitation) {
+        element.html('Invite Sent');
+        setTimeout(function(){
+          element.html('Re-Invite');
+        }, 3000)
+      }
+
       var headers = { 'X-PJAX': true };
       var type = 'GET';
       var url = '/contact/invite_send/' + contactId;
