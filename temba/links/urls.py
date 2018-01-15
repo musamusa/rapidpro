@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
 
-from .views import FlowCRUDL
+from .views import LinkCRUDL
 
-urlpatterns = FlowCRUDL().as_urlpatterns()
+urlpatterns = LinkCRUDL().as_urlpatterns()

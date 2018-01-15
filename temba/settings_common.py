@@ -469,6 +469,10 @@ PERMISSIONS = {
                       'results',
                       ),
 
+    'links.link': ('archived',
+                   'read',
+                   ),
+
     'msgs.msg': ('api',
                  'archive',
                  'archived',
@@ -678,6 +682,11 @@ GROUP_PERMISSIONS = {
         'msgs.msg_sent',
         'msgs.msg_update',
 
+        'links.link.*',
+        'links.link_read',
+        'links.link_archived',
+        'links.link_update',
+
         'triggers.trigger.*',
 
     ),
@@ -783,6 +792,11 @@ GROUP_PERMISSIONS = {
         'msgs.msg_outbox',
         'msgs.msg_sent',
         'msgs.msg_update',
+
+        'links.link.*',
+        'links.link_read',
+        'links.link_archived',
+        'links.link_update',
 
         'triggers.trigger.*',
 
