@@ -44,7 +44,7 @@
                   %a{'href':'{{folder.url}}'}
                     {{ folder.label }} ({{ folder.count }})
 
-        -block flow-list
+        -block link-list
           .span9
             - block buttons
               .pull-right
@@ -65,20 +65,23 @@
                         %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Archive" %}'}
                           .glyph.icon-box
 
-            %table.list-table.flow-list.object-list.table.table-condensed{style: '{% if not org_perms.flows.flow_update %}margin-top:10px{% endif %}'}
+            %table.list-table.link-list.object-list.table.table-condensed{style: '{% if not org_perms.links.link_update %}margin-top:10px{% endif %}'}
               %tbody
                 -for object in object_list
                   -with object.get_and_clear_unread_responses as new_responses
-                    %tr.flow.object-row.select-row{ data-object-uuid: "{{object.uuid}}", data-object-id: "{{ object.id }}" }
-                      %td.flow.checkbox.object-row-checkbox
-                        .glyph.icon-checkbox-unchecked.flow-checkbox.object-row-checkbox
+                    %tr.link.object-row.select-row{ data-object-uuid: "{{object.uuid}}", data-object-id: "{{ object.id }}" }
+                      %td.link.checkbox.object-row-checkbox
+                        .glyph.icon-checkbox-unchecked.link-checkbox.object-row-checkbox
 
                       %td.value-name
 
                         {{ object.name }}
 
+                      %td.value-shorten-url
+
+                        {{ object.shorten_url }}
+
                       -if not object.clicks_count
-                        %td.value-status
                         %td.value-status
                           -trans "No clicks"
 
@@ -91,8 +94,8 @@
                           {% endblocktrans %}
 
                 -empty
-                  %tr.flow
-                    %td.flow
+                  %tr.link
+                    %td.link
                       -trans "No matching links."
 
             - block paginator
@@ -128,7 +131,7 @@
 
     $(document).ready( function() {
 
-      $(document).on('click', 'tr.flow td:nth-child(n+2)', function(e){
+      $(document).on('click', 'tr.link td:nth-child(n+2)', function(e){
          document.location = '/link/read/' + $(this).parent().data("object-uuid");
       });
 

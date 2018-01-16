@@ -1,11 +1,14 @@
 from __future__ import print_function, unicode_literals
 
 import logging
+import requests
+import json
 
 from django.core.urlresolvers import reverse
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
@@ -82,11 +85,6 @@ class LinkCRUDL(SmartCRUDL):
         field_config = dict(name=dict(help=_("Choose a name to describe this link, e.g. Luca Survey Webflow")))
         submit_button_name = _("Create")
 
-        def derive_exclude(self):
-            org = self.request.user.get_org()
-            exclude = []
-            return exclude
-
         def get_form_kwargs(self):
             kwargs = super(LinkCRUDL.Create, self).get_form_kwargs()
             kwargs['user'] = self.request.user
@@ -101,12 +99,18 @@ class LinkCRUDL(SmartCRUDL):
             analytics.track(self.request.user.username, 'temba.link_created', dict(name=obj.name))
             org = self.request.user.get_org()
 
+            headers = {'Content-Type': 'application/json'}
+
+            request_url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            response = requests.post(url=request_url,
+                                     data=json.dumps(dict(longUrl='https://demo.communityconnectlabs.com')),
+                                     headers=headers)
+            response_json = response.json()
+
             self.object = Link.create(org=org, user=self.request.user, name=obj.name, destination=obj.destination,
-                                      shorten_url='https://google.com')
+                                      shorten_url=response_json.get('id'))
 
         def post_save(self, obj):
-            user = self.request.user
-            org = user.get_org()
             return obj
 
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
@@ -149,7 +153,7 @@ class LinkCRUDL(SmartCRUDL):
         refresh = 10000
         fields = ('name', 'modified_on')
         default_template = 'links/link_list.html'
-        default_order = ('-created_on',)
+        default_order = ('-created_on')
         search_fields = ('name__icontains',)
 
         def get_context_data(self, **kwargs):
@@ -158,10 +162,6 @@ class LinkCRUDL(SmartCRUDL):
             context['folders'] = self.get_folders()
             context['request_url'] = self.request.path
             context['actions'] = self.actions
-
-            # decorate flow objects with their run activity stats
-            for link in context['object_list']:
-                link.clicks_count = link.get_contacts().count()
 
             return context
 
