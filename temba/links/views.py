@@ -10,7 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.utils import analytics
 from temba.utils.views import BaseActionForm
@@ -57,7 +57,7 @@ class BaseFlowForm(forms.ModelForm):
 
 
 class LinkCRUDL(SmartCRUDL):
-    actions = ('list', 'archived', 'create', 'update')
+    actions = ('list', 'read', 'archived', 'create', 'update')
 
     model = Link
 
@@ -113,6 +113,28 @@ class LinkCRUDL(SmartCRUDL):
         def post_save(self, obj):
             return obj
 
+    class Read(OrgObjPermsMixin, SmartReadView):
+        slug_url_kwarg = 'uuid'
+        fields = ('name',)
+
+        def derive_title(self):
+            return self.object.name
+
+        def get_queryset(self):
+            return Link.objects.filter(is_active=True)
+
+        def get_context_data(self, **kwargs):
+            context = super(LinkCRUDL.Read, self).get_context_data(**kwargs)
+            return context
+
+        def get_gear_links(self):
+            links = []
+
+            if self.has_org_perm("links.link_update"):
+                links.append(dict(title=_('Edit'), style='btn-primary', js_class='update-link', href="#"))
+
+            return links
+
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         class LinkUpdateForm(BaseFlowForm):
 
@@ -125,6 +147,7 @@ class LinkCRUDL(SmartCRUDL):
                 fields = ('name', 'destination')
 
         success_message = ''
+        success_url = 'uuid@links.link_read'
         fields = ('name', 'destination')
         form_class = LinkUpdateForm
 
@@ -139,13 +162,9 @@ class LinkCRUDL(SmartCRUDL):
 
         def pre_save(self, obj):
             obj = super(LinkCRUDL.Update, self).pre_save(obj)
-            metadata = obj.get_metadata_json()
-            obj.set_metadata_json(metadata)
             return obj
 
         def post_save(self, obj):
-            user = self.request.user
-            org = user.get_org()
             return obj
 
     class BaseList(LinkActionMixin, OrgQuerysetMixin, OrgPermsMixin, SmartListView):
