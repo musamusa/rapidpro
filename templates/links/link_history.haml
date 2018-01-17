@@ -1,0 +1,40 @@
+-load humanize smartmin temba i18n
+
+    -for item in activity
+      %tr.msg
+        %td.icon
+          %span.det{title:'{% if item.obj.channel %}{{item.obj.channel.get_channel_type_name}} {{item.obj.channel.get_name}}{% endif %}'}
+            {{item}}
+    
+        %td.details.wrapped
+          -if item.type == 'contact'
+            -with item.obj as link
+              .activity-message
+                .activity-body
+                  .text
+                    {{item}}
+    
+        -# %td.created_on
+        -#   %span.time
+        -#     %span.short
+        -#       {{item.time|gmail_time}}
+        -#     %span.long.hide
+        -#       {{item.time}}
+    
+          -# .log-icon
+          -#   -if not user_org.is_anon or perms.contacts.contact_break_anon
+          -#     -if item.type == 'msg' or item.type == 'call'
+          -#       {% channel_log_link item.obj %}
+    
+          -#     -if item.type == 'webhook-result'
+          -#       -with item.obj.event as event
+          -#         %a{href:"{%url 'api.log_read' event.id %}"}
+          -#           .icon-docs-2
+    
+    -if has_older and not recent_only
+      %tr{ ic-append-from:"/link/history/{{link.uuid}}/?after={{after}}&before={{before}}", 
+           ic-trigger-on:"scrolled-into-view", 
+           ic-target:"table.activity tbody.previous", 
+           ic-indicator:"#indicator" }
+    
+    

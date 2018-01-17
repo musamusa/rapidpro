@@ -4,16 +4,21 @@ import logging
 import requests
 import json
 
+from datetime import timedelta
+
 from django.core.urlresolvers import reverse
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.utils import timezone
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
-from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
-from temba.utils import analytics
+
+from temba.utils import analytics, datetime_to_ms, ms_to_datetime
 from temba.utils.views import BaseActionForm
+from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
+
 from .models import Link
 
 logger = logging.getLogger(__name__)
@@ -57,7 +62,7 @@ class BaseFlowForm(forms.ModelForm):
 
 
 class LinkCRUDL(SmartCRUDL):
-    actions = ('list', 'read', 'archived', 'create', 'update')
+    actions = ('list', 'read', 'history', 'archived', 'create', 'update')
 
     model = Link
 
@@ -125,6 +130,7 @@ class LinkCRUDL(SmartCRUDL):
 
         def get_context_data(self, **kwargs):
             context = super(LinkCRUDL.Read, self).get_context_data(**kwargs)
+            context['recent_start'] = datetime_to_ms(timezone.now() - timedelta(minutes=5))
             return context
 
         def get_gear_links(self):
@@ -134,6 +140,58 @@ class LinkCRUDL(SmartCRUDL):
                 links.append(dict(title=_('Edit'), style='btn-primary', js_class='update-link', href="#"))
 
             return links
+
+    class History(OrgObjPermsMixin, SmartReadView):
+        slug_url_kwarg = 'uuid'
+
+        def get_queryset(self):
+            return Link.objects.filter(is_active=True)
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(LinkCRUDL.History, self).get_context_data(*args, **kwargs)
+            link = self.get_object()
+
+            link_creation = link.created_on - timedelta(hours=1)
+
+            before = int(self.request.GET.get('before', 0))
+            after = int(self.request.GET.get('after', 0))
+
+            recent_only = False
+            if not before:
+                recent_only = True
+                before = timezone.now()
+            else:
+                before = ms_to_datetime(before)
+
+            if not after:
+                after = before - timedelta(days=90)
+            else:
+                after = ms_to_datetime(after)
+
+            # keep looking further back until we get at least 20 items
+            while True:
+                activity = link.get_activity(after, before)
+                if recent_only or len(activity) >= 20 or after == link_creation:
+                    break
+                else:
+                    after = max(after - timedelta(days=90), link_creation)
+
+            # mark our after as the last item in our list
+            from temba.links.models import MAX_HISTORY
+            if len(activity) >= MAX_HISTORY:
+                after = activity[-1]['time']
+
+            # check if there are more pages to fetch
+            context['has_older'] = False
+            if not recent_only and before > link.created_on:
+                context['has_older'] = bool(link.get_activity(link_creation, after))
+
+            context['recent_only'] = recent_only
+            context['before'] = datetime_to_ms(after)
+            context['after'] = datetime_to_ms(max(after - timedelta(days=90), link_creation))
+            context['activity'] = activity
+
+            return context
 
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         class LinkUpdateForm(BaseFlowForm):

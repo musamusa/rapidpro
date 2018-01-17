@@ -3,6 +3,8 @@ from __future__ import print_function, unicode_literals
 
 import six
 
+from itertools import chain
+
 from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
@@ -10,6 +12,9 @@ from django.utils.translation import ugettext_lazy as _
 from temba.contacts.models import Contact
 from temba.orgs.models import Org
 from temba.utils.models import TembaModel
+
+
+MAX_HISTORY = 50
 
 
 class LinkException(Exception):
@@ -80,6 +85,20 @@ class Link(TembaModel):
     def restore(self):
         self.is_archived = False
         self.save(update_fields=['is_archived'])
+
+    def get_activity(self, after, before):
+        """
+        Gets this link's activity of contacts in the given time window
+        """
+
+        contacts = self.contacts.filter(created_on__gte=after, created_on__lt=before)
+
+        # wrap items, chain and sort by time
+        activity = chain(
+            [{'type': 'contact', 'time': c.created_on, 'obj': c} for c in contacts]
+        )
+
+        return sorted(activity, key=lambda i: i['time'], reverse=True)[:MAX_HISTORY]
 
     def __str__(self):
         return self.name
