@@ -228,6 +228,20 @@
   :javascript
     var startTime = null;
 
+    $(document).ready(function() {
+      $('.time').live('mouseover', function() {
+        $(this).children('.long').show();
+        $(this).children('.short').hide();
+      }).live('mouseleave', function() {
+        $(this).children('.short').show();
+        $(this).children('.long').hide();
+      });
+    });
+
+    function refreshRecents(){
+      Intercooler.triggerRequest($('tr.poll'));
+   }
+
   %script
 
     {% if org_perms.contacts.contact_update %}
