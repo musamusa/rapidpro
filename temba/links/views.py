@@ -103,17 +103,7 @@ class LinkCRUDL(SmartCRUDL):
         def save(self, obj):
             analytics.track(self.request.user.username, 'temba.link_created', dict(name=obj.name))
             org = self.request.user.get_org()
-
-            headers = {'Content-Type': 'application/json'}
-
-            request_url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
-            response = requests.post(url=request_url,
-                                     data=json.dumps(dict(longUrl='https://demo.communityconnectlabs.com')),
-                                     headers=headers)
-            response_json = response.json()
-
-            self.object = Link.create(org=org, user=self.request.user, name=obj.name, destination=obj.destination,
-                                      shorten_url=response_json.get('id'))
+            self.object = Link.create(org=org, user=self.request.user, name=obj.name, destination=obj.destination)
 
         def post_save(self, obj):
             return obj

@@ -31,9 +31,6 @@ class Link(TembaModel):
     slug = models.SlugField(max_length=64,
                             help_text="The trackable link slug")
 
-    shorten_url = models.URLField(max_length=100,
-                                  help_text="The trackable link slug")
-
     destination = models.URLField(max_length=255,
                                   help_text="The destination URL for this trackable link")
 
@@ -49,9 +46,9 @@ class Link(TembaModel):
                                       help_text=_("The users which clicked on this link"))
 
     @classmethod
-    def create(cls, org, user, name, destination, shorten_url):
-        flow = Link.objects.create(org=org, name=name, slug=slugify(name), shorten_url=shorten_url,
-                                   destination=destination, created_by=user, modified_by=user)
+    def create(cls, org, user, name, destination):
+        flow = Link.objects.create(org=org, name=name, slug=slugify(name), destination=destination,
+                                   created_by=user, modified_by=user)
         return flow
 
     def get_contacts(self):
