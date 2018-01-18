@@ -9,6 +9,8 @@ from django.db import models
 from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 
+from smartmin.models import SmartModel
+
 from temba.contacts.models import Contact
 from temba.orgs.models import Org
 from temba.utils.models import TembaModel
@@ -41,9 +43,6 @@ class Link(TembaModel):
 
     clicks_count = models.PositiveIntegerField(default=0,
                                                help_text="Clicks count for this trackable link")
-
-    contacts = models.ManyToManyField(Contact, related_name="contact_links",
-                                      help_text=_("The users which clicked on this link"))
 
     @classmethod
     def create(cls, org, user, name, destination):
@@ -88,7 +87,7 @@ class Link(TembaModel):
         Gets this link's activity of contacts in the given time window
         """
 
-        contacts = self.contacts.filter(created_on__gte=after, created_on__lt=before)
+        contacts = LinkContacts.objects.filter(link=self, created_on__gte=after, created_on__lt=before)
 
         # wrap items, chain and sort by time
         activity = chain(
@@ -102,3 +101,13 @@ class Link(TembaModel):
 
     class Meta:
         ordering = ('-created_on',)
+
+
+class LinkContacts(SmartModel):
+    link = models.ForeignKey(Link, related_name="contacts")
+
+    contact = models.ForeignKey(Contact, related_name="contact_links",
+                                help_text=_("The users which clicked on this link"))
+
+    def __str__(self):
+        return "%s" % self.contact.get_display()
