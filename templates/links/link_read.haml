@@ -24,6 +24,15 @@
       %span.link-destination
         {{ link.destination }}
 
+-block above-bar
+  -block top-form
+    %form.search{method:'get'}
+      %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{ request.GET.search }}"}
+
+    #gear-container
+      %a{'href':'#', 'data-success-url': '', 'class': 'update-link btn-primary btn', 'data-original-title': '', 'title': ''}
+        Edit
+
 -block read-buttons
 
 -block content
@@ -39,7 +48,7 @@
     -trans "Contacts"
   %table.activity.history{style:'padding:0;margin:0'}
 
-    %tr.poll{ ic-src:"/link/history/{{link.uuid}}/?after={{recent_start}}",
+    %tr.poll{ ic-src:"/link/history/{{link.uuid}}/?after={{recent_start}}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}",
               ic-trigger-on:"scrolled-into-view",
               ic-poll:"5s",
               ic-target:"table .recent",
@@ -48,7 +57,7 @@
     %tbody.recent
 
     // trigger the first batch of previous messages
-    %tr{ ic-append-from:"/link/history/{{link.uuid}}/?before={{recent_start}}",
+    %tr{ ic-append-from:"/link/history/{{link.uuid}}/?before={{recent_start}}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}",
          ic-trigger-on:"scrolled-into-view",
          ic-target:"table .previous",
          ic-indicator:"#indicator" }
@@ -64,6 +73,19 @@
 
     {% lessblock %}
       :plain
+
+        .icon-user {
+          color: #999;
+        }
+
+        form.search {
+          display: inline-block;
+        }
+
+        input.search-query {
+          margin: 0;
+        }
+
         .show-all {
           margin-top:-10px;
           margin-right:18px;
