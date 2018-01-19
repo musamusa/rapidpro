@@ -143,6 +143,8 @@ class LinkCRUDL(SmartCRUDL):
 
             link_creation = link.created_on - timedelta(hours=1)
 
+            search = self.request.GET.get('search', None)
+
             before = int(self.request.GET.get('before', 0))
             after = int(self.request.GET.get('after', 0))
 
@@ -160,7 +162,7 @@ class LinkCRUDL(SmartCRUDL):
 
             # keep looking further back until we get at least 20 items
             while True:
-                activity = link.get_activity(after, before)
+                activity = link.get_activity(after, before, search)
                 if recent_only or len(activity) >= 20 or after == link_creation:
                     break
                 else:
@@ -174,7 +176,7 @@ class LinkCRUDL(SmartCRUDL):
             # check if there are more pages to fetch
             context['has_older'] = False
             if not recent_only and before > link.created_on:
-                context['has_older'] = bool(link.get_activity(link_creation, after))
+                context['has_older'] = bool(link.get_activity(link_creation, after, search))
 
             context['recent_only'] = recent_only
             context['before'] = datetime_to_ms(after)
