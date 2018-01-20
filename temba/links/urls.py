@@ -1,5 +1,12 @@
 from __future__ import unicode_literals
 
-from .views import LinkCRUDL
+from django.conf.urls import url
 
-urlpatterns = LinkCRUDL().as_urlpatterns()
+from .views import LinkCRUDL, LinkHandler
+
+
+urlpatterns = [
+    url(r'^link/handler/(?P<uuid>[^/]+)/?$', LinkHandler.as_view(), {}, 'links.link_handler'),
+]
+
+urlpatterns += LinkCRUDL().as_urlpatterns()

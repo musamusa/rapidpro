@@ -6,7 +6,6 @@ import six
 from itertools import chain
 
 from django.db import models
-from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 
 from smartmin.models import SmartModel
@@ -31,9 +30,6 @@ class Link(TembaModel):
     name = models.CharField(max_length=64,
                             help_text=_("The name for this trackable link"))
 
-    slug = models.SlugField(max_length=64,
-                            help_text="The trackable link slug")
-
     destination = models.URLField(max_length=255,
                                   help_text="The destination URL for this trackable link")
 
@@ -47,8 +43,7 @@ class Link(TembaModel):
 
     @classmethod
     def create(cls, org, user, name, destination):
-        flow = Link.objects.create(org=org, name=name, slug=slugify(name), destination=destination,
-                                   created_by=user, modified_by=user)
+        flow = Link.objects.create(org=org, name=name, destination=destination, created_by=user, modified_by=user)
         return flow
 
     def get_contacts(self):
@@ -91,7 +86,7 @@ class Link(TembaModel):
         contacts = LinkContacts.objects.filter(link=self, created_on__gte=after, created_on__lt=before)
         if search:
             try:
-                real_contacts = Contact.objects.filter(id__in=contacts.values_list('contact__id'))
+                real_contacts = Contact.objects.filter(id__in=contacts.values_list('contact__id')).only('id')
                 search_contacts = contact_search(self.org, search, real_contacts, None)
                 contacts = contacts.filter(contact__id__in=search_contacts.values_list('id'))
             except SearchException as e:

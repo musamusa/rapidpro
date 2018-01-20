@@ -13,12 +13,6 @@
   %h2.header-margin
     {{ link.name }}
 
-    {% blocktrans count clicks_count=link.clicks_count %}
-      ({{ clicks_count }} click)
-    {% plural %}
-      ({{ clicks_count }} clicks)
-    {% endblocktrans %}
-
   %h5.header-margin{style:"margin-bottom: 10px"}
     .link-destination
       %span.link-destination

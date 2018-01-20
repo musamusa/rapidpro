@@ -1,25 +1,25 @@
 from __future__ import print_function, unicode_literals
 
 import logging
-import requests
-import json
 
 from datetime import timedelta
 
-from django.core.urlresolvers import reverse
 from django import forms
+from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
+from django.views.generic import RedirectView
 from django.utils import timezone
+from django.urls import NoReverseMatch, reverse
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
 
 from temba.utils import analytics, datetime_to_ms, ms_to_datetime
 from temba.utils.views import BaseActionForm
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
+from temba.contacts.models import Contact
 
-from .models import Link
+from .models import Link, LinkContacts
 
 logger = logging.getLogger(__name__)
 
@@ -264,3 +264,25 @@ class LinkCRUDL(SmartCRUDL):
             queryset = super(LinkCRUDL.List, self).derive_queryset(*args, **kwargs)
             queryset = queryset.filter(is_active=True, is_archived=False)
             return queryset
+
+
+class LinkHandler(RedirectView):
+    def get_redirect_url(self, *args, **kwargs):
+        link = Link.objects.filter(uuid=self.kwargs.get('uuid')).only('id', 'clicks_count').first()
+        contact = Contact.objects.filter(uuid=self.request.GET.get('contact')).only('id').first()
+
+        if link and contact:
+            if contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
+
+                link_contact_args = dict(link=link,
+                                         contact=contact,
+                                         created_by=link.created_by,
+                                         modified_by=link.modified_by)
+                LinkContacts.objects.create(**link_contact_args)
+
+                link.clicks_count += 1
+                link.save()
+
+            return link.destination
+        else:
+            return None
