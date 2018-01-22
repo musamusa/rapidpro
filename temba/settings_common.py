@@ -472,6 +472,7 @@ PERMISSIONS = {
     'links.link': ('archived',
                    'read',
                    'history',
+                   'api',
                    ),
 
     'msgs.msg': ('api',
@@ -688,6 +689,7 @@ GROUP_PERMISSIONS = {
         'links.link_archived',
         'links.link_update',
         'links.link_history',
+        'links.link_api',
 
         'triggers.trigger.*',
 
@@ -800,6 +802,7 @@ GROUP_PERMISSIONS = {
         'links.link_archived',
         'links.link_update',
         'links.link_history',
+        'links.link_api',
 
         'triggers.trigger.*',
 

@@ -49,6 +49,9 @@ class Link(TembaModel):
     def get_contacts(self):
         return self.contacts.all().select_related().only('pk', 'name')
 
+    def as_select2(self):
+        return dict(text=self.name, id=self.uuid)
+
     @classmethod
     def apply_action_archive(cls, user, links):
         changed = []

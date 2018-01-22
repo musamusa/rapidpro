@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import logging
+import json
 
 from datetime import timedelta
 
@@ -11,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView
 from django.utils import timezone
 from django.urls import NoReverseMatch, reverse
+from django.http import JsonResponse
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
 
@@ -62,7 +64,7 @@ class BaseFlowForm(forms.ModelForm):
 
 
 class LinkCRUDL(SmartCRUDL):
-    actions = ('list', 'read', 'history', 'archived', 'create', 'update')
+    actions = ('list', 'read', 'history', 'archived', 'create', 'update', 'api')
 
     model = Link
 
@@ -264,6 +266,13 @@ class LinkCRUDL(SmartCRUDL):
             queryset = super(LinkCRUDL.List, self).derive_queryset(*args, **kwargs)
             queryset = queryset.filter(is_active=True, is_archived=False)
             return queryset
+
+    class Api(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+
+        def get(self, request, *args, **kwargs):
+            links = Link.objects.filter(is_active=True, is_archived=False).order_by('name')
+            results = [item.as_select2() for item in links]
+            return JsonResponse(dict(results=results))
 
 
 class LinkHandler(RedirectView):
