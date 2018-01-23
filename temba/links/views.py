@@ -1,7 +1,6 @@
 from __future__ import print_function, unicode_literals
 
 import logging
-import json
 
 from datetime import timedelta
 
@@ -11,7 +10,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView
 from django.utils import timezone
-from django.urls import NoReverseMatch, reverse
 from django.http import JsonResponse
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
