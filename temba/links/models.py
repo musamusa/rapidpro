@@ -7,6 +7,8 @@ from itertools import chain
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.core.urlresolvers import reverse
+from django.conf import settings
 
 from smartmin.models import SmartModel
 
@@ -51,6 +53,17 @@ class Link(TembaModel):
 
     def as_select2(self):
         return dict(text=self.name, id=self.uuid)
+
+    def get_permalink(self):
+        return reverse('links.link_handler', args=[self.uuid])
+
+    def get_url(self):
+        if settings.DEBUG:
+            protocol = 'http'
+        else:
+            protocol = 'https'
+
+        return '%s://%s%s' % (protocol, settings.HOSTNAME, self.get_permalink())
 
     @classmethod
     def apply_action_archive(cls, user, links):
