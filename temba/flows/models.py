@@ -3644,7 +3644,6 @@ class RuleSet(models.Model):
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             resthook = None
             url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
-            action = 'POST'
             headers = {'Content-Type': 'application/json'}
 
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]

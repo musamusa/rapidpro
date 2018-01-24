@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import logging
+import socket
 
 from datetime import timedelta
 
@@ -278,9 +279,15 @@ class LinkHandler(RedirectView):
         link = Link.objects.filter(uuid=self.kwargs.get('uuid')).only('id', 'clicks_count').first()
         contact = Contact.objects.filter(uuid=self.request.GET.get('contact')).only('id').first()
 
-        if link and contact:
-            if contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
+        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = self.request.META.get('REMOTE_ADDR')
+        host = socket.gethostbyaddr(ip)
 
+        if link and contact and host:
+            if 'google' not in host[0] and contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
                 link_contact_args = dict(link=link,
                                          contact=contact,
                                          created_by=link.created_by,
