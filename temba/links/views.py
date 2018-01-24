@@ -284,10 +284,15 @@ class LinkHandler(RedirectView):
             ip = x_forwarded_for.split(',')[0]
         else:
             ip = self.request.META.get('REMOTE_ADDR')
-        host = socket.gethostbyaddr(ip)
 
-        if link and contact and host:
-            if 'google' not in host[0] and contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
+        try:
+            host = socket.gethostbyaddr(ip)[0]
+            is_google_checking = 'google' in host
+        except Exception:
+            is_google_checking = False
+
+        if link and contact:
+            if not is_google_checking and contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
                 link_contact_args = dict(link=link,
                                          contact=contact,
                                          created_by=link.created_by,
