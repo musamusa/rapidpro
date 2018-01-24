@@ -200,6 +200,10 @@ class LinkCRUDL(SmartCRUDL):
             class Meta:
                 model = Link
                 fields = ('name', 'destination')
+                widgets = {
+                    'destination': forms.URLInput(
+                        attrs={'placeholder': 'E.g. http://example.com, https://example.com'}),
+                }
 
         success_message = ''
         success_url = 'uuid@links.link_read'
