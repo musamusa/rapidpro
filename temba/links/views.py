@@ -85,6 +85,10 @@ class LinkCRUDL(SmartCRUDL):
             class Meta:
                 model = Link
                 fields = ('name', 'destination')
+                widgets = {
+                    'destination': forms.URLInput(
+                        attrs={'placeholder': 'E.g. http://example.com, https://example.com'}),
+                }
 
         form_class = LinkCreateForm
         success_message = ''
@@ -269,7 +273,8 @@ class LinkCRUDL(SmartCRUDL):
     class Api(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
 
         def get(self, request, *args, **kwargs):
-            links = Link.objects.filter(is_active=True, is_archived=False).order_by('name')
+            org = self.request.user.get_org()
+            links = Link.objects.filter(is_active=True, is_archived=False, org=org).order_by('name')
             results = [item.as_select2() for item in links]
             return JsonResponse(dict(results=results))
 
