@@ -120,7 +120,7 @@
             Select which Trackable Link would you like to shorten
 
         %input{ng-model:"formData.shorten_url", search:"true", init-text:"[[ruleset.config.shorten_url.text]]", name:"shorten_url",
-              placeholder:"Select the flow event to notify subscribers of", required:"", init-id:"[[ruleset.config.shorten_url.id]]",
+              placeholder:"Select your trackable link to be shortened", required:"", init-id:"[[ruleset.config.shorten_url.id]]",
               select-server:"/link/api/", type:"hidden"}
 
     .webhook{ng-if:'formData.rulesetConfig.type == "webhook"'}><
