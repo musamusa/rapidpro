@@ -473,6 +473,7 @@ PERMISSIONS = {
                    'read',
                    'history',
                    'api',
+                   'export',
                    ),
 
     'msgs.msg': ('api',
@@ -690,6 +691,7 @@ GROUP_PERMISSIONS = {
         'links.link_update',
         'links.link_history',
         'links.link_api',
+        'links.link_export',
 
         'triggers.trigger.*',
 
@@ -803,6 +805,7 @@ GROUP_PERMISSIONS = {
         'links.link_update',
         'links.link_history',
         'links.link_api',
+        'links.link_export',
 
         'triggers.trigger.*',
 

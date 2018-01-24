@@ -24,8 +24,18 @@
       %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{ request.GET.search }}"}
 
     #gear-container
-      %a{'href':'#', 'data-success-url': '', 'class': 'update-link btn-primary btn', 'data-original-title': '', 'title': ''}
-        Edit
+      %span.btn-group.gear-menu
+        %button.btn.dropdown-toggle{'data-toggle': 'dropdown', 'data-original-title': '', 'title': ''}
+          %div.glyph.icon-cog
+          %span.caret
+        %ul.dropdown-menu.label-menu{'role': 'menu', 'aria-labelledby': 'dlabel'}
+          %li.dynamic-item
+            %a{'href': '#', 'data-success-url': '', 'class': 'update-link', 'data-original-title': '', 'title': ''}
+              -trans "Edit"
+          %li.dynamic-item
+            %a{'href': '{% url "links.link_export" link.pk %}', 'data-success-url': '', 'class': 'posterize'}
+              -trans "Export"
+              
 
 -block read-buttons
 
@@ -68,6 +78,16 @@
     {% lessblock %}
       :plain
 
+        @media (max-width: 1380px) {
+          #gear-container {
+            .gear-menu {
+              .btn {
+                padding: 8px 10px;
+              }
+            }
+          }
+        }
+
         .icon-user {
           color: #999;
         }
@@ -78,6 +98,13 @@
 
         input.search-query {
           margin: 0;
+
+          @media (max-width: 1380px) {
+            width: 160px !important;
+          }
+          @media (max-width: 1120px) {
+            width: 118px !important;
+          }
         }
 
         .show-all {

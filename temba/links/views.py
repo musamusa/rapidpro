@@ -1,17 +1,20 @@
 from __future__ import print_function, unicode_literals
 
+import os
 import logging
 import socket
 
 from datetime import timedelta
 
 from django import forms
+from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView
 from django.utils import timezone
-from django.http import JsonResponse
+from django.utils.translation import ugettext_lazy as _
+from django.utils.text import slugify
+from django.http import JsonResponse, HttpResponse
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
 
@@ -63,7 +66,7 @@ class BaseFlowForm(forms.ModelForm):
 
 
 class LinkCRUDL(SmartCRUDL):
-    actions = ('list', 'read', 'history', 'archived', 'create', 'update', 'api')
+    actions = ('list', 'read', 'history', 'archived', 'create', 'update', 'api', 'export')
 
     model = Link
 
@@ -133,6 +136,10 @@ class LinkCRUDL(SmartCRUDL):
 
             if self.has_org_perm("links.link_update"):
                 links.append(dict(title=_('Edit'), style='btn-primary', js_class='update-link', href="#"))
+
+            if self.has_org_perm("links.link_export"):
+                links.append(dict(title=_('Export'), style='btn-primary', js_class='posterize',
+                                  href=reverse('links.link_export', args=(self.object.pk,))))
 
             return links
 
@@ -225,6 +232,30 @@ class LinkCRUDL(SmartCRUDL):
 
         def post_save(self, obj):
             return obj
+
+    class Export(Read):
+        def get_context_data(self, *args, **kwargs):
+            context = super(LinkCRUDL.Export, self).get_context_data(*args, **kwargs)
+            return context
+
+        def get_template_names(self):
+            return "links/link_read.haml"
+
+        def post(self, request, *args, **kwargs):
+            self.object = self.get_object()
+
+            slug_name = slugify(self.object.name)
+
+            output_dir = '%s/link_export' % settings.MEDIA_ROOT
+            output_path = '%s/%s.csv' % (output_dir, slug_name)
+
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            with open(output_path, 'r') as csv:
+                response = HttpResponse(csv.read(), content_type='application/csv')
+                response['Content-Disposition'] = 'attachment; filename=%s.csv' % slug_name
+                return response
 
     class BaseList(LinkActionMixin, OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         title = _("Trackable Links")
