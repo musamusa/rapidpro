@@ -1,6 +1,5 @@
 from __future__ import print_function, unicode_literals
 
-import os
 import logging
 import socket
 
@@ -9,22 +8,23 @@ from datetime import timedelta
 from django import forms
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
-from django.utils.text import slugify
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponseRedirect
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
+from smartmin.views import SmartTemplateView
 
 from temba.utils import analytics, datetime_to_ms, ms_to_datetime, on_transaction_commit
 from temba.utils.views import BaseActionForm
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.contacts.models import Contact
 
-
-from .models import Link
+from .models import Link, ExportLinksTask
+from .tasks import export_link_task
 
 logger = logging.getLogger(__name__)
 
@@ -234,29 +234,44 @@ class LinkCRUDL(SmartCRUDL):
         def post_save(self, obj):
             return obj
 
-    class Export(Read):
-        def get_context_data(self, *args, **kwargs):
-            context = super(LinkCRUDL.Export, self).get_context_data(*args, **kwargs)
-            return context
+    class Export(OrgPermsMixin, SmartTemplateView):
+        def render_to_response(self, context, **response_kwargs):
+            user = self.request.user
+            org = user.get_org()
 
-        def get_template_names(self):
-            return "links/link_read.haml"
+            redirect = self.request.GET.get('redirect')
 
-        def post(self, request, *args, **kwargs):
-            self.object = self.get_object()
+            group = ContactGroup.all_groups.filter(org=org, uuid=group_uuid).first() if group_uuid else None
 
-            slug_name = slugify(self.object.name)
+            # is there already an export taking place?
+            existing = ExportLinksTask.get_recent_unfinished(org)
+            if existing:
+                messages.info(self.request,
+                              _("There is already an export in progress, started by %s. You must wait "
+                                "for that export to complete before starting another." % existing.created_by.username))
 
-            output_dir = '%s/link_export' % settings.MEDIA_ROOT
-            output_path = '%s/%s.csv' % (output_dir, slug_name)
+            # otherwise, off we go
+            else:
+                previous_export = ExportLinksTask.objects.filter(org=org, created_by=user).order_by('-modified_on').first()
+                if previous_export and previous_export.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
+                    analytics.track(self.request.user.username, 'temba.link_exported')
 
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+                export = ExportLinksTask.create(org, user, link)
 
-            with open(output_path, 'r') as csv:
-                response = HttpResponse(csv.read(), content_type='application/csv')
-                response['Content-Disposition'] = 'attachment; filename=%s.csv' % slug_name
-                return response
+                on_transaction_commit(lambda: export_link_task.delay(export.pk))
+
+                if not getattr(settings, 'CELERY_ALWAYS_EAGER', False):  # pragma: no cover
+                    messages.info(self.request,
+                                  _("We are preparing your export. We will e-mail you at %s when it is ready.")
+                                  % self.request.user.username)
+
+                else:
+                    dl_url = reverse('assets.download', kwargs=dict(type='link_export', pk=export.pk))
+                    messages.info(self.request,
+                                  _("Export complete, you can find it here: %s (production users will get an email)")
+                                  % dl_url)
+
+            return HttpResponseRedirect(redirect or reverse('links.link_read', args=[link.uuid]))
 
     class BaseList(LinkActionMixin, OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         title = _("Trackable Links")
