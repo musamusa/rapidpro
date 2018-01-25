@@ -48,9 +48,6 @@ class Link(TembaModel):
         flow = Link.objects.create(org=org, name=name, destination=destination, created_by=user, modified_by=user)
         return flow
 
-    def get_contacts(self):
-        return self.contacts.all().select_related().only('pk', 'name')
-
     def as_select2(self):
         return dict(text=self.name, id=self.uuid)
 
