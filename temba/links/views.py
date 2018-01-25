@@ -18,12 +18,13 @@ from django.http import JsonResponse, HttpResponse
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
 
-from temba.utils import analytics, datetime_to_ms, ms_to_datetime
+from temba.utils import analytics, datetime_to_ms, ms_to_datetime, on_transaction_commit
 from temba.utils.views import BaseActionForm
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.contacts.models import Contact
 
-from .models import Link, LinkContacts
+
+from .models import Link
 
 logger = logging.getLogger(__name__)
 
@@ -306,7 +307,6 @@ class LinkCRUDL(SmartCRUDL):
             return queryset
 
     class Api(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
-
         def get(self, request, *args, **kwargs):
             org = self.request.user.get_org()
             links = Link.objects.filter(is_active=True, is_archived=False, org=org).order_by('name')
@@ -316,31 +316,26 @@ class LinkCRUDL(SmartCRUDL):
 
 class LinkHandler(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
+        from .tasks import handle_link_task
+
         link = Link.objects.filter(uuid=self.kwargs.get('uuid')).only('id', 'clicks_count').first()
         contact = Contact.objects.filter(uuid=self.request.GET.get('contact')).only('id').first()
 
-        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = self.request.META.get('REMOTE_ADDR')
-
-        try:
-            host = socket.gethostbyaddr(ip)[0]
-            is_google_checking = 'google' in host
-        except Exception:
-            is_google_checking = False
-
         if link and contact:
-            if not is_google_checking and contact.id not in [item.get('contact__id') for item in link.contacts.all().select_related().only('contact__id').values('contact__id')]:
-                link_contact_args = dict(link=link,
-                                         contact=contact,
-                                         created_by=link.created_by,
-                                         modified_by=link.modified_by)
-                LinkContacts.objects.create(**link_contact_args)
+            x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = self.request.META.get('REMOTE_ADDR')
 
-                link.clicks_count += 1
-                link.save()
+            try:
+                host = socket.gethostbyaddr(ip)[0]
+                is_google_checking = 'google' in host
+            except Exception:
+                is_google_checking = False
+
+            if not is_google_checking:
+                on_transaction_commit(lambda: handle_link_task.delay(link.id, contact.id))
 
             return link.destination
         else:
