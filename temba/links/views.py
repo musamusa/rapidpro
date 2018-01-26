@@ -349,7 +349,7 @@ class LinkHandler(RedirectView):
             except Exception:
                 is_google_checking = False
 
-            if not is_google_checking:
+            if not is_google_checking and not contact.is_test:
                 on_transaction_commit(lambda: handle_link_task.delay(link.id, contact.id))
 
             return link.destination
