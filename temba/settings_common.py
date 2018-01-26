@@ -875,6 +875,12 @@ GROUP_PERMISSIONS = {
 
         'triggers.trigger_archived',
         'triggers.trigger_list',
+
+        'links.link_export',
+        'links.link_archived',
+        'links.link_history',
+        'links.link_list',
+        'links.link_read',
     )
 }
 

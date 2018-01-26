@@ -23,18 +23,21 @@
     %form.search{method:'get'}
       %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{ request.GET.search }}"}
 
-    #gear-container
-      %span.btn-group.gear-menu
-        %button.btn.dropdown-toggle{'data-toggle': 'dropdown', 'data-original-title': '', 'title': ''}
-          %div.glyph.icon-cog
-          %span.caret
-        %ul.dropdown-menu.label-menu{'role': 'menu', 'aria-labelledby': 'dlabel'}
-          %li.dynamic-item
-            %a{'href': '#', 'data-success-url': '', 'class': 'update-link', 'data-original-title': '', 'title': ''}
-              -trans "Edit"
-          %li.dynamic-item
-            %a{'href': '{% url "links.link_export" link.pk %}', 'data-success-url': '', 'class': 'posterize'}
-              -trans "Export"
+    - if org_perms.links.link_update or org_perms.links.link_export
+      #gear-container
+        %span.btn-group.gear-menu
+          %button.btn.dropdown-toggle{'data-toggle': 'dropdown', 'data-original-title': '', 'title': ''}
+            %div.glyph.icon-cog
+            %span.caret
+          %ul.dropdown-menu.label-menu{'role': 'menu', 'aria-labelledby': 'dlabel'}
+            - if org_perms.links.link_update
+              %li.dynamic-item
+                %a{'href': '#', 'data-success-url': '', 'class': 'update-link', 'data-original-title': '', 'title': ''}
+                  -trans "Edit"
+            -if org_perms.links.link_export
+              %li.dynamic-item
+                %a{'href': '{% url "links.link_export" link.pk %}', 'data-success-url': '', 'class': 'posterize'}
+                  -trans "Export"
               
 
 -block read-buttons
