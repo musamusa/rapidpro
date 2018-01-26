@@ -17,7 +17,7 @@ from temba.assets.models import register_asset_store
 from temba.contacts.models import Contact
 from temba.contacts.search import contact_search, SearchException
 from temba.orgs.models import Org
-from temba.utils import chunk_list
+from temba.utils import chunk_list, datetime_to_str
 from temba.utils.models import TembaModel
 from temba.utils.export import BaseExportAssetStore, BaseExportTask, TableExporter
 from temba.utils.text import clean_string
@@ -190,7 +190,7 @@ class ExportLinksTask(BaseExportTask):
                     elif field['key'] == Contact.UUID:
                         field_value = contact.contact.uuid
                     elif field['key'] == 'date':
-                        field_value = contact.created_on.strftime("%m-%d-%Y %H:%M:%S")
+                        field_value = datetime_to_str(contact.created_on, tz=self.link.org.timezone)
                     else:
                         value = contact.contact.get_field(field['key'])
                         field_value = Contact.get_field_display_for_value(field['field'], value)
