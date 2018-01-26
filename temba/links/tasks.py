@@ -4,9 +4,17 @@ import logging
 
 from celery.task import task
 
-from .models import Link, LinkContacts
+from .models import Link, LinkContacts, ExportLinksTask
 
 logger = logging.getLogger(__name__)
+
+
+@task(track_started=True, name='export_link_task')
+def export_link_task(id):
+    """
+    Export link contacts to a file and e-mail a link to the user
+    """
+    ExportLinksTask.objects.get(id=id).perform()
 
 
 @task(track_started=True, name='handle_link_task')

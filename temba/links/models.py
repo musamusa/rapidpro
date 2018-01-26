@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 
 import six
+import time
 
 from itertools import chain
 
@@ -12,10 +13,14 @@ from django.conf import settings
 
 from smartmin.models import SmartModel
 
+from temba.assets.models import register_asset_store
 from temba.contacts.models import Contact
 from temba.contacts.search import contact_search, SearchException
 from temba.orgs.models import Org
+from temba.utils import chunk_list
 from temba.utils.models import TembaModel
+from temba.utils.export import BaseExportAssetStore, BaseExportTask, TableExporter
+from temba.utils.text import clean_string
 
 
 MAX_HISTORY = 50
@@ -128,3 +133,100 @@ class LinkContacts(SmartModel):
 
     def __str__(self):
         return "%s" % self.contact.get_display()
+
+
+class ExportLinksTask(BaseExportTask):
+    analytics_key = 'link_export'
+    email_subject = "Your trackable link export is ready"
+    email_template = 'links/email/links_export_download'
+
+    link = models.ForeignKey(Link, null=True, related_name='exports',
+                             help_text=_("The trackable link to export"))
+
+    @classmethod
+    def create(cls, org, user, link):
+        return cls.objects.create(org=org, link=link, created_by=user, modified_by=user)
+
+    def get_export_fields_and_schemes(self):
+
+        fields = [dict(label='Contact UUID', key=Contact.UUID, id=0, field=None, urn_scheme=None),
+                  dict(label='Name', key=Contact.NAME, id=0, field=None, urn_scheme=None),
+                  dict(label='Date', key='date', id=0, field=None, urn_scheme=None)]
+
+        # anon orgs also get an ID column that is just the PK
+        if self.org.is_anon:
+            fields = [dict(label='ID', key=Contact.ID, id=0, field=None, urn_scheme=None)] + fields
+
+        return fields, dict()
+
+    def write_export(self):
+        fields, scheme_counts = self.get_export_fields_and_schemes()
+
+        contact_ids = self.link.contacts.filter(contact__is_test=False).order_by('contact__name', 'contact__id').values_list('id', flat=True)
+
+        # create our exporter
+        exporter = TableExporter(self, "Links", [f['label'] for f in fields], is_csv=True)
+
+        current_contact = 0
+        start = time.time()
+
+        # write out contacts in batches to limit memory usage
+        for batch_ids in chunk_list(contact_ids, 1000):
+            # fetch all the contacts for our batch
+            batch_contacts = LinkContacts.objects.filter(id__in=batch_ids)
+
+            # to maintain our sort, we need to lookup by id, create a map of our id->contact to aid in that
+            contact_by_id = {c.id: c for c in batch_contacts}
+
+            # bulk initialize them
+            # Contact.bulk_cache_initialize(self.org, batch_contacts)
+
+            for contact_id in batch_ids:
+                contact = contact_by_id[contact_id]
+
+                values = []
+                for col in range(len(fields)):
+                    field = fields[col]
+
+                    if field['key'] == Contact.NAME:
+                        field_value = contact.contact.name
+                    elif field['key'] == Contact.UUID:
+                        field_value = contact.contact.uuid
+                    elif field['key'] == 'date':
+                        field_value = contact.created_on.strftime("%m-%d-%Y %H:%M:%S")
+                    else:
+                        value = contact.contact.get_field(field['key'])
+                        field_value = Contact.get_field_display_for_value(field['field'], value)
+
+                    if field_value is None:
+                        field_value = ''
+
+                    if field_value:
+                        field_value = six.text_type(clean_string(field_value))
+
+                    values.append(field_value)
+
+                # write this contact's values
+                exporter.write_row(values)
+                current_contact += 1
+
+                # output some status information every 10,000 contacts
+                if current_contact % 10000 == 0:  # pragma: no cover
+                    elapsed = time.time() - start
+                    predicted = int(elapsed / (current_contact / (len(contact_ids) * 1.0)))
+
+                    print("Export of %s contacts - %d%% (%s/%s) complete in %0.2fs (predicted %0.0fs)" %
+                          (self.org.name, current_contact * 100 / len(contact_ids),
+                           "{:,}".format(current_contact), "{:,}".format(len(contact_ids)),
+                           time.time() - start, predicted))
+
+        return exporter.save_file()
+
+
+@register_asset_store
+class ContactExportAssetStore(BaseExportAssetStore):
+    model = ExportLinksTask
+    key = 'link_export'
+    directory = 'link_exports'
+    permission = 'links.link_export'
+    extensions = ('xlsx', 'csv')
