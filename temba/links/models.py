@@ -178,9 +178,6 @@ class ExportLinksTask(BaseExportTask):
             # to maintain our sort, we need to lookup by id, create a map of our id->contact to aid in that
             contact_by_id = {c.id: c for c in batch_contacts}
 
-            # bulk initialize them
-            # Contact.bulk_cache_initialize(self.org, batch_contacts)
-
             for contact_id in batch_ids:
                 contact = contact_by_id[contact_id]
 
@@ -189,7 +186,7 @@ class ExportLinksTask(BaseExportTask):
                     field = fields[col]
 
                     if field['key'] == Contact.NAME:
-                        field_value = contact.contact.name
+                        field_value = contact.contact.get_display()
                     elif field['key'] == Contact.UUID:
                         field_value = contact.contact.uuid
                     elif field['key'] == 'date':
