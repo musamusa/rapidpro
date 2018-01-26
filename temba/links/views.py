@@ -234,14 +234,14 @@ class LinkCRUDL(SmartCRUDL):
         def post_save(self, obj):
             return obj
 
-    class Export(OrgPermsMixin, SmartTemplateView):
-        def render_to_response(self, context, **response_kwargs):
-            user = self.request.user
+    class Export(OrgObjPermsMixin, SmartReadView):
+        def post(self, request, *args, **kwargs):
+            user = request.user
             org = user.get_org()
 
-            redirect = self.request.GET.get('redirect')
+            redirect = request.GET.get('redirect')
 
-            group = ContactGroup.all_groups.filter(org=org, uuid=group_uuid).first() if group_uuid else None
+            link = Link.objects.filter(org=org, pk=self.kwargs.get('pk')).first()
 
             # is there already an export taking place?
             existing = ExportLinksTask.get_recent_unfinished(org)

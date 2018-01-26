@@ -173,7 +173,7 @@ class ExportLinksTask(BaseExportTask):
         # write out contacts in batches to limit memory usage
         for batch_ids in chunk_list(contact_ids, 1000):
             # fetch all the contacts for our batch
-            batch_contacts = LinkContacts.objects.filter(id__in=batch_ids).select_related('org')
+            batch_contacts = LinkContacts.objects.filter(id__in=batch_ids)
 
             # to maintain our sort, we need to lookup by id, create a map of our id->contact to aid in that
             contact_by_id = {c.id: c for c in batch_contacts}
@@ -193,9 +193,9 @@ class ExportLinksTask(BaseExportTask):
                     elif field['key'] == Contact.UUID:
                         field_value = contact.contact.uuid
                     elif field['key'] == 'date':
-                        field_value = contact.created_on
+                        field_value = contact.created_on.strftime("%m-%d-%Y %H:%M:%S")
                     else:
-                        value = contact.get_field(field['key'])
+                        value = contact.contact.get_field(field['key'])
                         field_value = Contact.get_field_display_for_value(field['field'], value)
 
                     if field_value is None:
