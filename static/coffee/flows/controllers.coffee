@@ -1763,7 +1763,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
         ruleset.config = {
           'shorten_url': {
             'text': splitEditor.shorten_url.selected[0]['text'], 
-            'id': splitEditor.shorten_url.selected[0]['id']
+            'id': splitEditor.shorten_url.selected[0]['id'],
+            'destination': splitEditor.shorten_url.selected[0]['destination']
           }
         }
 

@@ -56,6 +56,11 @@ class Link(TembaModel):
     def as_select2(self):
         return dict(text=self.name, id=self.uuid)
 
+    def as_export(self):
+        data = self.as_select2()
+        data.update(dict(destination=self.destination))
+        return data
+
     def get_permalink(self):
         return reverse('links.link_handler', args=[self.uuid])
 
