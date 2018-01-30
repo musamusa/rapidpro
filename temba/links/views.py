@@ -331,6 +331,7 @@ class LinkCRUDL(SmartCRUDL):
 
 class LinkHandler(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
+        from user_agents import parse
         from .tasks import handle_link_task
 
         link = Link.objects.filter(uuid=self.kwargs.get('uuid')).only('id', 'clicks_count').first()
@@ -343,13 +344,16 @@ class LinkHandler(RedirectView):
             else:
                 ip = self.request.META.get('REMOTE_ADDR')
 
+            ua_string = self.request.META.get('HTTP_USER_AGENT')
+            user_agent = parse(ua_string)
+
             try:
                 host = socket.gethostbyaddr(ip)[0]
                 is_google_checking = 'google' in host
             except Exception:
                 is_google_checking = False
 
-            if not is_google_checking and not contact.is_test:
+            if not is_google_checking and not user_agent.is_bot and not contact.is_test:
                 on_transaction_commit(lambda: handle_link_task.delay(link.id, contact.id))
 
             return link.destination
