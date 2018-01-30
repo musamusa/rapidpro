@@ -190,7 +190,7 @@ class ExportLinksTask(BaseExportTask):
                     elif field['key'] == Contact.UUID:
                         field_value = contact.contact.uuid
                     elif field['key'] == 'date':
-                        field_value = datetime_to_str(contact.created_on, tz=self.link.org.timezone)
+                        field_value = datetime_to_str(contact.created_on, format='%m-%d-%Y %H:%M:%S', tz=self.link.org.timezone)
                     else:
                         value = contact.contact.get_field(field['key'])
                         field_value = Contact.get_field_display_for_value(field['field'], value)
