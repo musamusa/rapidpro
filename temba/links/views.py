@@ -325,7 +325,7 @@ class LinkCRUDL(SmartCRUDL):
         def get(self, request, *args, **kwargs):
             org = self.request.user.get_org()
             links = Link.objects.filter(is_active=True, is_archived=False, org=org).order_by('name')
-            results = [item.as_export() for item in links]
+            results = [item.as_select2() for item in links]
             return JsonResponse(dict(results=results))
 
 
