@@ -409,6 +409,20 @@ class Flow(TembaModel):
                 if ruleset['ruleset_type'] == RuleSet.TYPE_SUBFLOW:
                     remap_flow(ruleset['config']['flow'])
 
+                elif ruleset['ruleset_type'] == RuleSet.TYPE_SHORTEN_URL:
+                    link_data = None
+                    if 'links' in exported_json:
+                        for link in exported_json['links']:
+                            if link['uuid'] == ruleset['config'][RuleSet.TYPE_SHORTEN_URL]['id']:
+                                link_data = link
+                                break
+
+                    if link_data:
+                        created_link = Link.objects.create(org=org, name=link_data['name'],
+                                                           destination=link_data['destination'],
+                                                           created_by=user, modified_by=user)
+                        ruleset['config'][RuleSet.TYPE_SHORTEN_URL]['id'] = created_link.uuid
+
             for actionset in created['flow_spec'][Flow.ACTION_SETS]:
                 for action in actionset['actions']:
                     if action['type'] in ['flow', 'trigger-flow']:
