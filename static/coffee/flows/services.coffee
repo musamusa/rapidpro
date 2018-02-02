@@ -472,6 +472,11 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
           { name: 'Failure', test: { type: 'airtime_status', exit_status: 'failed'}},
         ]},
 
+        { type: 'shorten_url', name:'Shorten Trackable Link', verbose_name: 'Shorten Trackable Link', split:'shorten_url response', filter:[TEXT], rules:[
+          { name: 'Success', test: { type: 'webhook_status', status: 'success'}},
+          { name: 'Failure', test: { type: 'webhook_status', status: 'failure'}},
+        ]},
+
         # all flows
         { type: 'subflow', name: 'Run Flow', verbose_name: 'Run a flow', filter: ALL, rules: [
           { name: 'Completed', test: { type: 'subflow', exit_type: 'completed' }},
@@ -493,7 +498,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       @exclusiveRules = {
         'subflow': ['subflow'],
         'timeout': ['wait_message'],
-        'webhook_status': ['webhook', 'resthook'],
+        'webhook_status': ['webhook', 'resthook', 'shorten_url'],
         'airtime_status': ['airtime'],
         'in_group': ['group']
       }

@@ -9,6 +9,7 @@ import regex
 import six
 import time
 import urllib2
+import requests
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
@@ -36,6 +37,7 @@ from temba.locations.models import AdminBoundary
 from temba.msgs.models import Broadcast, Msg, FLOW, INBOX, INCOMING, QUEUED, FAILED, INITIALIZING, HANDLED, Label
 from temba.msgs.models import PENDING, DELIVERED, USSD as MSG_TYPE_USSD, OUTGOING
 from temba.orgs.models import Org, Language, UNREAD_FLOW_MSGS, get_current_export_version
+from temba.links.models import Link
 from temba.utils import get_datetime_format, str_to_datetime, datetime_to_str, analytics, json_date_to_datetime
 from temba.utils import chunk_list, on_transaction_commit
 from temba.utils.email import is_valid_address
@@ -406,6 +408,20 @@ class Flow(TembaModel):
             for ruleset in created['flow_spec'][Flow.RULE_SETS]:
                 if ruleset['ruleset_type'] == RuleSet.TYPE_SUBFLOW:
                     remap_flow(ruleset['config']['flow'])
+
+                elif ruleset['ruleset_type'] == RuleSet.TYPE_SHORTEN_URL:
+                    link_data = None
+                    if 'links' in exported_json:
+                        for link in exported_json['links']:
+                            if link['uuid'] == ruleset['config'][RuleSet.TYPE_SHORTEN_URL]['id']:
+                                link_data = link
+                                break
+
+                    if link_data:
+                        created_link = Link.objects.create(org=org, name=link_data['name'],
+                                                           destination=link_data['destination'],
+                                                           created_by=user, modified_by=user)
+                        ruleset['config'][RuleSet.TYPE_SHORTEN_URL]['id'] = created_link.uuid
 
             for actionset in created['flow_spec'][Flow.ACTION_SETS]:
                 for action in actionset['actions']:
@@ -3439,6 +3455,8 @@ class RuleSet(models.Model):
     TYPE_RANDOM = 'random'
     TYPE_SUBFLOW = 'subflow'
 
+    TYPE_SHORTEN_URL = 'shorten_url'
+
     CONFIG_WEBHOOK = 'webhook'
     CONFIG_WEBHOOK_ACTION = 'webhook_action'
     CONFIG_WEBHOOK_HEADERS = 'webhook_headers'
@@ -3464,7 +3482,8 @@ class RuleSet(models.Model):
                     (TYPE_FORM_FIELD, "Split by message form"),
                     (TYPE_CONTACT_FIELD, "Split on contact field"),
                     (TYPE_EXPRESSION, "Split by expression"),
-                    (TYPE_RANDOM, "Split Randomly"))
+                    (TYPE_RANDOM, "Split Randomly"),
+                    (TYPE_SHORTEN_URL, "Shorten Trackable Link"))
 
     uuid = models.CharField(max_length=36, unique=True)
 
@@ -3635,6 +3654,34 @@ class RuleSet(models.Model):
                     (result, value) = rule.matches(run, msg, context, orig_text)
                     if result > 0:
                         return rule, value
+
+        elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
+            resthook = None
+            url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            headers = {'Content-Type': 'application/json'}
+
+            config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
+            item_uuid = config.get('id')
+            item = Link.objects.filter(uuid=item_uuid, org=run.flow.org).first()
+
+            if item:
+                long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
+                data = json.dumps({'longUrl': long_url})
+
+                response = requests.post(url, data=data, headers=headers, timeout=10)
+
+                for rule in self.get_rules():
+                    (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                    if result > 0:
+                        if response.status_code == 200:
+                            response_json = response.json()
+                            short_url = response_json.get('id')
+                        else:
+                            short_url = None
+
+                        return rule, short_url
+            else:
+                return rule, None
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}

@@ -146,11 +146,14 @@ class TableExporter(object):
     When writing to an Excel sheet, this also takes care of creating different sheets every 1048576
     rows, as again, Excel file only support that many per sheet.
     """
-    def __init__(self, task, sheet_name, columns):
+    def __init__(self, task, sheet_name, columns, is_csv=False):
         self.task = task
         self.columns = columns
-        self.is_csv = len(self.columns) > BaseExportTask.MAX_EXCEL_COLS
         self.sheet_name = sheet_name
+        if is_csv:
+            self.is_csv = True
+        else:
+            self.is_csv = len(self.columns) > BaseExportTask.MAX_EXCEL_COLS
 
         self.current_sheet = 0
         self.current_row = 0

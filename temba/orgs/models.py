@@ -405,10 +405,12 @@ class Org(SmartModel):
         from temba.campaigns.models import Campaign
         from temba.flows.models import Flow
         from temba.triggers.models import Trigger
+        from temba.links.models import Link
 
         exported_flows = []
         exported_campaigns = []
         exported_triggers = []
+        exported_links = []
 
         for component in components:
             if isinstance(component, Flow):
@@ -418,12 +420,15 @@ class Org(SmartModel):
                 exported_campaigns.append(component.as_json())
             elif isinstance(component, Trigger):
                 exported_triggers.append(component.as_json())
+            elif isinstance(component, Link):
+                exported_links.append(component.as_json())
 
         return dict(version=get_current_export_version(),
                     site=site_link,
                     flows=exported_flows,
                     campaigns=exported_campaigns,
-                    triggers=exported_triggers)
+                    triggers=exported_triggers,
+                    links=exported_links)
 
     def config_json(self):
         if self.config:

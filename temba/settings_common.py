@@ -240,6 +240,7 @@ INSTALLED_APPS = (
     'temba.ussd',
     'temba.locations',
     'temba.values',
+    'temba.links',
     'temba.airtime',
 )
 
@@ -468,6 +469,13 @@ PERMISSIONS = {
                       'results',
                       ),
 
+    'links.link': ('archived',
+                   'read',
+                   'history',
+                   'api',
+                   'export',
+                   ),
+
     'msgs.msg': ('api',
                  'archive',
                  'archived',
@@ -677,6 +685,14 @@ GROUP_PERMISSIONS = {
         'msgs.msg_sent',
         'msgs.msg_update',
 
+        'links.link.*',
+        'links.link_read',
+        'links.link_archived',
+        'links.link_update',
+        'links.link_history',
+        'links.link_api',
+        'links.link_export',
+
         'triggers.trigger.*',
 
     ),
@@ -783,6 +799,14 @@ GROUP_PERMISSIONS = {
         'msgs.msg_sent',
         'msgs.msg_update',
 
+        'links.link.*',
+        'links.link_read',
+        'links.link_archived',
+        'links.link_update',
+        'links.link_history',
+        'links.link_api',
+        'links.link_export',
+
         'triggers.trigger.*',
 
     ),
@@ -851,6 +875,12 @@ GROUP_PERMISSIONS = {
 
         'triggers.trigger_archived',
         'triggers.trigger_list',
+
+        'links.link_export',
+        'links.link_archived',
+        'links.link_history',
+        'links.link_list',
+        'links.link_read',
     )
 }
 
@@ -1232,3 +1262,5 @@ INVITATION_ACCEPT_REPLY = 'y'
 INVITATION_REJECT_REPLY = 'n'
 INVITATION_ACCEPTED_GROUP_NAME = 'Opted-In'
 INVITATION_REJECTED_GROUP_NAME = 'Opted-Out'
+
+GOOGLE_SHORTEN_URL_API_KEY = '__YOUR_GOOGLE_SHORTEN_URL_API_KEY__'
