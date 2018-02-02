@@ -154,7 +154,8 @@ class ExportLinksTask(BaseExportTask):
 
         fields = [dict(label='Contact UUID', key=Contact.UUID, id=0, field=None, urn_scheme=None),
                   dict(label='Name', key=Contact.NAME, id=0, field=None, urn_scheme=None),
-                  dict(label='Date', key='date', id=0, field=None, urn_scheme=None)]
+                  dict(label='Date', key='date', id=0, field=None, urn_scheme=None),
+                  dict(label='Destination Link', key='destination', id=0, field=None, urn_scheme=None)]
 
         # anon orgs also get an ID column that is just the PK
         if self.org.is_anon:
@@ -194,6 +195,8 @@ class ExportLinksTask(BaseExportTask):
                         field_value = contact.contact.uuid
                     elif field['key'] == 'date':
                         field_value = datetime_to_str(contact.created_on, format='%m-%d-%Y %H:%M:%S', tz=self.link.org.timezone)
+                    elif field['key'] == 'destination':
+                        field_value = contact.link.destination
                     else:
                         value = contact.contact.get_field(field['key'])
                         field_value = Contact.get_field_display_for_value(field['field'], value)
