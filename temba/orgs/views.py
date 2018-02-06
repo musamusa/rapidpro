@@ -1947,6 +1947,62 @@ class OrgCRUDL(SmartCRUDL):
 
             return super(OrgCRUDL.Resthooks, self).pre_save(obj)
 
+    class Giftcards(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
+        class GiftcardsForm(forms.ModelForm):
+            collection = forms.SlugField(required=False, label=_("New Collection"),
+                                         help_text="Enter a name for your collection. ex: new-collection")
+
+            def add_giftcard_fields(self):
+                collections = []
+                field_mapping = []
+
+                for collection in self.instance.get_giftcards():
+                    check_field = forms.BooleanField(required=False)
+                    field_name = "giftcard_%d" % collection.pk
+
+                    field_mapping.append((field_name, check_field))
+                    collections.append(dict(collection=collection, field=field_name))
+
+                self.fields = OrderedDict(self.fields.items() + field_mapping)
+                return collections
+
+            def clean_collection(self):
+                new_collection = self.data.get('collection')
+
+                if new_collection in self.instance.get_giftcards():
+                    raise ValidationError("This collection name has already been used")
+
+                return new_collection
+
+            class Meta:
+                model = Org
+                fields = ('id', 'collection')
+
+        form_class = GiftcardsForm
+        success_message = ''
+
+        def get_form(self):
+            form = super(OrgCRUDL.Giftcards, self).get_form()
+            self.current_collections = form.add_giftcard_fields()
+            return form
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.Giftcards, self).get_context_data(**kwargs)
+            context['current_collections'] = self.current_collections
+            return context
+
+        def pre_save(self, obj):
+            new_collection = self.form.data.get('collection')
+            if new_collection:
+                Org.add_giftcard_to_org(user=self.request.user, name=new_collection)
+
+            # release any resthooks that the user removed
+            # for resthook in self.current_resthooks:
+            #     if self.form.data.get(resthook['field']):
+            #         resthook['resthook'].release(self.request.user)
+
+            return super(OrgCRUDL.Giftcards, self).pre_save(obj)
+
     class Webhook(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
         class WebhookForm(forms.ModelForm):

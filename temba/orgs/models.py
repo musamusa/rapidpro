@@ -121,6 +121,8 @@ CHATBASE_TYPE_USER = 'user'
 CHATBASE_FEEDBACK = 'CHATBASE_FEEDBACK'
 CHATBASE_VERSION = 'CHATBASE_VERSION'
 
+GIFTCARDS = 'giftcards'
+
 ORG_STATUS = 'STATUS'
 SUSPENDED = 'suspended'
 RESTORED = 'restored'
@@ -618,6 +620,30 @@ class Org(SmartModel):
             urns = ContactURN.objects.filter(org=self, scheme=TEL_SCHEME).exclude(path__startswith="+")
             for urn in urns:
                 urn.ensure_number_normalization(country_code)
+
+    def get_giftcards(self):
+        """
+        Returns the giftcards configured on this Org
+        """
+        config = self.config_json()
+        return config.get(GIFTCARDS, [])
+
+    def add_giftcard_to_org(self, user, name):
+        """
+        Add a giftcard collection to this Org
+        """
+        giftcards = self.get_giftcards()
+        config = self.config_json()
+
+        if giftcards:
+            giftcards.append(name)
+        else:
+            giftcards = [name]
+
+        config.update({GIFTCARDS: giftcards})
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
 
     def get_resthooks(self):
         """
