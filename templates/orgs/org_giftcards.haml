@@ -1,0 +1,83 @@
+-extends 'smartmin/form.html'
+-load smartmin
+-load i18n
+
+-block form-span
+  span8
+
+-block pre-form
+
+  -blocktrans
+    Create your database to import your Gift Cards.
+
+-block fields
+    -if current_giftcards
+      %table#table-giftcards.table.table-condensed
+        %thead
+          %tr
+            %th Gift Card Collection
+            %th.permission Remove
+
+        %tbody
+          -if current_giftcards
+            -for item in current_giftcards
+              %tr
+                %td= item.collection
+                %td.giftcard-check.permission
+                  .hidden-input.hide
+                    {{form|field:item.field}}
+                  .glyph.level-checkbox
+
+    -else
+      %hr
+
+    .field.formax-vertical
+      {% render_field 'collection' %}
+
+-block summary
+  -with org.get_giftcards as giftcards
+    -trans "You have"
+
+    %span.attn
+      -if giftcards|length == 0
+        -trans "no gift card collections"
+      -elif giftcards|length == 1
+        -trans "one gift card collection"
+      -else
+        {{ giftcards|length }}
+        -trans "gift card collections"
+
+    -trans "configured."
+
+-block extra-script
+  {{block.super}}
+  :javascript
+    $(function() {
+      $("td.giftcard-check .glyph").on('click', function(){
+        var cell = $(this).parent("td.giftcard-check");
+        var ipt = cell.find("input[type='checkbox']");
+
+        if (!cell.hasClass("checked")) {
+          cell.addClass('checked');
+          ipt.prop('checked', true);
+        } else {
+          cell.removeClass('checked');
+          ipt.prop('checked', false);
+        }
+      })
+    });
+
+-block extra-style
+  :css
+
+    #table-giftcards {
+      margin: 10px 0px 10px 0px;
+    }
+
+    #table-giftcards th {
+      border-bottom: 1px solid #eee;
+    }
+
+    td.giftcard-check.checked .glyph.level-checkbox:before {
+      content: "\e05a";
+    }

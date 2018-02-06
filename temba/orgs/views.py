@@ -455,7 +455,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards')
 
     model = Org
 
@@ -1956,9 +1956,9 @@ class OrgCRUDL(SmartCRUDL):
                 collections = []
                 field_mapping = []
 
-                for collection in self.instance.get_giftcards():
+                for i, collection in enumerate(self.instance.get_giftcards()):
                     check_field = forms.BooleanField(required=False)
-                    field_name = "giftcard_%d" % collection.pk
+                    field_name = "giftcard_%d" % i
 
                     field_mapping.append((field_name, check_field))
                     collections.append(dict(collection=collection, field=field_name))
@@ -1983,23 +1983,18 @@ class OrgCRUDL(SmartCRUDL):
 
         def get_form(self):
             form = super(OrgCRUDL.Giftcards, self).get_form()
-            self.current_collections = form.add_giftcard_fields()
+            self.current_giftcards = form.add_giftcard_fields()
             return form
 
         def get_context_data(self, **kwargs):
             context = super(OrgCRUDL.Giftcards, self).get_context_data(**kwargs)
-            context['current_collections'] = self.current_collections
+            context['current_giftcards'] = self.current_giftcards
             return context
 
         def pre_save(self, obj):
             new_collection = self.form.data.get('collection')
             if new_collection:
                 Org.add_giftcard_to_org(user=self.request.user, name=new_collection)
-
-            # release any resthooks that the user removed
-            # for resthook in self.current_resthooks:
-            #     if self.form.data.get(resthook['field']):
-            #         resthook['resthook'].release(self.request.user)
 
             return super(OrgCRUDL.Giftcards, self).pre_save(obj)
 
@@ -2238,6 +2233,9 @@ class OrgCRUDL(SmartCRUDL):
             # only pro orgs get multiple users
             if self.has_org_perm("orgs.org_manage_accounts") and org.is_multi_user_tier():
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
+
+            if self.has_org_perm('orgs.org_giftcards'):
+                formax.add_section('giftcards', reverse('orgs.org_giftcards'), icon='icon-credit-2', dependents="giftcards")
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
