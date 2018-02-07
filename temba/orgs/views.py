@@ -1951,8 +1951,8 @@ class OrgCRUDL(SmartCRUDL):
 
     class Giftcards(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
         class GiftcardsForm(forms.ModelForm):
-            collection = forms.SlugField(required=False, label=_("New Collection"),
-                                         help_text="Enter a name for your collection. ex: new-collection")
+            collection = forms.CharField(required=False, label=_("New Collection"),
+                                         help_text="Enter a name for your collection. ex: my gifts, new giftcards")
 
             def add_giftcard_fields(self):
                 collections = []
@@ -1995,9 +1995,13 @@ class OrgCRUDL(SmartCRUDL):
 
         def pre_save(self, obj):
             new_collection = self.form.data.get('collection')
-            if new_collection:
 
-                collection_full_name = '{}{}Giftcard{}'.format(str(self.object.slug).title(), self.object.id, str(new_collection.title()))
+            if new_collection:
+                from django.template.defaultfilters import slugify
+
+                slug_new_collection = slugify(new_collection)
+                collection_full_name = '{}_{}_{}_giftcard_{}'.format(settings.PARSE_SERVER_NAME, self.object.slug, self.object.id, slug_new_collection)
+                collection_full_name = collection_full_name.replace('-', '')
 
                 url = '%s/schemas/%s' % (settings.PARSE_URL, collection_full_name)
                 data = {
