@@ -123,6 +123,30 @@ CHATBASE_VERSION = 'CHATBASE_VERSION'
 
 GIFTCARDS = 'GIFTCARDS'
 
+DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
+    "active": {
+        "type": "Boolean"
+    },
+    "eNumber": {
+        "type": "String"
+    },
+    "URL": {
+        "type": "String"
+    },
+    "CCode": {
+        "type": "String"
+    },
+    "PhoneNumber": {
+        "type": "String"
+    }
+}
+
+DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS = {
+    "IndexPhoneNumber": {
+        "PhoneNumber": 1
+    }
+}
+
 ORG_STATUS = 'STATUS'
 SUSPENDED = 'suspended'
 RESTORED = 'restored'

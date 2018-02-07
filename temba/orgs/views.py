@@ -6,6 +6,7 @@ import logging
 import plivo
 import nexmo
 import six
+import requests
 
 from collections import OrderedDict
 from datetime import datetime
@@ -51,6 +52,7 @@ from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, 
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
+from .models import DEFAULT_FIELDS_PAYLOAD_GIFTCARDS, DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
 
 
 def check_login(request):
@@ -1994,7 +1996,23 @@ class OrgCRUDL(SmartCRUDL):
         def pre_save(self, obj):
             new_collection = self.form.data.get('collection')
             if new_collection:
-                Org.add_giftcard_to_org(user=self.request.user, name=new_collection)
+
+                collection_full_name = '{}{}Giftcard{}'.format(str(self.object.slug).title(), self.object.id, str(new_collection.title()))
+
+                url = '%s/schemas/%s' % (settings.PARSE_URL, collection_full_name)
+                data = {
+                    'className': collection_full_name,
+                    'fields': DEFAULT_FIELDS_PAYLOAD_GIFTCARDS,
+                    'indexes': DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
+                }
+                headers = {
+                    'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                    'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                    'Content-Type': 'application/json'
+                }
+                response = requests.post(url, data=json.dumps(data), headers=headers)
+                if response.status_code == 200:
+                    self.object.add_giftcard_to_org(user=self.request.user, name=new_collection)
 
             return super(OrgCRUDL.Giftcards, self).pre_save(obj)
 
