@@ -2042,7 +2042,7 @@ class OrgCRUDL(SmartCRUDL):
                     purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection_full_name)
 
                     response_purge = requests.delete(purge_url, headers=headers)
-                    if response_purge.status_code == 200:
+                    if response_purge.status_code in [200, 404]:
                         response = requests.delete(url, headers=headers)
 
                         if response.status_code == 200:
