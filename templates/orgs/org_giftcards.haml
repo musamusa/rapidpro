@@ -24,9 +24,16 @@
               %tr
                 %td= item.collection
                 %td.giftcard-check.permission
-                  .hidden-input.hide
-                    {{form|field:item.field}}
-                  .glyph.level-checkbox
+                  %a{'href': 'javascript:confirmRemoveGiftcard("{{ forloop.counter0 }}")'}
+                    .glyph.icon-remove-2
+
+              .hide{'class': 'remove-giftcard-{{ forloop.counter0 }}'}
+                .title
+                  -trans "Remove Gift Card Collection"
+                .body
+                  -blocktrans
+                    This will remove this Gift Cards collection from Parse for good and cannot be undone. This process can take some time. Are you sure you want to proceed?
+                %a.posterize{'id': 'remove-giftcard-{{ forloop.counter0 }}-form', 'href': '{% url "orgs.org_giftcards" %}?remove=true&index={{ forloop.counter0 }}'}
 
     -else
       %hr
@@ -66,6 +73,9 @@
         }
       })
     });
+    function confirmRemoveGiftcard(index) {
+      removalConfirmation("remove-giftcard-" + index, "Remove");
+    }
 
 -block extra-style
   :css

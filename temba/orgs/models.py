@@ -652,6 +652,21 @@ class Org(SmartModel):
         config = self.config_json()
         return config.get(GIFTCARDS, [])
 
+    def remove_giftcard_from_org(self, user, index):
+        """
+        Remove giftcards configured on this Org
+        """
+        giftcards = self.get_giftcards()
+        config = self.config_json()
+
+        if giftcards:
+            giftcards.pop(index)
+
+        config.update({GIFTCARDS: giftcards})
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
+
     def add_giftcard_to_org(self, user, name):
         """
         Add a giftcard collection to this Org
