@@ -52,7 +52,7 @@ from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, 
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
-from .models import DEFAULT_FIELDS_PAYLOAD_GIFTCARDS, DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
+from .models import GIFTCARDS, LOOKUPS, DEFAULT_FIELDS_PAYLOAD_GIFTCARDS, DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
 
 
 def check_login(request):
@@ -1956,10 +1956,10 @@ class OrgCRUDL(SmartCRUDL):
             remove = forms.CharField(widget=forms.HiddenInput, max_length=6, required=False)
             index = forms.CharField(widget=forms.HiddenInput, max_length=10, required=False)
 
-            def add_giftcard_fields(self):
+            def add_collection_fields(self, collection_type):
                 collections = []
 
-                for collection in self.instance.get_collections():
+                for collection in self.instance.get_collections(collection_type=collection_type):
                     collections.append(dict(collection=collection))
 
                 self.fields = OrderedDict(self.fields.items())
@@ -1968,7 +1968,7 @@ class OrgCRUDL(SmartCRUDL):
             def clean_collection(self):
                 new_collection = self.data.get('collection')
 
-                if new_collection in self.instance.get_collections():
+                if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Giftcards.collection_type):
                     raise ValidationError("This collection name has already been used")
 
                 return new_collection
@@ -1980,10 +1980,13 @@ class OrgCRUDL(SmartCRUDL):
         form_class = GiftcardsForm
         success_message = ''
         success_url = '@orgs.org_home'
+        collection_type = GIFTCARDS
+        fields_payload = DEFAULT_FIELDS_PAYLOAD_GIFTCARDS
+        indexes_payload = DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
 
         def get_form(self):
             form = super(OrgCRUDL.Giftcards, self).get_form()
-            self.current_giftcards = form.add_giftcard_fields()
+            self.current_giftcards = form.add_collection_fields(collection_type=self.collection_type)
             return form
 
         def get_context_data(self, **kwargs):
@@ -1992,11 +1995,11 @@ class OrgCRUDL(SmartCRUDL):
             return context
 
         @staticmethod
-        def get_collection_full_name(org_slug, org_id, name):
+        def get_collection_full_name(org_slug, org_id, name, collection_type=str(GIFTCARDS).lower()):
             from django.template.defaultfilters import slugify
 
             slug_new_collection = slugify(name)
-            collection_full_name = '{}_{}_{}_giftcard_{}'.format(settings.PARSE_SERVER_NAME, org_slug, org_id, slug_new_collection)
+            collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org_slug, org_id, collection_type, slug_new_collection)
             collection_full_name = collection_full_name.replace('-', '')
 
             return collection_full_name
@@ -2012,32 +2015,36 @@ class OrgCRUDL(SmartCRUDL):
             if new_collection:
                 collection_full_name = OrgCRUDL.Giftcards.get_collection_full_name(org_slug=self.object.slug,
                                                                                    org_id=self.object.id,
-                                                                                   name=new_collection)
+                                                                                   name=new_collection,
+                                                                                   collection_type=str(self.collection_type).lower())
                 url = '%s/schemas/%s' % (settings.PARSE_URL, collection_full_name)
                 data = {
                     'className': collection_full_name,
-                    'fields': DEFAULT_FIELDS_PAYLOAD_GIFTCARDS,
-                    'indexes': DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
+                    'fields': self.fields_payload,
+                    'indexes': self.indexes_payload
                 }
                 response = requests.post(url, data=json.dumps(data), headers=headers)
                 if response.status_code == 200:
-                    self.object.add_collection_to_org(user=self.request.user, name=new_collection)
+                    self.object.add_collection_to_org(user=self.request.user, name=new_collection,
+                                                      collection_type=self.collection_type)
 
             remove = self.form.data.get('remove', 'false') == 'true'
             index = self.form.data.get('index', None)
 
             if remove and index:
                 index = int(index)
-                giftcards = self.object.get_collections()
+                collections = self.object.get_collections(collection_type=self.collection_type)
+
                 try:
-                    collection = giftcards[index]
+                    collection = collections[index]
                 except Exception:
                     collection = None
 
                 if collection:
                     collection_full_name = OrgCRUDL.Giftcards.get_collection_full_name(org_slug=self.object.slug,
                                                                                        org_id=self.object.id,
-                                                                                       name=collection)
+                                                                                       name=collection,
+                                                                                       collection_type=str(self.collection_type).lower())
                     url = '%s/schemas/%s' % (settings.PARSE_URL, collection_full_name)
                     purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection_full_name)
 
@@ -2046,7 +2053,8 @@ class OrgCRUDL(SmartCRUDL):
                         response = requests.delete(url, headers=headers)
 
                         if response.status_code == 200:
-                            self.object.remove_collection_from_org(user=self.request.user, index=index)
+                            self.object.remove_collection_from_org(user=self.request.user, index=index,
+                                                                   collection_type=self.collection_type)
 
             return super(OrgCRUDL.Giftcards, self).pre_save(obj)
 
