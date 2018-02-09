@@ -8,32 +8,34 @@
 -block pre-form
 
   -blocktrans
-    Create your database to import your Gift Cards.
+    Create your database to import your {{ view_title }}s.
 
 -block fields
-    -if current_giftcards
+    -if current_collections
       %table#table-giftcards.table.table-condensed
         %thead
           %tr
-            %th Gift Card Collection
+            %th {{ view_title }} Collections
             %th.permission Remove
 
         %tbody
-          -if current_giftcards
-            -for item in current_giftcards
+          -if current_collections
+            -for item in current_collections
               %tr
                 %td= item.collection
                 %td.giftcard-check.permission
-                  %a{'href': 'javascript:confirmRemoveGiftcard("{{ forloop.counter0 }}")'}
+                  %a{'href': 'javascript:confirmRemoveCollection("remove-{{ remove_div_title }}", "{{ forloop.counter0 }}")'}
                     .glyph.icon-remove-2
 
-              .hide{'class': 'remove-giftcard-{{ forloop.counter0 }}'}
+              .hide{'class': 'remove-{{ remove_div_title }}-{{ forloop.counter0 }}'}
                 .title
-                  -trans "Remove Gift Card Collection"
+                  -trans "Remove"
+                  {{ view_title }}
+                  -trans "Collection"
                 .body
                   -blocktrans
-                    This will remove this Gift Cards collection from Parse for good and cannot be undone. This process can take some time. Are you sure you want to proceed?
-                %a.posterize{'id': 'remove-giftcard-{{ forloop.counter0 }}-form', 'href': '{% url "orgs.org_giftcards" %}?remove=true&index={{ forloop.counter0 }}'}
+                    This will remove this {{ view_title }}s collection from Parse for good and cannot be undone. This process can take some time. Are you sure you want to proceed?
+                %a.posterize{'id': 'remove-{{ remove_div_title }}-{{ forloop.counter0 }}-form', 'href': '{{ view_url }}?remove=true&index={{ forloop.counter0 }}'}
 
     -else
       %hr
@@ -42,39 +44,30 @@
       {% render_field 'collection' %}
 
 -block summary
-  -with org.get_collections as giftcards
+  -with current_collections as collections
     -trans "You have"
 
     %span.attn
-      -if giftcards|length == 0
-        -trans "no gift card collections"
-      -elif giftcards|length == 1
-        -trans "one gift card collection"
+      -if collections|length == 0
+        -trans "no"
+        {{ view_title|lower }}
+        -trans "collections"
+      -elif collections|length == 1
+        -trans "one"
+        {{ view_title|lower }}
+        -trans "collection"
       -else
-        {{ giftcards|length }}
-        -trans "gift card collections"
+        {{ collections|length }}
+        {{ view_title|lower }}
+        -trans "collections"
 
     -trans "configured."
 
 -block extra-script
   {{block.super}}
   :javascript
-    $(function() {
-      $("td.giftcard-check .glyph").on('click', function(){
-        var cell = $(this).parent("td.giftcard-check");
-        var ipt = cell.find("input[type='checkbox']");
-
-        if (!cell.hasClass("checked")) {
-          cell.addClass('checked');
-          ipt.prop('checked', true);
-        } else {
-          cell.removeClass('checked');
-          ipt.prop('checked', false);
-        }
-      })
-    });
-    function confirmRemoveGiftcard(index) {
-      removalConfirmation("remove-giftcard-" + index, "Remove");
+    function confirmRemoveCollection(name, index) {
+      removalConfirmation(name + "-" + index, "Remove");
     }
 
 -block extra-style

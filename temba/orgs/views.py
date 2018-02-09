@@ -53,6 +53,7 @@ from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
 from .models import GIFTCARDS, LOOKUPS, DEFAULT_FIELDS_PAYLOAD_GIFTCARDS, DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS
+from .models import DEFAULT_FIELDS_PAYLOAD_LOOKUPS, DEFAULT_INDEXES_FIELDS_PAYLOAD_LOOKUPS
 
 
 def check_login(request):
@@ -304,6 +305,34 @@ class OrgGrantForm(forms.ModelForm):
         fields = '__all__'
 
 
+class GiftcardsForm(forms.ModelForm):
+    collection = forms.CharField(required=False, label=_("New Collection"),
+                                 help_text="Enter a name for your collection. ex: my gifts, new lookup table")
+    remove = forms.CharField(widget=forms.HiddenInput, max_length=6, required=False)
+    index = forms.CharField(widget=forms.HiddenInput, max_length=10, required=False)
+
+    def add_collection_fields(self, collection_type):
+        collections = []
+
+        for collection in self.instance.get_collections(collection_type=collection_type):
+            collections.append(dict(collection=collection))
+
+        self.fields = OrderedDict(self.fields.items())
+        return collections
+
+    def clean_collection(self):
+        new_collection = self.data.get('collection')
+
+        if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Giftcards.collection_type):
+            raise ValidationError("This collection name has already been used")
+
+        return new_collection
+
+    class Meta:
+        model = Org
+        fields = ('id', 'collection', 'remove', 'index')
+
+
 class UserCRUDL(SmartCRUDL):
     model = User
     actions = ('edit',)
@@ -457,7 +486,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards', 'lookups')
 
     model = Org
 
@@ -1950,33 +1979,6 @@ class OrgCRUDL(SmartCRUDL):
             return super(OrgCRUDL.Resthooks, self).pre_save(obj)
 
     class Giftcards(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
-        class GiftcardsForm(forms.ModelForm):
-            collection = forms.CharField(required=False, label=_("New Collection"),
-                                         help_text="Enter a name for your collection. ex: my gifts, new giftcards")
-            remove = forms.CharField(widget=forms.HiddenInput, max_length=6, required=False)
-            index = forms.CharField(widget=forms.HiddenInput, max_length=10, required=False)
-
-            def add_collection_fields(self, collection_type):
-                collections = []
-
-                for collection in self.instance.get_collections(collection_type=collection_type):
-                    collections.append(dict(collection=collection))
-
-                self.fields = OrderedDict(self.fields.items())
-                return collections
-
-            def clean_collection(self):
-                new_collection = self.data.get('collection')
-
-                if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Giftcards.collection_type):
-                    raise ValidationError("This collection name has already been used")
-
-                return new_collection
-
-            class Meta:
-                model = Org
-                fields = ('id', 'collection', 'remove', 'index')
-
         form_class = GiftcardsForm
         success_message = ''
         success_url = '@orgs.org_home'
@@ -1986,12 +1988,15 @@ class OrgCRUDL(SmartCRUDL):
 
         def get_form(self):
             form = super(OrgCRUDL.Giftcards, self).get_form()
-            self.current_giftcards = form.add_collection_fields(collection_type=self.collection_type)
+            self.current_collections = form.add_collection_fields(collection_type=self.collection_type)
             return form
 
         def get_context_data(self, **kwargs):
             context = super(OrgCRUDL.Giftcards, self).get_context_data(**kwargs)
-            context['current_giftcards'] = self.current_giftcards
+            context['current_collections'] = self.current_collections
+            context['view_title'] = 'Gift Card'
+            context['remove_div_title'] = 'giftcard'
+            context['view_url'] = reverse('orgs.org_giftcards')
             return context
 
         @staticmethod
@@ -2057,6 +2062,41 @@ class OrgCRUDL(SmartCRUDL):
                                                                    collection_type=self.collection_type)
 
             return super(OrgCRUDL.Giftcards, self).pre_save(obj)
+
+    class Lookups(Giftcards):
+        class LookupsForm(GiftcardsForm):
+
+            def clean_collection(self):
+                new_collection = self.data.get('collection')
+
+                if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Lookups.collection_type):
+                    raise ValidationError("This collection name has already been used")
+
+                return new_collection
+
+            class Meta:
+                model = Org
+                fields = ('id', 'collection', 'remove', 'index')
+
+        form_class = LookupsForm
+        success_message = ''
+        success_url = '@orgs.org_home'
+        collection_type = LOOKUPS
+        fields_payload = DEFAULT_FIELDS_PAYLOAD_LOOKUPS
+        indexes_payload = DEFAULT_INDEXES_FIELDS_PAYLOAD_LOOKUPS
+
+        def get_form(self):
+            form = super(OrgCRUDL.Lookups, self).get_form()
+            self.current_collections = form.add_collection_fields(collection_type=self.collection_type)
+            return form
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.Lookups, self).get_context_data(**kwargs)
+            context['current_collections'] = self.current_collections
+            context['view_title'] = 'Lookup'
+            context['remove_div_title'] = 'lookup'
+            context['view_url'] = reverse('orgs.org_lookups')
+            return context
 
     class Webhook(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
@@ -2296,6 +2336,9 @@ class OrgCRUDL(SmartCRUDL):
 
             if self.has_org_perm('orgs.org_giftcards'):
                 formax.add_section('giftcards', reverse('orgs.org_giftcards'), icon='icon-credit-2', dependents="giftcards")
+
+            if self.has_org_perm('orgs.org_lookups'):
+                formax.add_section('lookups', reverse('orgs.org_lookups'), icon='icon-filter', dependents="lookups")
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
