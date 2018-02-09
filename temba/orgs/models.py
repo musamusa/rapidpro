@@ -122,6 +122,7 @@ CHATBASE_FEEDBACK = 'CHATBASE_FEEDBACK'
 CHATBASE_VERSION = 'CHATBASE_VERSION'
 
 GIFTCARDS = 'GIFTCARDS'
+LOOKUP = 'LOOKUPS'
 
 DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
     "active": {
@@ -645,41 +646,41 @@ class Org(SmartModel):
             for urn in urns:
                 urn.ensure_number_normalization(country_code)
 
-    def get_giftcards(self):
+    def get_collections(self, collection_type=GIFTCARDS):
         """
-        Returns the giftcards configured on this Org
+        Returns the collections (gift cards or lookup) configured on this Org
         """
         config = self.config_json()
-        return config.get(GIFTCARDS, [])
+        return config.get(collection_type, [])
 
-    def remove_giftcard_from_org(self, user, index):
+    def remove_collection_from_org(self, user, index, collection_type=GIFTCARDS):
         """
-        Remove giftcards configured on this Org
+        Remove collections (gift cards or lookup) configured on this Org
         """
-        giftcards = self.get_giftcards()
+        collections = self.get_collections(collection_type=collection_type)
         config = self.config_json()
 
-        if giftcards:
-            giftcards.pop(index)
+        if collections:
+            collections.pop(index)
 
-        config.update({GIFTCARDS: giftcards})
+        config.update({collection_type: collections})
         self.config = json.dumps(config)
         self.modified_by = user
         self.save()
 
-    def add_giftcard_to_org(self, user, name):
+    def add_collection_to_org(self, user, name, collection_type=GIFTCARDS):
         """
-        Add a giftcard collection to this Org
+        Add a collection (gift cards or lookup) to this Org
         """
-        giftcards = self.get_giftcards()
+        collections = self.get_collections(collection_type=collection_type)
         config = self.config_json()
 
-        if giftcards:
-            giftcards.append(name)
+        if collections:
+            collections.append(name)
         else:
-            giftcards = [name]
+            collections = [name]
 
-        config.update({GIFTCARDS: giftcards})
+        config.update({collection_type: collections})
         self.config = json.dumps(config)
         self.modified_by = user
         self.save()

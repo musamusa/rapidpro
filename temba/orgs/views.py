@@ -1959,7 +1959,7 @@ class OrgCRUDL(SmartCRUDL):
             def add_giftcard_fields(self):
                 collections = []
 
-                for collection in self.instance.get_giftcards():
+                for collection in self.instance.get_collections():
                     collections.append(dict(collection=collection))
 
                 self.fields = OrderedDict(self.fields.items())
@@ -1968,7 +1968,7 @@ class OrgCRUDL(SmartCRUDL):
             def clean_collection(self):
                 new_collection = self.data.get('collection')
 
-                if new_collection in self.instance.get_giftcards():
+                if new_collection in self.instance.get_collections():
                     raise ValidationError("This collection name has already been used")
 
                 return new_collection
@@ -2021,14 +2021,14 @@ class OrgCRUDL(SmartCRUDL):
                 }
                 response = requests.post(url, data=json.dumps(data), headers=headers)
                 if response.status_code == 200:
-                    self.object.add_giftcard_to_org(user=self.request.user, name=new_collection)
+                    self.object.add_collection_to_org(user=self.request.user, name=new_collection)
 
             remove = self.form.data.get('remove', 'false') == 'true'
             index = self.form.data.get('index', None)
 
             if remove and index:
                 index = int(index)
-                giftcards = self.object.get_giftcards()
+                giftcards = self.object.get_collections()
                 try:
                     collection = giftcards[index]
                 except Exception:
@@ -2046,7 +2046,7 @@ class OrgCRUDL(SmartCRUDL):
                         response = requests.delete(url, headers=headers)
 
                         if response.status_code == 200:
-                            self.object.remove_giftcard_from_org(user=self.request.user, index=index)
+                            self.object.remove_collection_from_org(user=self.request.user, index=index)
 
             return super(OrgCRUDL.Giftcards, self).pre_save(obj)
 
