@@ -3457,6 +3457,8 @@ class RuleSet(models.Model):
 
     TYPE_SHORTEN_URL = 'shorten_url'
 
+    TYPE_LOOKUP = 'lookup'
+
     CONFIG_WEBHOOK = 'webhook'
     CONFIG_WEBHOOK_ACTION = 'webhook_action'
     CONFIG_WEBHOOK_HEADERS = 'webhook_headers'
@@ -3483,7 +3485,8 @@ class RuleSet(models.Model):
                     (TYPE_CONTACT_FIELD, "Split on contact field"),
                     (TYPE_EXPRESSION, "Split by expression"),
                     (TYPE_RANDOM, "Split Randomly"),
-                    (TYPE_SHORTEN_URL, "Shorten Trackable Link"))
+                    (TYPE_SHORTEN_URL, "Shorten Trackable Link"),
+                    (TYPE_LOOKUP, "Lookup"))
 
     uuid = models.CharField(max_length=36, unique=True)
 
@@ -3656,7 +3659,6 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            resthook = None
             url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
@@ -3681,7 +3683,7 @@ class RuleSet(models.Model):
 
                         return rule, short_url
             else:
-                return rule, None
+                return None, None
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}
