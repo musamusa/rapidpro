@@ -477,6 +477,11 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
           { name: 'Failure', test: { type: 'webhook_status', status: 'failure'}},
         ]},
 
+        { type: 'lookup', name:'Lookup', verbose_name: 'Lookup', split:'lookup response', filter:[TEXT], rules:[
+          { name: 'Success', test: { type: 'webhook_status', status: 'success'}},
+          { name: 'Failure', test: { type: 'webhook_status', status: 'failure'}},
+        ]},
+
         # all flows
         { type: 'subflow', name: 'Run Flow', verbose_name: 'Run a flow', filter: ALL, rules: [
           { name: 'Completed', test: { type: 'subflow', exit_type: 'completed' }},
@@ -498,7 +503,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       @exclusiveRules = {
         'subflow': ['subflow'],
         'timeout': ['wait_message'],
-        'webhook_status': ['webhook', 'resthook', 'shorten_url'],
+        'webhook_status': ['webhook', 'resthook', 'shorten_url', 'lookup'],
         'airtime_status': ['airtime'],
         'in_group': ['group']
       }
@@ -538,6 +543,15 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'true', name: 'Other', verbose_name:'contains anything', operands: 0, filter: NONE }
         { type: 'timeout', name:'Timeout', verbose_name:'timeout', operands:0, filter: NONE }
         { type: 'interrupted_status', name:'Interrupted', verbose_name:'interrupted status', operands:0, filter: NONE }
+      ]
+
+      @lookup_operators = [
+        { type: 'contains_any', name:'Contains any', verbose_name:'contains', operands: 1, localized:true, filter: ALL_TEXT, operand_required: true }
+        { type: 'lt', name: 'Less than', verbose_name:'has a number less than', operands: 1, filter: ALL }
+        { type: 'eq', name: 'Equal to', verbose_name:'has a number equal to', operands: 1, filter: ALL }
+        { type: 'gt', name: 'More than', verbose_name:'has a number more than', operands: 1, filter: ALL }
+        { type: 'date_equal', name: 'Date equal to', verbose_name:'has a date equal to', operands: 1, validate:'date', filter: ALL_TEXT }
+        { type: 'regex', name: 'Regex', verbose_name:'matches regex', operands: 1, localized:true, filter: ALL }
       ]
 
       @opNames =

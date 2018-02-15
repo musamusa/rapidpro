@@ -39,6 +39,16 @@
       #split-on
         -trans "If the message response..."
 
+    .response{ng-if:'formData.rulesetConfig.type == "lookup"'}><
+      .split-margin
+        %p{class:"description"}
+          -blocktrans
+            Make some queries for lookup...
+
+        %input{ng-model:"formData.lookup_db", search:"true", init-text:"[[ruleset.config.lookup_db.text]]", name:"lookup_db",
+              placeholder:"Select your lookup database", required:"", init-id:"[[ruleset.config.lookup_db.id]]",
+              select-server:"/flow/lookups_api/", type:"hidden"}
+
     .subflow{ng-if:'formData.rulesetConfig.type == "subflow"'}><
       .split-margin
         %p{class:"description"}

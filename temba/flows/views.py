@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export')
+               'upload_media_action', 'pdf_export', 'lookups_api')
 
     model = Flow
 
@@ -1701,6 +1701,18 @@ class FlowCRUDL(SmartCRUDL):
                              include_active=form.cleaned_data['include_active'])
             return flow
 
+    class LookupsApi(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            from temba.orgs.models import LOOKUPS
+
+            org = self.request.user.get_org()
+            collections = []
+            for collection in org.get_collections(collection_type=LOOKUPS):
+                slug_collection = slugify(collection)
+                collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
+                collection_full_name = collection_full_name.replace('-', '')
+                collections.append(dict(id=collection_full_name, text=collection))
+            return JsonResponse(dict(results=collections))
 
 # this is just for adhoc testing of the preprocess url
 class PreprocessTest(FormView):  # pragma: no cover

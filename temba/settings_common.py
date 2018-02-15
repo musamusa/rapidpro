@@ -463,6 +463,7 @@ PERMISSIONS = {
                    'upload_action_recording',
                    'upload_media_action',
                    'pdf_export',
+                   'lookups_api',
                    ),
 
     'flows.ruleset': ('analytics',
