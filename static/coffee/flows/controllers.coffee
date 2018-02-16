@@ -977,6 +977,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.actionConfigs = Flow.actions
   $scope.rulesetConfigs = Flow.rulesets
   $scope.operatorConfigs = Flow.operators
+  $scope.operatorLookupConfigs = Flow.lookup_operators
+  $scope.operatorLookupFields = Flow.lookup_fields
 
   # all org languages except default
   $scope.languages = utils.clone(Flow.languages).filter (lang) -> lang.name isnt "Default"

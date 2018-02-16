@@ -208,7 +208,7 @@
 
     // RULE EDITOR
     %form{name:'ruleForm'}
-      %span{ng-if:'hasRules() && formData.rulesetConfig.type != "wait_menu"'}
+      %span{ng-if:'hasRules() && formData.rulesetConfig.type != "wait_menu" && formData.rulesetConfig.type != "lookup"'}
         %div{ui-sortable:"sortableOptions",ng-model:"ruleset.rules"}
           .rule{ng-repeat:"rule in ruleset.rules track by rule.uuid", ng-show:"isRuleVisible(rule)"}
 
@@ -252,6 +252,28 @@
                 -trans "Please enter a value for evaluating this rule."
               .error.ng-hide{ng-show:'inner.category.$error.required'}
                 -trans "Please enter a category name."
+
+      
+      %span{ng-if:'hasRules() && formData.rulesetConfig.type == "lookup"'}
+        .split-margin
+          %p{class:"description"}
+            -blocktrans
+              Lookup Parameters
+        %div{ui-sortable:"sortableOptions",ng-model:"ruleset.rules"}
+          .rule{ng-repeat:"rule in ruleset.rules track by rule.uuid", ng-show:"isRuleVisible(rule)"}
+            <ng-form name="inner">
+              .icon.icon-menu
+              -# %input{ng-model:"rule.test._base",name:"operand",placeholder:"[[rule._config.placeholder]]",auto-complete:"rule._config.auto_complete",flow:"[[flowId]]",ng-required:"rule.category._base",ng-change:"updateCategory(rule)",type:"text",class:"operand",validate-type:"[[rule._config.type]]",uuid:"[[ruleset.uuid]]"}
+              %select{ng-model:"rule.test._base",ng-options:'operator as operator.title for operator in operatorLookupFields', class:"operator-select", ng-required:"rule.category._base"}
+              %select{ng-model:"rule._config",ng-options:'operator as operator.verbose_name for operator in operatorLookupConfigs|filter:isVisibleOperator', class:"operator-select",ng-change:"updateCategory(rule)"}
+              .operation{ng-if:"rule._config.operands == 0"}
+              .categorize
+                %input{ng-model:"rule.category._base",name:"value",ng-required:"rule._config.operands==0 || (rule._config.operands==1 && rule.test._base)", auto-complete:"rule._config.auto_complete", type:"text", class:"category", maxlength:"36"}
+              .icon.icon-close{ng-click:"remove(rule)"}
+              .error.ng-hide{ng-show:'inner.operand.$error.required'}
+                -trans "Please enter a value for evaluating this rule."
+              .error.ng-hide{ng-show:'inner.value.$error.required'}
+                -trans "Please enter a value."
 
 .modal-footer
   .ussd-counter{ng-class:"{limit: characters < 0}", ng-if:'formData.rulesetConfig.type == "wait_menu" || formData.rulesetConfig.type == "wait_ussd"'}

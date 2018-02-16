@@ -510,7 +510,8 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
 
       @supportsRules = [
         'wait_message', 'wait_menu', 'wait_ussd', 'wait_digits',
-        'expression', 'flow_field', 'contact_field', 'form_field'
+        'expression', 'flow_field', 'contact_field', 'form_field',
+        'lookup'
       ]
 
       @operators = [
@@ -546,12 +547,21 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       ]
 
       @lookup_operators = [
-        { type: 'contains_any', name:'Contains any', verbose_name:'contains', operands: 1, localized:true, filter: ALL_TEXT, operand_required: true }
+        { type: 'contains_any', name:'Contains any', verbose_name:'contains', operands: 1, localized:true, filter: ALL_TEXT }
         { type: 'lt', name: 'Less than', verbose_name:'has a number less than', operands: 1, filter: ALL }
         { type: 'eq', name: 'Equal to', verbose_name:'has a number equal to', operands: 1, filter: ALL }
         { type: 'gt', name: 'More than', verbose_name:'has a number more than', operands: 1, filter: ALL }
         { type: 'date_equal', name: 'Date equal to', verbose_name:'has a date equal to', operands: 1, validate:'date', filter: ALL_TEXT }
         { type: 'regex', name: 'Regex', verbose_name:'matches regex', operands: 1, localized:true, filter: ALL }
+      ]
+
+      @lookup_fields = [
+        { title: 'Organization name', name: 'orgName' },
+        { title: 'Project name', name: 'projectName' },
+        { title: 'Category', name: 'category' },
+        { title: 'Keyword', name: 'keyword' },
+        { title: 'Created at', name: 'createdAt' },
+        { title: 'Updated at', name: 'updatedAt' },
       ]
 
       @opNames =
