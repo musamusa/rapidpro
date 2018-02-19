@@ -39,15 +39,44 @@
       #split-on
         -trans "If the message response..."
 
-    .response{ng-if:'formData.rulesetConfig.type == "lookup"'}><
+    .lookup{ng-if:'formData.rulesetConfig.type == "lookup"'}><
       .split-margin
         %p{class:"description"}
           -blocktrans
             Make some queries for lookup...
 
         %input{ng-model:"formData.lookup_db", search:"true", init-text:"[[ruleset.config.lookup_db.text]]", name:"lookup_db",
-              placeholder:"Select your lookup database", required:"", init-id:"[[ruleset.config.lookup_db.id]]",
-              select-server:"/flow/lookups_api/", type:"hidden"}
+              placeholder:"Select your lookup database", required:"", init-id:"[[ruleset.config.lookup_db]]",
+              select-server:"/flow/lookups_api/", type:"hidden", ng-change:'updateLookupFields()'}
+
+      .split-margin{ng-show:"formData.isLookupQueriesVisible"}
+        %p{class:"description"}
+          -blocktrans
+            Lookup Parameters
+
+        .lookup-queries
+          .modal-lookup-query-rules
+            .modal-lookup-query.modal-lookup-query-field
+              .message
+                -trans "Field"
+            .modal-lookup-query.modal-lookup-query-rule
+              .message
+                -trans "Rule"
+            .modal-lookup-query.modal-lookup-query-value
+              .message
+                -trans "Value"
+          .modal-lookup-query-rules{ng-repeat:"query in formData.lookup_queries"}
+            .modal-lookup-query.modal-lookup-query-field
+              %input{type:"text", name:"query-field", required:"required", ng-model:"lookup_queries_field[$index]"}
+            .modal-lookup-query.modal-lookup-query-rule
+              %select{ng-model:"lookup_queries_rule[$index]", required:"required", name:"query-rule", ng-options:"operator.verbose_name for operator in operatorLookupConfigs track by operator.type",style:"height:34px",select2:""}
+            .modal-lookup-query.modal-lookup-query-value
+              %input{type:"text", name:"query-value", required:"required", ng-model:"lookup_queries_value[$index]", auto-complete}
+            .modal-lookup-query.modal-lookup-query-remove
+              .icon.icon-close{ng-click:"removeLookupQuery($index)"}
+
+          %a.add-query{href:"javascript:;",ng-click:"addNewLookupQuery()"}
+            .icon.icon-plus-circle2
 
     .subflow{ng-if:'formData.rulesetConfig.type == "subflow"'}><
       .split-margin
@@ -252,28 +281,6 @@
                 -trans "Please enter a value for evaluating this rule."
               .error.ng-hide{ng-show:'inner.category.$error.required'}
                 -trans "Please enter a category name."
-
-      
-      %span{ng-if:'hasRules() && formData.rulesetConfig.type == "lookup"'}
-        .split-margin
-          %p{class:"description"}
-            -blocktrans
-              Lookup Parameters
-        %div{ui-sortable:"sortableOptions",ng-model:"ruleset.rules"}
-          .rule{ng-repeat:"rule in ruleset.rules track by rule.uuid", ng-show:"isRuleVisible(rule)"}
-            <ng-form name="inner">
-              .icon.icon-menu
-              -# %input{ng-model:"rule.test._base",name:"operand",placeholder:"[[rule._config.placeholder]]",auto-complete:"rule._config.auto_complete",flow:"[[flowId]]",ng-required:"rule.category._base",ng-change:"updateCategory(rule)",type:"text",class:"operand",validate-type:"[[rule._config.type]]",uuid:"[[ruleset.uuid]]"}
-              %select{ng-model:"rule.test._base",ng-options:'operator as operator.title for operator in operatorLookupFields', class:"operator-select", ng-required:"rule.category._base"}
-              %select{ng-model:"rule._config",ng-options:'operator as operator.verbose_name for operator in operatorLookupConfigs|filter:isVisibleOperator', class:"operator-select",ng-change:"updateCategory(rule)"}
-              .operation{ng-if:"rule._config.operands == 0"}
-              .categorize
-                %input{ng-model:"rule.category._base",name:"value",ng-required:"rule._config.operands==0 || (rule._config.operands==1 && rule.test._base)", auto-complete:"rule._config.auto_complete", type:"text", class:"category", maxlength:"36"}
-              .icon.icon-close{ng-click:"remove(rule)"}
-              .error.ng-hide{ng-show:'inner.operand.$error.required'}
-                -trans "Please enter a value for evaluating this rule."
-              .error.ng-hide{ng-show:'inner.value.$error.required'}
-                -trans "Please enter a value."
 
 .modal-footer
   .ussd-counter{ng-class:"{limit: characters < 0}", ng-if:'formData.rulesetConfig.type == "wait_menu" || formData.rulesetConfig.type == "wait_ussd"'}

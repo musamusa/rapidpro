@@ -978,7 +978,6 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.rulesetConfigs = Flow.rulesets
   $scope.operatorConfigs = Flow.operators
   $scope.operatorLookupConfigs = Flow.lookup_operators
-  $scope.operatorLookupFields = Flow.lookup_fields
 
   # all org languages except default
   $scope.languages = utils.clone(Flow.languages).filter (lang) -> lang.name isnt "Default"
@@ -1112,6 +1111,10 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.webhook_headers_name = []
   $scope.webhook_headers_value = []
 
+  $scope.lookup_queries_field = []
+  $scope.lookup_queries_rule = []
+  $scope.lookup_queries_value = []
+
   if ruleset.config
     formData.webhook = ruleset.config.webhook
     formData.webhook_action = ruleset.config.webhook_action
@@ -1123,9 +1126,23 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       $scope.webhook_headers_name[item_counter] = item.name
       $scope.webhook_headers_value[item_counter] = item.value
       item_counter++
+
+    formData.lookup_db = ruleset.config.lookup_db
+    formData.lookup_queries = ruleset.config.lookup_queries or []
+    formData.isLookupQueriesVisible = formData.lookup_queries.length > 0
+
+    item_lookup_counter = 0
+    for item in formData.lookup_queries
+      $scope.lookup_queries_field[item_lookup_counter] = item.field
+      $scope.lookup_queries_rule[item_lookup_counter] = item.rule
+      $scope.lookup_queries_value[item_lookup_counter] = item.value
+      item_lookup_counter++
+    
   else
     formData.webhook_headers = []
     formData.isWebhookAdditionalOptionsVisible = false
+    formData.lookup_queries = []
+    formData.isLookupQueriesVisible = false
 
   formData.rulesetConfig = Flow.getRulesetConfig({type:ruleset.ruleset_type})
 
@@ -1151,6 +1168,24 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
     if formData.webhook_headers.length == 0
       $scope.addNewWebhookHeader()
+
+  $scope.addNewLookupQuery = () ->
+    if formData.lookup_queries == undefined
+      formData.lookup_queries = []
+
+    formData.lookup_queries.push({field: '', rule: '', value: ''})
+
+  $scope.removeLookupQuery = (index) ->
+    formData.lookup_queries.splice(index, 1)
+    $scope.lookup_queries_field.splice(index, 1)
+    $scope.lookup_queries_rule.splice(index, 1)
+    $scope.lookup_queries_value.splice(index, 1)
+
+    if formData.lookup_queries.length == 0
+      $scope.addNewLookupQuery()
+
+  $scope.updateLookupFields = () ->
+    console.log(true)
 
   $scope.updateActionForm = (config) ->
 

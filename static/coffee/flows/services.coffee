@@ -555,15 +555,6 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'regex', name: 'Regex', verbose_name:'matches regex', operands: 1, localized:true, filter: ALL }
       ]
 
-      @lookup_fields = [
-        { title: 'Organization name', name: 'orgName' },
-        { title: 'Project name', name: 'projectName' },
-        { title: 'Category', name: 'category' },
-        { title: 'Keyword', name: 'keyword' },
-        { title: 'Created at', name: 'createdAt' },
-        { title: 'Updated at', name: 'updatedAt' },
-      ]
-
       @opNames =
         'lt': '< '
         'gt': '> '
