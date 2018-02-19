@@ -1703,29 +1703,34 @@ class FlowCRUDL(SmartCRUDL):
 
     class LookupsApi(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         def get(self, request, *args, **kwargs):
+            import requests
             from temba.orgs.models import LOOKUPS
 
-            org = self.request.user.get_org()
+            db = self.request.GET.get('db', None)
             collections = []
-            for collection in org.get_collections(collection_type=LOOKUPS):
-                slug_collection = slugify(collection)
-                collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
-                collection_full_name = collection_full_name.replace('-', '')
-                collections.append(dict(id=collection_full_name, text=collection))
+
+            if db:
+                headers = {
+                    'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                    'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                    'Content-Type': 'application/json'
+                }
+                url = '%s/schemas/%s' % (settings.PARSE_URL, db)
+                response = requests.get(url, headers=headers)
+                response_json = response.json()
+                if response.status_code == 200 and 'fields' in response_json:
+                    fields = response_json['fields']
+                    for key in fields.keys():
+                        collections.append(dict(id=key, text=key))
+            else:
+                org = self.request.user.get_org()
+                for collection in org.get_collections(collection_type=LOOKUPS):
+                    slug_collection = slugify(collection)
+                    collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
+                    collection_full_name = collection_full_name.replace('-', '')
+                    collections.append(dict(id=collection_full_name, text=collection))
             return JsonResponse(dict(results=collections))
 
-    class LookupsParseFields(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
-        def get(self, request, *args, **kwargs):
-            from temba.orgs.models import LOOKUPS
-
-            org = self.request.user.get_org()
-            collections = []
-            for collection in org.get_collections(collection_type=LOOKUPS):
-                slug_collection = slugify(collection)
-                collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
-                collection_full_name = collection_full_name.replace('-', '')
-                collections.append(dict(id=collection_full_name, text=collection))
-            return JsonResponse(dict(results=collections))
 
 # this is just for adhoc testing of the preprocess url
 class PreprocessTest(FormView):  # pragma: no cover

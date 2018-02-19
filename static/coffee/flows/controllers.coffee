@@ -978,6 +978,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.rulesetConfigs = Flow.rulesets
   $scope.operatorConfigs = Flow.operators
   $scope.operatorLookupConfigs = Flow.lookup_operators
+  $scope.lookupDbs = Flow.lookup_dbs
 
   # all org languages except default
   $scope.languages = utils.clone(Flow.languages).filter (lang) -> lang.name isnt "Default"
@@ -1114,6 +1115,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.lookup_queries_field = []
   $scope.lookup_queries_rule = []
   $scope.lookup_queries_value = []
+  $scope.parseFields = []
 
   if ruleset.config
     formData.webhook = ruleset.config.webhook
@@ -1130,6 +1132,10 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     formData.lookup_db = ruleset.config.lookup_db
     formData.lookup_queries = ruleset.config.lookup_queries or []
     formData.isLookupQueriesVisible = formData.lookup_queries.length > 0
+
+    if formData.lookup_db
+      Flow.getParseFields(formData.lookup_db.id).success (data) ->
+        $scope.parseFields = data.results
 
     item_lookup_counter = 0
     for item in formData.lookup_queries
@@ -1185,7 +1191,13 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       $scope.addNewLookupQuery()
 
   $scope.updateLookupFields = () ->
-    console.log(true)
+    formData.isLookupQueriesVisible = true
+
+    if formData.lookup_queries.length == 0
+      $scope.addNewLookupQuery()
+
+    Flow.getParseFields(formData.lookup_db.id).success (data) ->
+      $scope.parseFields = data.results
 
   $scope.updateActionForm = (config) ->
 
@@ -1819,6 +1831,22 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
           webhook: formData.webhook
           webhook_action: formData.webhook_action
           webhook_headers: webhook_headers
+
+      else if rulesetConfig.type == 'lookup'
+        lookup_queries = []
+        item_counter = 0
+        if formData.lookup_queries
+          for item in formData.lookup_queries
+            item_field = if $scope.lookup_queries_field.length > 0 then $scope.lookup_queries_field[item_counter] else null
+            item_rule = if $scope.lookup_queries_rule.length > 0 then $scope.lookup_queries_rule[item_counter] else null
+            item_value = if $scope.lookup_queries_value.length > 0 then $scope.lookup_queries_value[item_counter] else null
+            if item_field and item_rule and item_value
+              lookup_queries.push({field: item_field, rule: item_rule, value: item_value})
+            item_counter++
+
+        ruleset.config =
+          lookup_db: formData.lookup_db
+          lookup_queries: lookup_queries
 
       # update our operand if they selected a contact field explicitly
       else if rulesetConfig.type == 'contact_field'

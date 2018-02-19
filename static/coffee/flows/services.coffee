@@ -547,13 +547,16 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       ]
 
       @lookup_operators = [
-        { type: 'contains_any', name:'Contains any', verbose_name:'contains', operands: 1, localized:true, filter: ALL_TEXT }
-        { type: 'lt', name: 'Less than', verbose_name:'has a number less than', operands: 1, filter: ALL }
-        { type: 'eq', name: 'Equal to', verbose_name:'has a number equal to', operands: 1, filter: ALL }
-        { type: 'gt', name: 'More than', verbose_name:'has a number more than', operands: 1, filter: ALL }
-        { type: 'date_equal', name: 'Date equal to', verbose_name:'has a date equal to', operands: 1, validate:'date', filter: ALL_TEXT }
-        { type: 'regex', name: 'Regex', verbose_name:'matches regex', operands: 1, localized:true, filter: ALL }
+        { type: 'contains_any', verbose_name:'contains' }
+        { type: 'lt', verbose_name:'has a number less than' }
+        { type: 'eq', verbose_name:'has a number equal to' }
+        { type: 'gt', verbose_name:'has a number more than' }
+        { type: 'date_equal', verbose_name:'has a date equal to' }
+        { type: 'regex', verbose_name:'matches regex' }
       ]
+
+      $http.get('/flow/lookups_api/').success (data) ->
+        Flow.lookup_dbs = data.results
 
       @opNames =
         'lt': '< '
@@ -810,6 +813,10 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
     # translates a string into a slug
     slugify: (label) ->
       return label.toString().toLowerCase().replace(/([^a-z0-9]+)/g, '_')
+
+    # Get the Parse Fields from DB passed
+    getParseFields: (db) ->
+      return $http.get('/flow/lookups_api/?db=' + db).success (data) ->
 
     # Get an array of current flow fields as:
     # [ { id: 'label_name', name: 'Label Name' } ]

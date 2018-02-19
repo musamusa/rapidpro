@@ -45,11 +45,11 @@
           -blocktrans
             Make some queries for lookup...
 
-        %input{ng-model:"formData.lookup_db", search:"true", init-text:"[[ruleset.config.lookup_db.text]]", name:"lookup_db",
-              placeholder:"Select your lookup database", required:"", init-id:"[[ruleset.config.lookup_db]]",
-              select-server:"/flow/lookups_api/", type:"hidden", ng-change:'updateLookupFields()'}
+        %select{ng-model:"formData.lookup_db", search:"true", init-text:"[[ruleset.config.lookup_db]]", name:"lookup_db",
+              data-placeholder:"Select your lookup database", required:"", ng-options:"option.text for option in lookupDbs track by option.id", 
+              type:"hidden", ng-change:'updateLookupFields()', select2:""}
 
-      .split-margin{ng-show:"formData.isLookupQueriesVisible"}
+      .split-margin{ng-show:"formData.isLookupQueriesVisible", style:"margin: 20px 0 0 0"}
         %p{class:"description"}
           -blocktrans
             Lookup Parameters
@@ -67,7 +67,7 @@
                 -trans "Value"
           .modal-lookup-query-rules{ng-repeat:"query in formData.lookup_queries"}
             .modal-lookup-query.modal-lookup-query-field
-              %input{type:"text", name:"query-field", required:"required", ng-model:"lookup_queries_field[$index]"}
+              %select{ng-model:"lookup_queries_field[$index]", data-placeholder:"Select an option", required:"required", name:"query-field", ng-options:"field.text for field in parseFields track by field.id",style:"height:34px",select2:""}
             .modal-lookup-query.modal-lookup-query-rule
               %select{ng-model:"lookup_queries_rule[$index]", required:"required", name:"query-rule", ng-options:"operator.verbose_name for operator in operatorLookupConfigs track by operator.type",style:"height:34px",select2:""}
             .modal-lookup-query.modal-lookup-query-value
