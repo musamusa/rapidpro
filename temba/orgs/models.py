@@ -142,20 +142,7 @@ DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
     }
 }
 
-DEFAULT_FIELDS_PAYLOAD_LOOKUPS = {
-    "projectName": {
-        "type": "String"
-    },
-    "keyword": {
-        "type": "String"
-    },
-    "orgName": {
-        "type": "String"
-    },
-    "category": {
-        "type": "String"
-    }
-}
+DEFAULT_FIELDS_PAYLOAD_LOOKUPS = {}
 
 DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS = {
     "IndexPhoneNumber": {
@@ -163,11 +150,7 @@ DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS = {
     }
 }
 
-DEFAULT_INDEXES_FIELDS_PAYLOAD_LOOKUPS = {
-    "IndexKeyword": {
-        "keyword": 1
-    }
-}
+DEFAULT_INDEXES_FIELDS_PAYLOAD_LOOKUPS = {}
 
 ORG_STATUS = 'STATUS'
 SUSPENDED = 'suspended'
