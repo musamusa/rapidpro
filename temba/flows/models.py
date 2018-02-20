@@ -3685,6 +3685,35 @@ class RuleSet(models.Model):
             else:
                 return None, None
 
+        elif self.ruleset_type == RuleSet.TYPE_LOOKUP:
+            lookup_queries = self.config_json()['lookup_queries']
+            lookup_db = self.config_json()['lookup_db']
+
+            for query in lookup_queries:
+                (value, errors) = Msg.evaluate_template(query.get('value'), context, org=run.flow.org)
+                if value:
+                    query['value'] = value
+
+            headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
+            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, webhook=True), headers=headers)
+
+            for rule in self.get_rules():
+                (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                if result > 0:
+                    if response.status_code == 200:
+                        response = response.json()
+                    else:
+                        response = None
+
+                    return rule, response
+                else:
+                    return None, None
+
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}
 
