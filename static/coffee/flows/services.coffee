@@ -510,8 +510,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
 
       @supportsRules = [
         'wait_message', 'wait_menu', 'wait_ussd', 'wait_digits',
-        'expression', 'flow_field', 'contact_field', 'form_field',
-        'lookup'
+        'expression', 'flow_field', 'contact_field', 'form_field'
       ]
 
       @operators = [
@@ -547,9 +546,9 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       ]
 
       @lookup_operators = [
+        { type: 'equals', verbose_name:'equals' }
         { type: 'contains_any', verbose_name:'contains' }
         { type: 'lt', verbose_name:'has a number less than' }
-        { type: 'eq', verbose_name:'has a number equal to' }
         { type: 'gt', verbose_name:'has a number more than' }
         { type: 'date_equal', verbose_name:'has a date equal to' }
         { type: 'regex', verbose_name:'matches regex' }

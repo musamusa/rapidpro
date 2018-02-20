@@ -237,7 +237,7 @@
 
     // RULE EDITOR
     %form{name:'ruleForm'}
-      %span{ng-if:'hasRules() && formData.rulesetConfig.type != "wait_menu" && formData.rulesetConfig.type != "lookup"'}
+      %span{ng-if:'hasRules() && formData.rulesetConfig.type != "wait_menu"'}
         %div{ui-sortable:"sortableOptions",ng-model:"ruleset.rules"}
           .rule{ng-repeat:"rule in ruleset.rules track by rule.uuid", ng-show:"isRuleVisible(rule)"}
 
