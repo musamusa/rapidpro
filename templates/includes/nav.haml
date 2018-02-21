@@ -106,14 +106,14 @@
 
   -if org_perms.links.link_list and not request.user.is_superuser
     %li.nav-trackable-links
-      %a.icon-easy{href:"{% url 'links.link_list' %}", class:"{% active request 'link' %}"}
+      %a.icon-nav-hand{href:"{% url 'links.link_list' %}", class:"{% active request 'link' %}"}
         .title
           -trans "trackable links"
       %div.custom-tooltip
         %div.custom-tooltip-arrow
         %span.custom-tooltip-icon
           %div.around
-            %i.icon-easy
+            %i.icon-nav-hand-inverted
         %span.custom-tooltip-title
           -trans "Trackable Links"
         %div.custom-tooltip-separator
