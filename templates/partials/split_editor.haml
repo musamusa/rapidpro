@@ -78,6 +78,12 @@
           %a.add-query{href:"javascript:;",ng-click:"addNewLookupQuery()"}
             .icon.icon-plus-circle2
 
+        .help-text
+          -blocktrans
+            The Parse API responds with JSON, each property will be added
+            to the flow like @lookup.result would be
+            added for all future steps.
+
     .subflow{ng-if:'formData.rulesetConfig.type == "subflow"'}><
       .split-margin
         %p{class:"description"}

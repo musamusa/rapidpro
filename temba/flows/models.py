@@ -1381,7 +1381,8 @@ class Flow(TembaModel):
         # our current flow context
         flow_context = self.build_flow_context(contact, contact_context)
 
-        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context)
+        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context,
+                       lookup=run_context)
 
         # if we have parent or child contexts, add them in too
         if run:
@@ -3706,7 +3707,8 @@ class RuleSet(models.Model):
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
                 if result > 0:
                     if response.status_code == 200:
-                        response = response.json()
+                        response = json.loads(response.text)
+                        run.update_fields(response)
                     else:
                         response = None
 

@@ -547,7 +547,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
 
       @lookup_operators = [
         { type: 'equals', verbose_name:'equals' }
-        { type: 'contains_any', verbose_name:'contains' }
+        { type: 'contains', verbose_name:'contains' }
         { type: 'lt', verbose_name:'has a number less than' }
         { type: 'gt', verbose_name:'has a number more than' }
         { type: 'date_equal', verbose_name:'has a date equal to' }
