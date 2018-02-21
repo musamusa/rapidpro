@@ -3701,7 +3701,7 @@ class RuleSet(models.Model):
                 'Content-Type': 'application/json'
             }
             url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
-            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, webhook=True), headers=headers)
+            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True), headers=headers)
 
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
