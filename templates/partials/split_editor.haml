@@ -84,6 +84,16 @@
             to the flow like @lookup.result would be
             added for all future steps.
 
+    .giftcard{ng-if:'formData.rulesetConfig.type == "giftcard"'}><
+      .split-margin
+        %p{class:"description"}
+          -blocktrans
+            Select which collection would you like to query the Gift Card
+
+        %input{ng-model:"formData.giftcard_db", search:"true", init-text:"[[ruleset.config.giftcard_db.text]]", name:"giftcard_db",
+              placeholder:"Select your collection to do the query on that", required:"", init-id:"[[ruleset.config.giftcard_db.id]]",
+              select-server:"/flow/giftcards_api/", type:"hidden"}
+
     .subflow{ng-if:'formData.rulesetConfig.type == "subflow"'}><
       .split-margin
         %p{class:"description"}

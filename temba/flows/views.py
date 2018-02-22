@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export', 'lookups_api')
+               'upload_media_action', 'pdf_export', 'lookups_api', 'giftcards_api')
 
     model = Flow
 
@@ -1729,6 +1729,19 @@ class FlowCRUDL(SmartCRUDL):
                     collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
                     collection_full_name = collection_full_name.replace('-', '')
                     collections.append(dict(id=collection_full_name, text=collection))
+            return JsonResponse(dict(results=collections))
+
+    class GiftcardsApi(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            from temba.orgs.models import GIFTCARDS
+
+            collections = []
+            org = self.request.user.get_org()
+            for collection in org.get_collections(collection_type=GIFTCARDS):
+                slug_collection = slugify(collection)
+                collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(GIFTCARDS).lower(), slug_collection)
+                collection_full_name = collection_full_name.replace('-', '')
+                collections.append(dict(id=collection_full_name, text=collection))
             return JsonResponse(dict(results=collections))
 
 

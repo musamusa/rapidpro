@@ -482,6 +482,11 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
           { name: 'Failure', test: { type: 'webhook_status', status: 'failure'}},
         ]},
 
+        { type: 'giftcard', name:'Gift Card', verbose_name: 'Gift Card', split:'giftcard response', filter:[TEXT], rules:[
+          { name: 'Success', test: { type: 'webhook_status', status: 'success'}},
+          { name: 'Failure', test: { type: 'webhook_status', status: 'failure'}},
+        ]},
+
         # all flows
         { type: 'subflow', name: 'Run Flow', verbose_name: 'Run a flow', filter: ALL, rules: [
           { name: 'Completed', test: { type: 'subflow', exit_type: 'completed' }},
@@ -503,7 +508,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       @exclusiveRules = {
         'subflow': ['subflow'],
         'timeout': ['wait_message'],
-        'webhook_status': ['webhook', 'resthook', 'shorten_url', 'lookup'],
+        'webhook_status': ['webhook', 'resthook', 'shorten_url', 'lookup', 'giftcard'],
         'airtime_status': ['airtime'],
         'in_group': ['group']
       }

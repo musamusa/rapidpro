@@ -987,6 +987,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   formData = {}
   formData.resthook = ""
   formData.shorten_url = ""
+  formData.giftcard_db = ""
 
   if options.nodeType == 'rules' or options.nodeType == 'ivr'
 
@@ -1813,6 +1814,14 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
           'shorten_url': {
             'text': splitEditor.shorten_url.selected[0]['text'], 
             'id': splitEditor.shorten_url.selected[0]['id']
+          }
+        }
+
+      else if rulesetConfig.type == 'giftcard'
+        ruleset.config = {
+          'giftcard_db': {
+            'text': splitEditor.giftcard_db.selected[0]['text'], 
+            'id': splitEditor.giftcard_db.selected[0]['id']
           }
         }
 

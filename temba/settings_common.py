@@ -464,6 +464,7 @@ PERMISSIONS = {
                    'upload_media_action',
                    'pdf_export',
                    'lookups_api',
+                   'giftcards_api',
                    ),
 
     'flows.ruleset': ('analytics',
