@@ -798,3 +798,9 @@
 .icon-nav-hand-inverted:before {
   content: "\e907";
 }
+.icon-nav-help-inverted:before {
+  content: "\e90d";
+}
+.icon-nav-help:before {
+  content: "\e90e";
+}
