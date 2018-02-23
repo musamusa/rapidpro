@@ -25,18 +25,10 @@ RUN pip install -U requests[security]
 ADD . /rapidpro
 COPY docker.settings /rapidpro/temba/settings.py
 
-
 RUN apt-get install -y xvfb
-#RUN apt-get install -y wkhtmltopdf
 RUN apt-get install -y libxrender1 libxext6 fontconfig xfonts-base xfonts-75dpi
-#RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.3/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
 
-#RUN wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.2.1/wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
 RUN dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
-
-#RUN tar vxf wkhtmltox-0.12.2.1.tar.bz2
-#RUN cp wkhtmltox/bin/wk* /usr/local/bin/
-#RUN wkhtmltopdf --version
 
 RUN wget -qO- https://deb.nodesource.com/setup_6.x | bash -
 RUN apt-get install -y nodejs
@@ -47,10 +39,6 @@ RUN bower install --allow-root
 RUN python manage.py collectstatic --noinput
 
 RUN touch `echo $RANDOM`.txt
-
-#RUN python manage.py compress --extension=.haml --force
-
-#RUN python manage.py migrate
 
 # nginx + gunicorn setup
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf
