@@ -137,7 +137,7 @@ DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
     "CCode": {
         "type": "String"
     },
-    "PhoneNumber": {
+    "Identifier": {
         "type": "String"
     }
 }
@@ -145,8 +145,8 @@ DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
 DEFAULT_FIELDS_PAYLOAD_LOOKUPS = {}
 
 DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS = {
-    "IndexPhoneNumber": {
-        "PhoneNumber": 1
+    "IndexIdentifier": {
+        "Identifier": 1
     }
 }
 

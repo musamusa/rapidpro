@@ -1381,8 +1381,7 @@ class Flow(TembaModel):
         # our current flow context
         flow_context = self.build_flow_context(contact, contact_context)
 
-        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context,
-                       lookup=run_context)
+        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context)
 
         # if we have parent or child contexts, add them in too
         if run:
