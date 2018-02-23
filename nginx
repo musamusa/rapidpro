@@ -3,7 +3,7 @@ upstream rapidpro_server {
 }
 
 server {
-    server_name 192.168.15.5;
+    server_name ~^.*$;
 
     listen 8000;
     client_max_body_size 4G;

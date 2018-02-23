@@ -804,6 +804,7 @@ class Contact(TembaModel):
 
     @classmethod
     def find_and_handle(cls, msg):
+        from unidecode import unidecode
         from django.conf import settings
 
         reply = msg.text
@@ -815,9 +816,10 @@ class Contact(TembaModel):
         if not words:
             return handled
 
-        str_reply = '%s' % reply
+        str_reply = unicode(unidecode('%s' % reply))
 
-        another_possible_responses = dict(yes='y', yep='y', yeah='y', yup='y', no='n', nops='n', nope='n', nah='n')
+        another_possible_responses = dict(yes='y', yep='y', yeah='y', yup='y', no='n', nops='n', nope='n', nah='n',
+                                          si='y', s='y')
         another_possible_responses['not'] = 'n'
 
         if contact.is_test:
