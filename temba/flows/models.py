@@ -3459,6 +3459,7 @@ class RuleSet(models.Model):
     TYPE_SHORTEN_URL = 'shorten_url'
 
     TYPE_LOOKUP = 'lookup'
+    TYPE_GIFTCARD = 'giftcard'
 
     CONFIG_WEBHOOK = 'webhook'
     CONFIG_WEBHOOK_ACTION = 'webhook_action'
@@ -3487,7 +3488,8 @@ class RuleSet(models.Model):
                     (TYPE_EXPRESSION, "Split by expression"),
                     (TYPE_RANDOM, "Split Randomly"),
                     (TYPE_SHORTEN_URL, "Shorten Trackable Link"),
-                    (TYPE_LOOKUP, "Lookup"))
+                    (TYPE_LOOKUP, "Lookup"),
+                    (TYPE_GIFTCARD, "Gift Card"))
 
     uuid = models.CharField(max_length=36, unique=True)
 
@@ -3702,6 +3704,31 @@ class RuleSet(models.Model):
             }
             url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
             response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True), headers=headers)
+
+            for rule in self.get_rules():
+                (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                if result > 0:
+                    if response.status_code == 200:
+                        response = json.loads(response.text)
+                        run.update_fields(response)
+                    else:
+                        response = None
+
+                    return rule, response
+                else:
+                    return None, None
+
+        elif self.ruleset_type == RuleSet.TYPE_GIFTCARD:
+            giftcard_db = self.config_json()['giftcard_db']
+            urn = run.contact.get_urn()
+
+            headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_GIFTCARD)
+            response = requests.post(url, json=dict(db=giftcard_db.get('id'), urn=urn.path), headers=headers)
 
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
