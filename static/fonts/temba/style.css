@@ -792,3 +792,15 @@
 .icon-button-quick-reply:before {
   content: "\e903";
 }
+.icon-nav-hand:before {
+  content: "\e90b";
+}
+.icon-nav-hand-inverted:before {
+  content: "\e907";
+}
+.icon-nav-help-inverted:before {
+  content: "\e90d";
+}
+.icon-nav-help:before {
+  content: "\e90e";
+}
