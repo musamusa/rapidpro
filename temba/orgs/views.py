@@ -486,7 +486,8 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards', 'lookups')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards', 'lookups',
+               'import_parse_data')
 
     model = Org
 
@@ -540,6 +541,68 @@ class OrgCRUDL(SmartCRUDL):
                 return self.form_invalid(form)
 
             return super(OrgCRUDL.Import, self).form_valid(form)  # pragma: needs cover
+
+    class ImportParseData(InferOrgMixin, OrgPermsMixin, SmartFormView):
+
+        class FlowImportParseDataForm(Form):
+
+            COLLECTION_TYPE = (
+                ('giftcard', 'Giftcard'),
+                ('lookup', 'Lookup'),
+            )
+
+            collection_type = forms.CharField(label=_('Select the type of database you want to upload your file'),
+                                              widget=forms.Select(attrs={'onchange': 'updateCollectionType($(this))'}, choices=COLLECTION_TYPE), required=True)
+            collection = forms.ChoiceField(label=_('Select the database you want to upload your file'),
+                                           widget=forms.Select(), required=True)
+            import_file = forms.FileField(help_text=_('The import file'))
+
+            def __init__(self, *args, **kwargs):
+                self.org = kwargs['org']
+                del kwargs['org']
+
+                super(OrgCRUDL.ImportParseData.FlowImportParseDataForm, self).__init__(*args, **kwargs)
+
+                config = self.org.config_json()
+                collections = []
+                for item in config.get(GIFTCARDS, []):
+                    full_name = OrgCRUDL.Giftcards.get_collection_full_name(self.org.slug, self.org.id, item, GIFTCARDS.lower())
+                    collections.append((full_name, item))
+                self.fields['collection'].choices = collections
+
+            def clean_import_file(self):
+
+                # make sure they are in the proper tier
+                if not self.org.is_import_flows_tier():
+                    raise ValidationError("Sorry, import is a premium feature")
+
+                data = self.cleaned_data['import_file'].read()
+                return data
+
+        success_message = _("Import successful")
+        form_class = FlowImportParseDataForm
+
+        def get_success_url(self):  # pragma: needs cover
+            return reverse('orgs.org_home')
+
+        def get_form_kwargs(self):
+            kwargs = super(OrgCRUDL.ImportParseData, self).get_form_kwargs()
+            kwargs['org'] = self.request.user.get_org()
+            return kwargs
+
+        def form_valid(self, form):
+            try:
+                org = self.request.user.get_org()
+                data = json.loads(form.cleaned_data['import_file'])
+                org.import_app(data, self.request.user, self.request.branding['link'])
+            except Exception as e:
+                # this is an unexpected error, report it to sentry
+                logger = logging.getLogger(__name__)
+                logger.error('Exception on app import: %s' % six.text_type(e), exc_info=True)
+                form._errors['import_file'] = form.error_class([_("Sorry, your import file is invalid.")])
+                return self.form_invalid(form)
+
+            return super(OrgCRUDL.ImportParseData, self).form_valid(form)  # pragma: needs cover
 
     class Export(InferOrgMixin, OrgPermsMixin, SmartTemplateView):
 
@@ -2260,6 +2323,9 @@ class OrgCRUDL(SmartCRUDL):
 
             if self.has_org_perm("orgs.org_import"):
                 links.append(dict(title=_('Import'), href=reverse('orgs.org_import')))
+
+            if self.has_org_perm("orgs.org_import_parse_data"):
+                links.append(dict(title=_('Import Parse Data'), href=reverse('orgs.org_import_parse_data')))
 
             return links
 
