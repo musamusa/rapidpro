@@ -170,21 +170,31 @@
     -block extra-script
       {{block.super}}
       :javascript
-        function updateCollectionType(elem){
+        function updateCollectionType(elem) {
           var collection_type = elem[0].value;
+          var url;
           if (collection_type === 'lookup') {
             $('p#template').removeClass('hide');
-            $.ajax('/flow/lookups_api/').done(function(data) {
-              $("#id_collection").select2({
-                data: data.results
-              });
-            });
+            url = '/flow/lookups_api/';
           } else {
             $('p#template').addClass('hide');
+            url = '/flow/giftcards_api/';
           }
+          $.ajax(url).done(function(data) {
+            data = data.results;
+            var fieldSelect2 = $("#id_collection");
+            fieldSelect2.empty();
+            fieldSelect2.val(null).trigger("change");
+            for (item in data) {
+              fieldSelect2.append(
+                '<option value="' + data[item].id + '">' + data[item].text + '</option>'
+              );
+              fieldSelect2.val(data[0].id).trigger("change");
+            };
+          });
         }
 
-        function updateParseImportFile(){
+        function updateParseImportFile() {
           var file = $("#import_file").val();
           while (file.indexOf("\\") >= 0){
             file = file.substring(file.indexOf("\\")+1, file.length);
