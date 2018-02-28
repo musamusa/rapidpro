@@ -5,6 +5,7 @@ import json
 import logging
 import plivo
 import nexmo
+import regex
 import six
 import requests
 
@@ -19,6 +20,7 @@ from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.core.validators import validate_email
+from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.db.models import Sum, Q, F, ExpressionWrapper, IntegerField
 from django.forms import Form
@@ -333,6 +335,11 @@ class GiftcardsForm(forms.ModelForm):
         fields = ('id', 'collection', 'remove', 'index')
 
 
+class ChoiceFieldNoValidation(forms.ChoiceField):
+    def validate(self, value):
+        pass
+
+
 class UserCRUDL(SmartCRUDL):
     model = User
     actions = ('edit',)
@@ -553,8 +560,7 @@ class OrgCRUDL(SmartCRUDL):
 
             collection_type = forms.CharField(label=_('Select the type of database you want to upload your file'),
                                               widget=forms.Select(attrs={'onchange': 'updateCollectionType($(this))'}, choices=COLLECTION_TYPE), required=True)
-            collection = forms.ChoiceField(label=_('Select the database you want to upload your file'),
-                                           widget=forms.Select(), required=True)
+            collection = ChoiceFieldNoValidation(label=_('Select the database you want to upload your file'), required=True)
             import_file = forms.FileField(help_text=_('The import file'))
 
             def __init__(self, *args, **kwargs):
@@ -571,13 +577,20 @@ class OrgCRUDL(SmartCRUDL):
                 self.fields['collection'].choices = collections
 
             def clean_import_file(self):
+                if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', self.cleaned_data['import_file'].name, regex.V0):
+                    raise forms.ValidationError('Please make sure the file name only contains '
+                                                'alphanumeric characters [0-9a-zA-Z] and '
+                                                'special characters in -, _, ., (, )')
 
-                # make sure they are in the proper tier
-                if not self.org.is_import_flows_tier():
-                    raise ValidationError("Sorry, import is a premium feature")
+                collection_type = self.cleaned_data.get('collection_type')
 
-                data = self.cleaned_data['import_file'].read()
-                return data
+                try:
+                    needed_check = True if collection_type == 'giftcard' else False
+                    Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org, needed_check=needed_check)
+                except Exception as e:
+                    raise forms.ValidationError(str(e))
+
+                return self.cleaned_data['import_file']
 
         success_message = _("Import successful")
         form_class = FlowImportParseDataForm
@@ -593,8 +606,10 @@ class OrgCRUDL(SmartCRUDL):
         def form_valid(self, form):
             try:
                 org = self.request.user.get_org()
-                data = json.loads(form.cleaned_data['import_file'])
-                org.import_app(data, self.request.user, self.request.branding['link'])
+                data = form.cleaned_data['import_file']
+                collection_type = form.cleaned_data['collection_type']
+                collection = form.cleaned_data['collection']
+                org.import_parse_data(data, collection_type, collection)
             except Exception as e:
                 # this is an unexpected error, report it to sentry
                 logger = logging.getLogger(__name__)

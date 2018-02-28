@@ -53,12 +53,12 @@
                     .attn
                       -trans "Warning!"
     
-                    -trans "If you select a database that already has some data, the data will be added to the current database. No replacement will be made."
+                    -trans "If you select a database that already exist, the data will be replaced on the current database."
                     %p
-                    %p#template.hide
+                    %p#template
                       -trans "Template file"
-                      %a{href:''}
-                        -trans "Lookup template"
+                      %a{href:'{{STATIC_URL}}examples/sample_giftcards.csv'}
+                        -trans "GiftCard template"
                     %p
                     %b
                       -trans "Do not proceed unless you are willing to increase your existing database."
@@ -174,10 +174,10 @@
           var collection_type = elem[0].value;
           var url;
           if (collection_type === 'lookup') {
-            $('p#template').removeClass('hide');
+            $('p#template').addClass('hide');
             url = '/flow/lookups_api/';
           } else {
-            $('p#template').addClass('hide');
+            $('p#template').removeClass('hide');
             url = '/flow/giftcards_api/';
           }
           $.ajax(url).done(function(data) {
