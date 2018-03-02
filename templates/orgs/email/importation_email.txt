@@ -6,7 +6,7 @@ Report about the importation:
 - This process has imported {{success}} row(s).
 {% endblocktrans %}
 {% if failures %}
-{% blocktrans with failure_lines=failures %}
+{% blocktrans with failures=failures %}
 - There are failures at lines: {{failures}}.
 {% endblocktrans %}
 {% endif %}
