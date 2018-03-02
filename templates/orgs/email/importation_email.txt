@@ -1,0 +1,12 @@
+{% load i18n %}
+
+{% blocktrans with success=success %}
+The importation process to Parse was finished.
+Report about the importation:
+- This process has imported {{success}} row(s).
+{% endblocktrans %}
+{% if failures %}
+{% blocktrans with failure_lines=failures %}
+- There are failures at lines: {{failures}}.
+{% endblocktrans %}
+{% endif %}

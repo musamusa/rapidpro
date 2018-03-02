@@ -1,0 +1,21 @@
+{% extends "email_base.html" %}
+
+{% load tz %}
+{% load i18n %}
+{% block body %}
+
+<p>
+  {% blocktrans with success=success %}
+      The importation process to Parse was finished.
+      <br/>
+      Report about the importation: <br>
+      - This process has imported {{success}} row(s). <br>
+  {% endblocktrans %}
+  {% if failures %}
+    {% blocktrans with failures=failures %}
+      - There are failures at lines: {{failures}}.
+    {% endblocktrans %}
+  {% endif %}
+</p>
+
+{% endblock body %}
