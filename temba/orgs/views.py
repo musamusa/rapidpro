@@ -592,11 +592,15 @@ class OrgCRUDL(SmartCRUDL):
 
                 return self.cleaned_data['import_file']
 
-        success_message = _("Import successful")
         form_class = FlowImportParseDataForm
 
         def get_success_url(self):  # pragma: needs cover
             return reverse('orgs.org_import_parse_data')
+
+        def derive_success_message(self):
+            user = self.get_user()
+            success_message = _('We are preparing your import. We will e-mail you at %s when it is ready.' % user.email)
+            return success_message
 
         def get_form_kwargs(self):
             kwargs = super(OrgCRUDL.ImportParseData, self).get_form_kwargs()
@@ -606,6 +610,9 @@ class OrgCRUDL(SmartCRUDL):
         def form_valid(self, form):
             import csv
             from .tasks import import_data_to_parse
+
+            org = self.request.user.get_org()
+            user = self.get_user()
 
             try:
                 import_file = form.cleaned_data['import_file']
@@ -647,8 +654,12 @@ class OrgCRUDL(SmartCRUDL):
                         if response_purge.status_code in [200, 404]:
                             requests.put(parse_url, data=json.dumps(remove_fields), headers=parse_headers)
 
+                else:
+                    purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection)
+                    response_purge = requests.delete(purge_url, headers=parse_headers)
+
                 spamreader = csv.reader(import_file, delimiter=str(','))
-                import_data_to_parse.delay(list(spamreader), parse_url, parse_headers, collection, needed_create_header)
+                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, needed_create_header)
 
             except Exception as e:
                 # this is an unexpected error, report it to sentry

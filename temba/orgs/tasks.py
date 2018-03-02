@@ -9,9 +9,11 @@ from parse_rest.connection import register
 from parse_rest.datatypes import Object
 from datetime import timedelta
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 from django.template.defaultfilters import slugify
 from temba.utils.queues import nonoverlapping_task
+from temba.utils.email import send_template_email
 from .models import CreditAlert, Invitation, Org, TopUpCredits
 
 
@@ -54,7 +56,7 @@ def squash_topupcredits():
 
 
 @task(track_started=True, name='import_data_to_parse')
-def import_data_to_parse(iterator, parse_url, parse_headers, collection, needed_create_header):  # pragma: needs cover
+def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, needed_create_header):  # pragma: needs cover
     start = time.time()
     print("Started task to import %s row(s) to Parse" % str(len(iterator) - 1))
 
@@ -62,7 +64,9 @@ def import_data_to_parse(iterator, parse_url, parse_headers, collection, needed_
 
     new_fields = {}
     fields_map = {}
-    errors = []
+
+    failures = []
+    success = 0
 
     for i, row in enumerate(iterator):
         if i == 0:
@@ -86,10 +90,20 @@ def import_data_to_parse(iterator, parse_url, parse_headers, collection, needed_
                 try:
                     payload[fields_map[item]] = row[item].replace('"', '')
                 except Exception:
-                    errors.append(i)
+                    failures.append(str(i))
 
             real_collection = Object.factory(collection)
             new_item = real_collection(**payload)
             new_item.save()
+            success += 1
 
     print(" -- Importation task ran in %0.2f seconds" % (time.time() - start))
+
+    subject = _("%(name)s Information") % branding
+    template = "orgs/email/importation_email"
+
+    failures = ', '.join(failures) if failures else None
+
+    context = dict(now=timezone.now(), subject=subject, success=success, failures=failures)
+
+    send_template_email(user_email, subject, template, context, branding)
