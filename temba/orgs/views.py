@@ -596,7 +596,7 @@ class OrgCRUDL(SmartCRUDL):
         form_class = FlowImportParseDataForm
 
         def get_success_url(self):  # pragma: needs cover
-            return reverse('orgs.org_home')
+            return reverse('orgs.org_import_parse_data')
 
         def get_form_kwargs(self):
             kwargs = super(OrgCRUDL.ImportParseData, self).get_form_kwargs()
@@ -604,12 +604,52 @@ class OrgCRUDL(SmartCRUDL):
             return kwargs
 
         def form_valid(self, form):
+            import csv
+            from .tasks import import_data_to_parse
+
             try:
-                org = self.request.user.get_org()
-                data = form.cleaned_data['import_file']
+                import_file = form.cleaned_data['import_file']
                 collection_type = form.cleaned_data['collection_type']
                 collection = form.cleaned_data['collection']
-                org.import_parse_data(data, collection_type, collection)
+
+                parse_headers = {
+                    'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                    'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                    'Content-Type': 'application/json'
+                }
+
+                needed_create_header = False
+
+                parse_url = '%s/schemas/%s' % (settings.PARSE_URL, collection)
+
+                if collection_type == 'lookup':
+                    needed_create_header = True
+
+                    response = requests.get(parse_url, headers=parse_headers)
+                    if response.status_code == 200 and 'fields' in response.json():
+                        fields = response.json().get('fields')
+
+                        for key in fields.keys():
+                            if key in ['objectId', 'updatedAt', 'createdAt', 'ACL']:
+                                del fields[key]
+                            else:
+                                del fields[key]['type']
+                                fields[key]['__op'] = 'Delete'
+
+                        remove_fields = {
+                            "className": collection,
+                            "fields": fields
+                        }
+
+                        purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection)
+                        response_purge = requests.delete(purge_url, headers=parse_headers)
+
+                        if response_purge.status_code in [200, 404]:
+                            requests.put(parse_url, data=json.dumps(remove_fields), headers=parse_headers)
+
+                spamreader = csv.reader(import_file, delimiter=str(','))
+                import_data_to_parse.delay(list(spamreader), parse_url, parse_headers, collection, needed_create_header)
+
             except Exception as e:
                 # this is an unexpected error, report it to sentry
                 logger = logging.getLogger(__name__)

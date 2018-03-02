@@ -1,10 +1,17 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import time
+import requests
+import json
 
 from celery.task import task
+from parse_rest.connection import register
+from parse_rest.datatypes import Object
 from datetime import timedelta
 from django.utils import timezone
+from django.conf import settings
+from django.template.defaultfilters import slugify
+from django.utils.translation import ugettext_lazy as _
 from temba.utils.queues import nonoverlapping_task
 from .models import CreditAlert, Invitation, Org, TopUpCredits
 
@@ -45,3 +52,45 @@ def calculate_credit_caches():  # pragma: needs cover
 @nonoverlapping_task(track_started=True, name="squash_topupcredits", lock_key='squash_topupcredits')
 def squash_topupcredits():
     TopUpCredits.squash()
+
+
+@task(track_started=True, name='import_data_to_parse')
+def import_data_to_parse(iterator, parse_url, parse_headers, collection, needed_create_header):  # pragma: needs cover
+    start = time.time()
+    print("Started task to import %s row(s) to Parse" % str(len(iterator) - 1))
+
+    register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
+
+    new_fields = {}
+    fields_map = {}
+    errors = []
+
+    for i, row in enumerate(iterator):
+        if i == 0:
+            counter = 0
+            for item in row:
+                new_key = str(slugify(item)).replace('-', '_')
+                new_fields[new_key] = dict(type='String')
+
+                fields_map[counter] = new_key
+                counter += 1
+
+            if needed_create_header:
+                add_new_fields = {
+                    "className": collection,
+                    "fields": new_fields
+                }
+                requests.put(parse_url, data=json.dumps(add_new_fields), headers=parse_headers)
+        else:
+            payload = dict()
+            for item in fields_map.keys():
+                try:
+                    payload[fields_map[item]] = row[item].replace('"', '')
+                except Exception:
+                    errors.append(i)
+
+            real_collection = Object.factory(collection)
+            new_item = real_collection(**payload)
+            new_item.save()
+
+    print(" -- Importation task ran in %0.2f seconds" % (time.time() - start))
