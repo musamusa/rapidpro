@@ -402,13 +402,6 @@ class Org(SmartModel):
     def is_whitelisted(self):
         return self.config_json().get(ORG_STATUS, None) == WHITELISTED
 
-    def import_parse_data(self, data, collection_type, collection):
-        print(collection_type)
-        if collection_type == 'lookup':
-            pass
-        else:
-            pass
-
     @transaction.atomic
     def import_app(self, data, user, site=None):
         from temba.flows.models import Flow
