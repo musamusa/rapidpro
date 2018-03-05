@@ -37,6 +37,8 @@ from functools import cmp_to_key
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartFormView, SmartReadView, SmartUpdateView, SmartListView, SmartTemplateView
 from smartmin.views import SmartModelFormView, SmartModelActionView
 from datetime import timedelta
+from parse_rest.connection import register
+from parse_rest.datatypes import Object
 from temba.api.models import APIToken
 from temba.campaigns.models import Campaign
 from temba.channels.models import Channel
@@ -494,7 +496,7 @@ class OrgCRUDL(SmartCRUDL):
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
                'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'giftcards', 'lookups',
-               'import_parse_data')
+               'import_parse_data', 'parse_data_view')
 
     model = Org
 
@@ -2225,6 +2227,70 @@ class OrgCRUDL(SmartCRUDL):
             context['view_title'] = 'Lookup'
             context['remove_div_title'] = 'lookup'
             context['view_url'] = reverse('orgs.org_lookups')
+            return context
+
+    class ParseDataView(InferOrgMixin, OrgPermsMixin, SmartListView):
+        paginate_by = 0
+
+        def derive_fields(self):
+            db = self.request.GET.get('db')
+            type = self.request.GET.get('type')
+
+            if type == 'giftcard':
+                collection_type = str(GIFTCARDS).lower()
+            else:
+                collection_type = str(LOOKUPS).lower()
+
+            org = self.request.user.get_org()
+            collection = OrgCRUDL.Giftcards.get_collection_full_name(org_slug=org.slug, org_id=org.id, name=db, collection_type=collection_type)
+
+            parse_headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+
+            parse_url = '%s/schemas/%s' % (settings.PARSE_URL, collection)
+
+            response = requests.get(parse_url, headers=parse_headers)
+
+            fields = []
+            if response.status_code == 200 and 'fields' in response.json():
+                fields = response.json().get('fields')
+                fields = [item for item in fields.keys() if item != 'ACL']
+
+            return tuple(fields)
+
+        def derive_queryset(self, **kwargs):
+            db = self.request.GET.get('db')
+            type = self.request.GET.get('type')
+
+            if type == 'giftcard':
+                collection_type = str(GIFTCARDS).lower()
+            else:
+                collection_type = str(LOOKUPS).lower()
+
+            org = self.request.user.get_org()
+            collection = OrgCRUDL.Giftcards.get_collection_full_name(org_slug=org.slug, org_id=org.id, name=db, collection_type=collection_type)
+
+            register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
+
+            factory = Object.factory(collection)
+            results = factory.Query.all().limit(1000).order_by('createdAt')
+            return results
+
+        def derive_title(self):
+            return self.request.GET.get('db')
+
+        def lookup_obj_attribute(self, obj, field):
+            if hasattr(obj, field):
+                return getattr(obj, field, None)
+            else:
+                return None
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.ParseDataView, self).get_context_data(**kwargs)
+            context['searches'] = []
             return context
 
     class Webhook(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
