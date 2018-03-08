@@ -20,9 +20,6 @@
     
               - block import-status
                 %form#import-form.smartmin-form.horizontal-form{method:"post", action:"{% url 'orgs.org_import_parse_data' %}", enctype:"multipart/form-data"}
-                  - if form.non_field_errors
-                    %div.alert.alert-error.form-errors
-                      {{ form.non_field_errors }}
     
                   -csrf_token
                   -if form.non_field_errors
@@ -30,8 +27,6 @@
                       {{ form.non_field_errors }}
     
                   -block fields
-                    %div#import_file_errors
-                      {{ form.import_file.errors }}
                     #choice-db-type
                       %p
                         {{ form.collection_type.label }}
@@ -48,6 +43,8 @@
                       %input{type:"text", id:"file-field"}
                       %a.btn.btn-primary
                         -trans "Choose File"
+                    %div#import_file_errors
+                      {{ form.import_file.errors }}
     
                   .warning
                     .attn
