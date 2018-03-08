@@ -499,8 +499,8 @@ class Org(SmartModel):
         not_found_headers = [h for h in PARSE_GIFTCARDS_IMPORT_HEADERS if h not in headers]
         string_possible_headers = '", "'.join([h for h in PARSE_GIFTCARDS_IMPORT_HEADERS])
 
-        if 'Identifier' in headers or 'active' in headers:
-            return
+        if ('Identifier' in headers or 'identifier' in headers) or ('Active' in headers or 'active' in headers):
+            raise Exception(ugettext('Please remove the "identifier" and/or "active" column from your file.'))
 
         if not_found_headers:
             raise Exception(ugettext('The file you provided is missing a required header. All these fields: "%s" '
