@@ -56,7 +56,7 @@ def squash_topupcredits():
 
 
 @task(track_started=True, name='import_data_to_parse')
-def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, collection_type, filename, needed_create_header):  # pragma: needs cover
+def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, collection_type, collection_real_name, filename, needed_create_header):  # pragma: needs cover
     start = time.time()
     print("Started task to import %s row(s) to Parse" % str(len(iterator) - 1))
 
@@ -104,6 +104,6 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
 
     failures = ', '.join(failures) if failures else None
 
-    context = dict(now=timezone.now(), subject=subject, success=success, failures=failures, collection=collection, collection_type=collection_type, filename=filename)
+    context = dict(now=timezone.now(), subject=subject, success=success, failures=failures, collection_real_name=collection_real_name, collection_type=collection_type, filename=filename)
 
     send_template_email(user_email, subject, template, context, branding)

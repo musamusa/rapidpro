@@ -553,7 +553,7 @@ class OrgCRUDL(SmartCRUDL):
 
     class ImportParseData(InferOrgMixin, OrgPermsMixin, SmartFormView):
 
-        class FlowImportParseDataForm(Form):
+        class ImportParseDataForm(Form):
 
             COLLECTION_TYPE = (
                 ('giftcard', 'Giftcard'),
@@ -569,7 +569,7 @@ class OrgCRUDL(SmartCRUDL):
                 self.org = kwargs['org']
                 del kwargs['org']
 
-                super(OrgCRUDL.ImportParseData.FlowImportParseDataForm, self).__init__(*args, **kwargs)
+                super(OrgCRUDL.ImportParseData.ImportParseDataForm, self).__init__(*args, **kwargs)
 
                 config = self.org.config_json()
                 collections = []
@@ -594,7 +594,7 @@ class OrgCRUDL(SmartCRUDL):
 
                 return self.cleaned_data['import_file']
 
-        form_class = FlowImportParseDataForm
+        form_class = ImportParseDataForm
 
         def get_success_url(self):  # pragma: needs cover
             return reverse('orgs.org_import_parse_data')
@@ -631,6 +631,9 @@ class OrgCRUDL(SmartCRUDL):
 
                 parse_url = '%s/schemas/%s' % (settings.PARSE_URL, collection)
 
+                config = self.org.config_json()
+                collection_real_name = None
+
                 if collection_type == 'lookup':
                     needed_create_header = True
 
@@ -656,12 +659,24 @@ class OrgCRUDL(SmartCRUDL):
                         if response_purge.status_code in [200, 404]:
                             requests.put(parse_url, data=json.dumps(remove_fields), headers=parse_headers)
 
+                    for item in config.get(LOOKUPS, []):
+                        full_name = OrgCRUDL.Giftcards.get_collection_full_name(org.slug, org.id, item, LOOKUPS.lower())
+                        if full_name == collection:
+                            collection_real_name = item
+                            break
+
                 else:
                     purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection)
                     response_purge = requests.delete(purge_url, headers=parse_headers)
 
+                    for item in config.get(GIFTCARDS, []):
+                        full_name = OrgCRUDL.Giftcards.get_collection_full_name(org.slug, org.id, item, GIFTCARDS.lower())
+                        if full_name == collection:
+                            collection_real_name = item
+                            break
+
                 spamreader = csv.reader(import_file, delimiter=str(','))
-                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), import_file.name, needed_create_header)
+                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), collection_real_name, import_file.name, needed_create_header)
 
             except Exception as e:
                 # this is an unexpected error, report it to sentry

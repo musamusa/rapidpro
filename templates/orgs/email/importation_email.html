@@ -5,9 +5,9 @@
 {% block body %}
 
 <p>
-  {% blocktrans with success=success collection=collection collection_type=collection_type filename=filename %}
+  {% blocktrans with success=success collection_real_name=collection_real_name collection_type=collection_type filename=filename %}
     Database type: {{collection_type}} <br/>
-    Database name: {{collection}} <br/>
+    Database name: {{collection_real_name}} <br/>
     File name: {{filename}} <br/>
     Rows imported: {{success}} <br/>
   {% endblocktrans %}

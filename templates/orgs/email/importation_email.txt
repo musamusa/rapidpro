@@ -1,8 +1,8 @@
 {% load i18n %}
 
-{% blocktrans with success=success collection=collection collection_type=collection_type filename=filename %}
+{% blocktrans with success=success collection_real_name=collection_real_name collection_type=collection_type filename=filename %}
 Database type: {{collection_type}}
-Database name: {{collection}}
+Database name: {{collection_real_name}}
 File name: {{filename}}
 Rows imported: {{success}}
 {% endblocktrans %}
