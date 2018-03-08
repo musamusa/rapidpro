@@ -5,17 +5,22 @@
 {% block body %}
 
 <p>
-  {% blocktrans with success=success %}
-      The importation process to Parse was finished.
-      <br/>
-      Report about the importation: <br>
-      - This process has imported {{success}} row(s). <br>
+  {% blocktrans with success=success collection=collection collection_type=collection_type filename=filename %}
+    Database type: {{collection_type}} <br/>
+    Database name: {{collection}} <br/>
+    File name: {{filename}} <br/>
+    Rows imported: {{success}} <br/>
   {% endblocktrans %}
   {% if failures %}
     {% blocktrans with failures=failures %}
-      - There are failures at lines: {{failures}}.
+      Failures at lines: {{failures}}
     {% endblocktrans %}
   {% endif %}
+  {% blocktrans %}
+    <br/>
+    Best,<br/>
+    The CommunityConnectLabs Team
+  {% endblocktrans %}
 </p>
 
 {% endblock body %}

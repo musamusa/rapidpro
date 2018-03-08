@@ -661,7 +661,7 @@ class OrgCRUDL(SmartCRUDL):
                     response_purge = requests.delete(purge_url, headers=parse_headers)
 
                 spamreader = csv.reader(import_file, delimiter=str(','))
-                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, needed_create_header)
+                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), import_file.name, needed_create_header)
 
             except Exception as e:
                 # this is an unexpected error, report it to sentry

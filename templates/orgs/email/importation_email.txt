@@ -1,12 +1,17 @@
 {% load i18n %}
 
-{% blocktrans with success=success %}
-The importation process to Parse was finished.
-Report about the importation:
-- This process has imported {{success}} row(s).
+{% blocktrans with success=success collection=collection collection_type=collection_type filename=filename %}
+Database type: {{collection_type}}
+Database name: {{collection}}
+File name: {{filename}}
+Rows imported: {{success}}
 {% endblocktrans %}
 {% if failures %}
 {% blocktrans with failures=failures %}
-- There are failures at lines: {{failures}}.
+Failures at lines: {{failures}}
 {% endblocktrans %}
 {% endif %}
+{% blocktrans %}
+Best,
+The CommunityConnectLabs Team
+{% endblocktrans %}
