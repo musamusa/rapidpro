@@ -503,7 +503,7 @@ class Org(SmartModel):
             return
 
         if not_found_headers:
-            raise Exception(ugettext('The file you provided is missing a required header. All this fields: "%s" '
+            raise Exception(ugettext('The file you provided is missing a required header. All these fields: "%s" '
                                      'should be included.' % string_possible_headers))
 
     def config_json(self):
