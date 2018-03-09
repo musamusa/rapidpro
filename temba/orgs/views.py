@@ -311,6 +311,7 @@ class OrgGrantForm(forms.ModelForm):
 
 class GiftcardsForm(forms.ModelForm):
     collection = forms.CharField(required=False, label=_("New Collection"),
+                                 max_length=30,
                                  help_text="Enter a name for your collection. ex: my gifts, new lookup table")
     remove = forms.CharField(widget=forms.HiddenInput, max_length=6, required=False)
     index = forms.CharField(widget=forms.HiddenInput, max_length=10, required=False)
@@ -330,7 +331,7 @@ class GiftcardsForm(forms.ModelForm):
         if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Giftcards.collection_type):
             raise ValidationError("This collection name has already been used")
 
-        return new_collection
+        return new_collection[:30] if new_collection else None
 
     class Meta:
         model = Org
@@ -2218,7 +2219,7 @@ class OrgCRUDL(SmartCRUDL):
                 if new_collection in self.instance.get_collections(collection_type=OrgCRUDL.Lookups.collection_type):
                     raise ValidationError("This collection name has already been used")
 
-                return new_collection
+                return new_collection[:30] if new_collection else None
 
             class Meta:
                 model = Org
@@ -2548,10 +2549,12 @@ class OrgCRUDL(SmartCRUDL):
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
 
             if self.has_org_perm('orgs.org_giftcards'):
-                formax.add_section('giftcards', reverse('orgs.org_giftcards'), icon='icon-credit-2', dependents="giftcards")
+                formax.add_section('giftcards', reverse('orgs.org_giftcards'), icon='icon-credit-2',
+                                   action='redirect')
 
             if self.has_org_perm('orgs.org_lookups'):
-                formax.add_section('lookups', reverse('orgs.org_lookups'), icon='icon-filter', dependents="lookups")
+                formax.add_section('lookups', reverse('orgs.org_lookups'), icon='icon-filter',
+                                   action='redirect')
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
