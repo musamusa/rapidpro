@@ -587,6 +587,9 @@ class OrgCRUDL(SmartCRUDL):
 
                 collection_type = self.cleaned_data.get('collection_type')
 
+                if not self.cleaned_data['import_file'].name.endswith(('.csv', '.xls', '.xlsx')):
+                    raise forms.ValidationError(_('The file must be a CSV or XLS.'))
+
                 try:
                     needed_check = True if collection_type == 'giftcard' else False
                     Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org, needed_check=needed_check)
@@ -701,7 +704,7 @@ class OrgCRUDL(SmartCRUDL):
                 # this is an unexpected error, report it to sentry
                 logger = logging.getLogger(__name__)
                 logger.error('Exception on app import: %s' % six.text_type(e), exc_info=True)
-                form._errors['import_file'] = form.error_class([_("Sorry, your import file is invalid. In addition, the file must be a CSV or XLS")])
+                form._errors['import_file'] = form.error_class([_("Sorry, your file is invalid. In addition, the file must be a CSV or XLS")])
                 return self.form_invalid(form)
 
             return super(OrgCRUDL.ImportParseData, self).form_valid(form)  # pragma: needs cover
