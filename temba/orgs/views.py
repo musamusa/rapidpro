@@ -612,6 +612,7 @@ class OrgCRUDL(SmartCRUDL):
 
         def form_valid(self, form):
             import csv
+            from pyexcel_xls import get_data
             from .tasks import import_data_to_parse
 
             org = self.request.user.get_org()
@@ -621,6 +622,13 @@ class OrgCRUDL(SmartCRUDL):
                 import_file = form.cleaned_data['import_file']
                 collection_type = form.cleaned_data['collection_type']
                 collection = form.cleaned_data['collection']
+
+                if import_file.name.endswith('.csv'):
+                    file_type = 'csv'
+                elif import_file.name.endswith(('.xls', '.xlsx')):
+                    file_type = 'xls'
+                else:
+                    raise Exception
 
                 parse_headers = {
                     'X-Parse-Application-Id': settings.PARSE_APP_ID,
@@ -676,14 +684,24 @@ class OrgCRUDL(SmartCRUDL):
                             collection_real_name = item
                             break
 
-                spamreader = csv.reader(import_file, delimiter=str(','))
-                import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), collection_real_name, import_file.name, needed_create_header)
+                if file_type == 'csv':
+                    spamreader = csv.reader(import_file, delimiter=str(','))
+                else:
+                    data = get_data(import_file)
+                    spamreader = None
+                    if data:
+                        for item in data:
+                            spamreader = data[item]
+                            break
+
+                if spamreader:
+                    import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), collection_real_name, import_file.name, needed_create_header)
 
             except Exception as e:
                 # this is an unexpected error, report it to sentry
                 logger = logging.getLogger(__name__)
                 logger.error('Exception on app import: %s' % six.text_type(e), exc_info=True)
-                form._errors['import_file'] = form.error_class([_("Sorry, your import file is invalid.")])
+                form._errors['import_file'] = form.error_class([_("Sorry, your import file is invalid. In addition, the file must be a CSV or XLS")])
                 return self.form_invalid(form)
 
             return super(OrgCRUDL.ImportParseData, self).form_valid(form)  # pragma: needs cover

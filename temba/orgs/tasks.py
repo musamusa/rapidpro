@@ -73,7 +73,16 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
             counter = 0
             for item in row:
                 new_key = str(slugify(item)).replace('-', '_')
-                new_fields[new_key] = dict(type='String')
+
+                next_elem = iterator[(i + 1) % len(iterator)]
+                field_type = type(next_elem[counter])
+
+                if field_type.__name__ == 'int':
+                    field_type = 'Number'
+                else:
+                    field_type = 'String'
+
+                new_fields[new_key] = dict(type=field_type)
 
                 fields_map[counter] = new_key
                 counter += 1
@@ -88,7 +97,11 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
             payload = dict()
             for item in fields_map.keys():
                 try:
-                    payload[fields_map[item]] = row[item].replace('"', '')
+                    if type(row[item]).__name__ == 'int':
+                        field_value = int(row[item])
+                    else:
+                        field_value = str(row[item]).replace('"', '')
+                    payload[fields_map[item]] = field_value
                 except Exception:
                     failures.append(str(i))
 
