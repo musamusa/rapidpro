@@ -7,7 +7,7 @@ import json
 from celery.task import task
 from parse_rest.connection import register
 from parse_rest.datatypes import Object
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
@@ -72,19 +72,19 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
         if i == 0:
             counter = 0
             for item in row:
-                new_key = str(slugify(item)).replace('-', '_')
-
-                next_elem = iterator[(i + 1) % len(iterator)]
-                field_type = type(next_elem[counter])
-
-                if field_type.__name__ == 'int':
+                if str(item).startswith('numeric_'):
                     field_type = 'Number'
+                    item = item.replace('numeric_', '')
+                elif str(item).startswith('date_'):
+                    field_type = 'Date'
+                    item = item.replace('date_', '')
                 else:
                     field_type = 'String'
 
+                new_key = str(slugify(item)).replace('-', '_')
                 new_fields[new_key] = dict(type=field_type)
 
-                fields_map[counter] = new_key
+                fields_map[counter] = dict(name=new_key, type=field_type)
                 counter += 1
 
             if needed_create_header:
@@ -97,13 +97,23 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
             payload = dict()
             for item in fields_map.keys():
                 try:
-                    if type(row[item]).__name__ == 'int':
-                        field_value = int(row[item])
+                    field_value = row[item]
+
+                    if fields_map[item].get('type') == 'Number':
+                        field_value = int(field_value)
+                    elif fields_map[item].get('type') == 'Date':
+                        field_value = field_value.replace('-', '/')
+                        try:
+                            field_value = datetime.strptime(field_value, '%m/%d/%Y')
+                        except Exception:
+                            field_value = datetime.strptime(field_value, '%d/%m/%Y')
                     else:
-                        field_value = str(row[item]).replace('"', '')
-                    payload[fields_map[item]] = field_value
+                        field_value = str(field_value)
+
+                    payload[fields_map[item].get('name')] = field_value
                 except Exception:
-                    failures.append(str(i))
+                    if str(i) not in failures:
+                        failures.append(str(i))
 
             real_collection = Object.factory(collection)
             new_item = real_collection(**payload)
