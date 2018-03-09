@@ -3706,16 +3706,10 @@ class RuleSet(models.Model):
 
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                response_json = json.loads(response.text)
+                run.update_fields(response_json)
                 if result > 0:
-                    if response.status_code == 200:
-                        response = json.loads(response.text)
-                        run.update_fields(response)
-                    else:
-                        response = None
-
-                    return rule, response
-                else:
-                    return None, None
+                    return rule, response_json
 
         elif self.ruleset_type == RuleSet.TYPE_GIFTCARD:
             giftcard_db = self.config_json()['giftcard_db']
@@ -3731,16 +3725,10 @@ class RuleSet(models.Model):
 
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                response_json = json.loads(response.text)
+                run.update_fields(response_json)
                 if result > 0:
-                    if response.status_code == 200:
-                        response = json.loads(response.text)
-                        run.update_fields(response)
-                    else:
-                        response = None
-
-                    return rule, response
-                else:
-                    return None, None
+                    return rule, response_json
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}
