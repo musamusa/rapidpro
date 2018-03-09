@@ -1721,7 +1721,9 @@ class FlowCRUDL(SmartCRUDL):
                 if response.status_code == 200 and 'fields' in response_json:
                     fields = response_json['fields']
                     for key in fields.keys():
-                        collections.append(dict(id=key, text=key))
+                        default_fields = ['ACL', 'createdAt', 'updatedAt', 'objectId']
+                        if key not in default_fields:
+                            collections.append(dict(id=key, text=key))
             else:
                 org = self.request.user.get_org()
                 for collection in org.get_collections(collection_type=LOOKUPS):
