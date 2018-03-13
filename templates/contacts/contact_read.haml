@@ -162,20 +162,21 @@
       %a.pull-right.show-all.upcoming
         more
 
-  %h5
-    -trans "Compose message"
   #box-message
+    %h5
+      -trans "Compose message"
     -if send_channel
       #send-custom-form
         {% csrf_token %}
-        %textarea#id_custom_text{tabindex:1}
+        #box-text
+          %textarea#id_custom_text{tabindex:1}
+          %button#send-custom-message.btn.btn-primary.ok{type: 'submit', tabindex:2}
+            -trans "Send"
         #errors
         #omni-custom.hide
           #omni-custom-select2
             #omnibox-custom.placeholder.populate{style:"width:400px"}
           #loading-custom
-        %button#send-custom-message.btn.btn-primary.ok{type: 'submit', tabindex:2}
-          -trans "Send Message"
     -else
       -blocktrans with name=brand.name
         To get started you need to add a channel to your account. A channel is a phone number or social network
@@ -440,24 +441,54 @@
           }
         }
 
+        #box-message {
+          background-color: #FFF;
+          width: 100%;
+          
+          &.scroll {
+            z-index: 10000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 0 30px 10px 30px;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+
+            #send-custom-form {
+              margin: 0;
+            } 
+
+          }
+
+        }
+
         #send-custom-form {
           margin: 0 0 40px 0;
 
-          textarea {
-            resize: none;
-            display: block;
-            width: 510px;
-            height: 50px;
-            padding: 10px;
-            margin-right: 15px;
+          #box-text {
+            position: relative;
 
-            @media (max-width: 768px) {
-              width: 90%;
+            textarea {
+              resize: none;
+              display: block;
+              width: 100%;
+              height: 60px;
+              padding: 10px 80px 10px 10px;
+              margin-right: 15px;
+              box-sizing: border-box;
+              -moz-box-sizing: border-box;
+              -webkit-box-sizing: border-box;
             }
-          }
 
-          button {
-            margin: 10px 0 0 0;
+            button {
+              position: absolute;
+              top: 0;
+              right: 0;
+              height: 100%;
+            }
+
           }
 
           .error {
@@ -477,6 +508,15 @@
     var startTime = null;
 
     $(document).ready(function() {
+
+      var boxMessage = $('#box-message');
+      $(window).scroll(function() {
+          if ($(this).scrollTop() > 365) {
+            boxMessage.addClass('scroll');
+          } else {
+            boxMessage.removeClass('scroll');
+          }
+      });
 
       $('.show-all.upcoming').live('click', function() {
         $(this).hide();
@@ -525,6 +565,12 @@
 
     });
 
+    function goTo(elem) {
+      $('html, body').animate({
+        scrollTop: $(elem).offset().top
+      }, 500);
+    }
+
     function initializeCustomOmnibox(initial) {
       var options = {
           placeholder: gettext("Recipients, enter contacts or groups"),
@@ -559,7 +605,7 @@
           $("#omnibox-custom").select2('data', initial);
           $("#omni-custom-select2").show();
           $("#loading-custom").hide();
-          $("#send-custom-message").text(gettext("Send Message")).removeClass("disabled");
+          $("#send-custom-message").text(gettext("Send")).removeClass("disabled");
       }
       // otherwise, make sure our data is cleared
       else {
@@ -599,6 +645,7 @@
         return;
       }
 
+      goTo('.contact-fields');
       $("#send-custom-message").text('{% trans "Sending.." %}').addClass("disabled");
 
       // its possible we might send to a different end point such as
@@ -635,7 +682,7 @@
         }
 
         form.find("#id_custom_text").val('');
-        $("#send-custom-message").text('{% trans "Send Message" %}').removeClass("disabled");
+        $("#send-custom-message").text('{% trans "Send" %}').removeClass("disabled");
 
       }).fail(function(data, textStatus) {
 
@@ -665,7 +712,7 @@
         }
 
         // re-enable our send button, so they can try again
-        $("#send-custom-message").text('{% trans "Send Message" %}').removeClass("disabled");
+        $("#send-custom-message").text('{% trans "Send" %}').removeClass("disabled");
 
       });
     }
