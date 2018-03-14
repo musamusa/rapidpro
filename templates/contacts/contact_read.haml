@@ -560,7 +560,7 @@
         }
       });
 
-      var queryString = 'c={{object.uuid}}'
+      var queryString = 'c={{object.uuid}}';
       $.get("{% url 'contacts.contact_omnibox' %}?" + queryString, function(data, textStatus){
         initializeCustomOmnibox(data.results);
       });
@@ -647,7 +647,7 @@
         return;
       }
 
-      goTo('.contact-fields');
+      goTo('.page-content');
       $("#send-custom-message").text('{% trans "Sending.." %}').addClass("disabled");
 
       // its possible we might send to a different end point such as
