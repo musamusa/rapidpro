@@ -16,7 +16,7 @@
           .row{style:"height:250px;"}
             .span9
               %p
-                -trans "If you have a file with Gift Cards or a Lookup, select it below to import it into your account."
+                -trans "If you have a CSV or XLS file with Gift Cards or a Lookup, select it below to import it into your account."
     
               - block import-status
                 %form#import-form.smartmin-form.horizontal-form{method:"post", action:"{% url 'orgs.org_import_parse_data' %}", enctype:"multipart/form-data"}
@@ -51,14 +51,29 @@
                       -trans "Warning!"
     
                     -trans "If you select a database that already exist, the data will be replaced on the current database."
+                    %br
+                    %b
+                      -trans "Do not proceed unless you are willing to replace your existing database."
                     %p
-                    %p#template
+                    %p#template-giftcard
                       -trans "Template file"
                       %a{href:'{{STATIC_URL}}examples/sample_giftcards.csv'}
                         -trans "GiftCard template"
-                    %p
-                    %b
-                      -trans "Do not proceed unless you are willing to replace your existing database."
+                    %p#template-lookup.hide
+                      -trans "Template file"
+                      %a{href:'{{STATIC_URL}}examples/sample_lookup.csv'}
+                        -trans "Lookup template"
+                      %br
+                      %br
+                      -trans "In order for data to be mapped correctly, please add the prefix 'numeric_' to columns that are formatted as numbers, and 'date_' to columns formatted as dates. Accepted date format: "
+                      %b
+                        -trans "m/d/Y"
+                      -trans " and "
+                      %b
+                        -trans "d/m/Y"
+                      %br
+                      %br
+                      -trans "Note: Remember that, if you’re using XLS file you need to set all data as text (no numeric and no datetime field)."
     
                   .form-buttons
                     %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
@@ -171,10 +186,12 @@
           var collection_type = elem[0].value;
           var url;
           if (collection_type === 'lookup') {
-            $('p#template').addClass('hide');
+            $('p#template-giftcard').addClass('hide');
+            $('p#template-lookup').removeClass('hide');
             url = '/flow/lookups_api/';
           } else {
-            $('p#template').removeClass('hide');
+            $('p#template-giftcard').removeClass('hide');
+            $('p#template-lookup').addClass('hide');
             url = '/flow/giftcards_api/';
           }
           $.ajax(url).done(function(data) {
