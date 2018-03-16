@@ -558,6 +558,7 @@
       $( "#id_custom_text" ).keypress(function(e) {
         if(e.which == 13){
           sendCustomMessage(e, refreshRecents());
+          e.preventDefault();
         }
       });
 
