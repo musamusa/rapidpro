@@ -3668,13 +3668,18 @@ class RuleSet(models.Model):
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                c = bitly_api.Connection(settings.BITLY_SHORTEN_URL_LOGIN, settings.BITLY_SHORTEN_URL_API_KEY)
-                response = c.shorten(long_url)
+                c = bitly_api.Connection(access_token=settings.BITLY_ACCESS_TOKEN)
+                try:
+                    response = c.shorten(long_url)
+                    short_url = response.get('url')
+                    status_code = 200
+                except Exception as e:
+                    short_url = str(e.args)
+                    status_code = 403
 
                 for rule in self.get_rules():
-                    (result, value) = rule.matches(run, msg, context, '200')
+                    (result, value) = rule.matches(run, msg, context, str(status_code))
                     if result > 0:
-                        short_url = response.get('url')
                         return rule, short_url
             else:
                 return None, None
