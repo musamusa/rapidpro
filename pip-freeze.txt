@@ -127,3 +127,4 @@ xlutils==2.0.0
 xlwt==1.2.0
 git+https://github.com/codenonprofits/coordinates-extractor.git
 git+https://github.com/milesrichardson/ParsePy.git
+bitly-api==0.3
