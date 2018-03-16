@@ -110,6 +110,23 @@
     %a.pull-right.show-all.fields
         .icon-arrow-down
 
+  -if org_perms.msgs.broadcast_send and not contact.is_blocked and not contact.is_stopped
+    #box-message
+      %h5
+        -trans "Compose message"
+      -if send_channel
+        #send-custom-form
+          {% csrf_token %}
+          #box-text
+            %input#id_custom_text{tabindex:1, type: 'text'}
+            %button#send-custom-message.btn.btn-primary.ok{type: 'submit', tabindex:2}
+              -trans "Send"
+          #errors
+          #omni-custom.hide
+            #omni-custom-select2
+              #omnibox-custom.placeholder.populate{style:"width:400px"}
+            #loading-custom
+
   -if upcoming_events
     %h5
       -trans "Upcoming"
@@ -162,21 +179,6 @@
       %a.pull-right.show-all.upcoming
         more
 
-  #box-message
-    %h5
-      -trans "Compose message"
-    -if send_channel
-      #send-custom-form
-        {% csrf_token %}
-        #box-text
-          %input#id_custom_text{tabindex:1, type: 'text'}
-          %button#send-custom-message.btn.btn-primary.ok{type: 'submit', tabindex:2}
-            -trans "Send"
-        #errors
-        #omni-custom.hide
-          #omni-custom-select2
-            #omnibox-custom.placeholder.populate{style:"width:400px"}
-          #loading-custom
     -else
       -blocktrans with name=brand.name
         To get started you need to add a channel to your account. A channel is a phone number or social network
@@ -475,7 +477,7 @@
               display: block;
               width: 100%;
               height: 50px;
-              padding: 0 80px 0 10px;
+              padding: 0 100px 0 10px;
               margin-right: 15px;
               box-sizing: border-box;
               -moz-box-sizing: border-box;
