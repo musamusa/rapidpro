@@ -106,7 +106,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                         try:
                             field_value = datetime.strptime(field_value, '%m/%d/%Y')
                         except Exception:
-                            field_value = datetime.strptime(field_value, '%d/%m/%Y')
+                            field_value = None
                     else:
                         field_value = str(field_value)
 
