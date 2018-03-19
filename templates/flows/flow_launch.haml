@@ -1,0 +1,13 @@
+-extends 'smartmin/form.html'
+-load smartmin
+-load i18n
+
+-block fields
+  -trans "Test"
+
+  -block form-buttons
+    .form-group.smartmin-form-buttons
+      .col-sm-offset-2.col-sm-10
+      %a.btn.btn-default{onclick: 'javascript:history.go(-1)'}
+        -trans "Cancel"
+

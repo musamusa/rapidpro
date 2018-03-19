@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export')
+               'upload_media_action', 'pdf_export', 'launch')
 
     model = Flow
 
@@ -977,12 +977,12 @@ class FlowCRUDL(SmartCRUDL):
             flow = self.get_object()
 
             if flow.flow_type not in [Flow.SURVEY, Flow.USSD] \
-                    and self.has_org_perm('flows.flow_broadcast') \
+                    and self.has_org_perm('flows.flow_launch') \
                     and not flow.is_archived:
 
-                links.append(dict(title=_("Start Flow"),
+                links.append(dict(title=_("Launch Flow"),
                                   style='btn-primary',
-                                  js_class='broadcast-rulesflow',
+                                  js_class='broadcast-launch',
                                   href='#'))
 
             if self.has_org_perm('flows.flow_results'):
@@ -1700,6 +1700,34 @@ class FlowCRUDL(SmartCRUDL):
                              restart_participants=form.cleaned_data['restart_participants'],
                              include_active=form.cleaned_data['include_active'])
             return flow
+
+    class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):
+        class LaunchForm(forms.ModelForm):
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+                super(FlowCRUDL.Launch.LaunchForm, self).__init__(*args, **kwargs)
+
+            class Meta:
+                model = Flow
+                exclude = '__all__'
+
+        slug_url_kwarg = 'id'
+        form_class = LaunchForm
+        exclude = '__all__'
+
+        def get_template_names(self):
+            return "flows/flow_launch.haml"
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.Launch, self).get_context_data(*args, **kwargs)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.Launch, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            return kwargs
 
 
 # this is just for adhoc testing of the preprocess url

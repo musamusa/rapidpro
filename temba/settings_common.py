@@ -452,6 +452,7 @@ PERMISSIONS = {
                    'export_results',
                    'filter',
                    'json',
+                   'launch',
                    'read',
                    'recent_messages',
                    'results',

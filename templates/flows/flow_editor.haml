@@ -109,6 +109,24 @@
         modal.setListeners(onActions);
         modal.show();
       });
+
+      $(".broadcast-launch").live('click', function(){
+        var modal = new Modax(gettext('Launch Flow'), '{% url "flows.flow_launch" object.pk %}');
+        var onActions = {
+          onSuccess: function(data) {
+            $('html').scope().pending = 'P';
+          },
+          onFormLoaded: function() {},
+          onPrimary: function() {
+            modal.dismiss();
+          }
+        }
+        modal.setListeners(onActions);
+        modal.setPrimaryButton(gettext("Cancel"));
+        modal.hideSecondaryButton();
+        modal.show();
+      });
+
     {% endif %}
 
     $(function(){
