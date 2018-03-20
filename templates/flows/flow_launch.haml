@@ -3,7 +3,60 @@
 -load i18n
 
 -block fields
-  -trans "Test"
+  %style
+    :plain
+      .launch-message {
+        color: #569D9B;
+        font-size: 15px;
+      }
+
+      ul.launch-options {
+        margin: 20px 0 0 0;
+        display: table;
+        width: 100%;
+      }
+
+      ul.launch-options li {
+        border-bottom: 1px solid #f6f6f6;
+        display: block;
+      }
+
+      ul.launch-options li:last-child {
+        border-bottom: none;
+      }
+
+      ul.launch-options li a {
+        padding: 15px 0;
+        text-align: left;
+        font-size: 15px;
+        display: block;
+      }
+
+      ul.launch-options li a:hover {
+        text-decoration: none;
+      }
+
+      ul.launch-options li a .claim-glyph {
+        margin: -2px 15px 0 0;
+        font-size: 22px;
+      }
+
+  .launch-message
+    -trans "Select how you would like to launch your flow."
+
+  %ul.launch-options
+    %li
+      %a.broadcast-rulesflow{href: 'javascript:;'}
+        .claim-glyph.icon-login-2
+        -trans "Start flow immediately and send to selected groups or individuals"
+    %li
+      %a{href: 'javascript:;'}
+        .claim-glyph.icon-bubble
+        -trans "Start flow when a specified keyword is received in a message"
+    %li
+      %a{href: 'javascript:;'}
+        .claim-glyph.icon-clock
+        -trans "Start flow at a future date and time"
 
   -block form-buttons
     .form-group.smartmin-form-buttons

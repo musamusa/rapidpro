@@ -73,7 +73,7 @@
       var modal = new Modax('Update Flow', '{% url "flows.flow_update" object.pk %}');
       modal.setIcon('icon-users-2');
       modal.setListeners({
-        onSuccess: function(data) {location.reload(); },
+        onSuccess: function(data) { location.reload(); },
         onFormLoaded: function() {
           $('#id_label').children("option:first-child").before("<option></option>");
           $('#id_label').select2({minimumResultsForSearch: -1, placeholder: "No Label Selected"});}
@@ -92,7 +92,27 @@
 
     // Starting the flow
     {% if org_perms.msgs.broadcast_send %}
-      $(".broadcast-rulesflow").live('click', function(){
+
+      var modalLaunch = new Modax(gettext('Launch Flow'), '{% url "flows.flow_launch" object.pk %}');
+
+      $(".broadcast-launch").live('click', function() {
+        var onActions = {
+          onSuccess: function(data) {
+            $('html').scope().pending = 'P';
+          },
+          onFormLoaded: function() {},
+          onPrimary: function() {
+            modalLaunch.dismiss();
+          }
+        }
+        modalLaunch.setListeners(onActions);
+        modalLaunch.setPrimaryButton(gettext("Cancel"));
+        modalLaunch.hideSecondaryButton();
+        modalLaunch.show();
+      });
+
+      $(".broadcast-rulesflow").live('click', function() {
+        modalLaunch.dismiss();
         var modal = new Modax(gettext('Start Flow'), '{% url "flows.flow_broadcast" object.pk %}');
         var onActions = {
           onSuccess: function(data) {
@@ -107,23 +127,6 @@
         {% endif %}
 
         modal.setListeners(onActions);
-        modal.show();
-      });
-
-      $(".broadcast-launch").live('click', function(){
-        var modal = new Modax(gettext('Launch Flow'), '{% url "flows.flow_launch" object.pk %}');
-        var onActions = {
-          onSuccess: function(data) {
-            $('html').scope().pending = 'P';
-          },
-          onFormLoaded: function() {},
-          onPrimary: function() {
-            modal.dismiss();
-          }
-        }
-        modal.setListeners(onActions);
-        modal.setPrimaryButton(gettext("Cancel"));
-        modal.hideSecondaryButton();
         modal.show();
       });
 
