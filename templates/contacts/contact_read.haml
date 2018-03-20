@@ -110,6 +110,29 @@
     %a.pull-right.show-all.fields
         .icon-arrow-down
 
+  -if org_perms.msgs.broadcast_send and not contact.is_blocked and not contact.is_stopped
+    #box-message
+      %h5
+        -trans "Compose message"
+      -if send_channel
+        #send-custom-form
+          {% csrf_token %}
+          #box-text
+            %input#id_custom_text{tabindex:1, type: 'text'}
+            %button#send-custom-message.btn.btn-primary.ok{type: 'submit', tabindex:2}
+              -trans "Send"
+          #errors
+          #omni-custom.hide
+            #omni-custom-select2
+              #omnibox-custom.placeholder.populate{style:"width:400px"}
+            #loading-custom
+      -else
+        -blocktrans with name=brand.name
+          To get started you need to add a channel to your account. A channel is a phone number or social network
+          account which {{ name }} can use to send and receive messages on your behalf. You can choose to use an
+          Android phone and your own cell phone plan, or we can connect you with a service provider in your country
+          directly.
+
   -if upcoming_events
     %h5
       -trans "Upcoming"
@@ -251,6 +274,11 @@
                 margin-top:15px;
               }
             }
+          }
+
+          tr.in {
+            background-color: rgba(86, 157, 155, 0.2);
+            font-style: italic;
           }
 
           tr.end-call {
@@ -414,6 +442,63 @@
           }
         }
 
+        #box-message {
+          background-color: #FFF;
+          width: 100%;
+          
+          &.scroll {
+            z-index: 10000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 0 30px 10px 30px;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+
+            #send-custom-form {
+              margin: 0;
+            } 
+
+          }
+
+        }
+
+        #send-custom-form {
+          margin: 0 0 40px 0;
+
+          #box-text {
+            position: relative;
+
+            input[type='text'] {
+              resize: none;
+              display: block;
+              width: 100%;
+              height: 50px;
+              padding: 0 100px 0 10px;
+              margin-right: 15px;
+              box-sizing: border-box;
+              -moz-box-sizing: border-box;
+              -webkit-box-sizing: border-box;
+            }
+
+            button {
+              position: absolute;
+              top: 0;
+              right: 0;
+              height: 100%;
+            }
+
+          }
+
+          .error {
+            background-color: transparent;
+            color: red;
+            border: none;
+          }
+        }
+
     {% endlessblock %}
 
 -block extra-script
@@ -424,6 +509,15 @@
     var startTime = null;
 
     $(document).ready(function() {
+
+      var boxMessage = $('#box-message');
+      $(window).scroll(function() {
+          if ($(this).scrollTop() > 365) {
+            boxMessage.addClass('scroll');
+          } else {
+            boxMessage.removeClass('scroll');
+          }
+      });
 
       $('.show-all.upcoming').live('click', function() {
         $(this).hide();
@@ -456,7 +550,72 @@
       if (featuredCount < featuredMax) {
         $('.normal .contact-field').slice(0, featuredMax-featuredCount).detach().appendTo('.featured')
       }
+
+      $("#send-custom-message").unbind('click').unbind('keypress').click(function(e) {
+        sendCustomMessage(e, refreshRecents());
+      });
+
+      $( "#id_custom_text" ).keypress(function(e) {
+        if(e.which == 13){
+          sendCustomMessage(e, refreshRecents());
+          e.preventDefault();
+        }
+      });
+
+      var queryString = 'c={{object.uuid}}';
+      $.get("{% url 'contacts.contact_omnibox' %}?" + queryString, function(data, textStatus){
+        initializeCustomOmnibox(data.results);
+      });
+
     });
+
+    function goTo(elem) {
+      $('html, body').animate({
+        scrollTop: $(elem).offset().top
+      }, 500);
+    }
+
+    function initializeCustomOmnibox(initial) {
+      var options = {
+          placeholder: gettext("Recipients, enter contacts or groups"),
+          minimumInputLength: 0,
+          multiple: true,
+          ajax: {
+              url: "/contact/omnibox/",
+              dataType: 'json',
+              data: function (term, page) {
+                  return {
+                      search: term,
+                      page: page
+                  };
+              },
+              results: function (data, page) {
+                  return data;
+              }
+          },
+          escapeMarkup: function(m) {
+              return m;
+          },
+          containerCssClass: "omnibox-custom-select2",
+          formatSelection: formatOmniboxSelection,
+          formatResult: formatOmniboxOption,
+          createSearchChoice: arbitraryNumberOption
+      };
+
+      var omnibox = $("#omnibox-custom").removeClass("loading").select2(options);
+
+      // if we have some initial data set it
+      if (initial) {
+          $("#omnibox-custom").select2('data', initial);
+          $("#omni-custom-select2").show();
+          $("#loading-custom").hide();
+          $("#send-custom-message").text(gettext("Send")).removeClass("disabled");
+      }
+      // otherwise, make sure our data is cleared
+      else {
+          $("#omnibox-custom").select2('data', null);
+      }
+    }
 
     function refreshRecents(){
       Intercooler.triggerRequest($('tr.poll'));
@@ -482,6 +641,84 @@
         parent.removeClass('playing');
         player.pause();
       }
+    }
+
+    function sendCustomMessage(e, onComplete) {
+      if ($("#send-custom-message").hasClass("disabled")) {
+        e.preventDefault();
+        return;
+      }
+
+      goTo('.page-content');
+      $("#send-custom-message").text('{% trans "Sending.." %}').addClass("disabled");
+
+      // its possible we might send to a different end point such as
+      // when doing a normal compose
+      var form = $('#send-custom-form');
+      var url = form.attr("action");
+      var post = "{% url 'msgs.broadcast_send' %}?_format=json";
+      if (url) {
+        post = url;
+      }
+
+      if (window.simulation) {
+        post = post + "&simulation=true"
+      }
+
+      // our post data
+      var data = {
+        step_node: null,
+        schedule: null,
+        text: form.find("#id_custom_text").val(),
+        csrfmiddlewaretoken: form.find("[name='csrfmiddlewaretoken']").val()
+      };
+
+      var omnibox = form.find("#omnibox-custom").val().trim();
+      if (omnibox.length > 0) {
+        data['omnibox'] = omnibox;
+      }
+
+      $.post(post, data, function(data, textStatus, b, c) {
+        fetchPJAXContent(".", "#pjax", { forceReload:true });
+
+        if (onComplete) {
+          onComplete();
+        }
+
+        form.find("#id_custom_text").val('');
+        $("#send-custom-message").text('{% trans "Send" %}').removeClass("disabled");
+
+      }).fail(function(data, textStatus) {
+
+        // uh oh, we couldnt post, check for errors to show the user
+        response = $.parseJSON(data.responseText);
+
+        // make sure we arent showing any previous errors
+        $("#send-custom-form .error").remove();
+
+        // show the non-field errors first
+        for (msg in response.errors['__all__']) {
+          $("#send-custom-form #errors").after("<div class=error>" + response.errors['__all__'][msg] + "</div>");
+        }
+
+        // look through our fielded errors and show them in the form
+        for (var error in response.errors) {
+          var msgs = response.errors[error];
+          for (var msg in msgs) {
+
+            var id = "#id_" + error;
+            if (error == "text") {
+              id = "#counter";
+            }
+
+            $(id).after("<div class=error id=" + error + "_error>" + msgs[msg] + "</div>");
+          }
+        }
+
+        // re-enable our send button, so they can try again
+        $("#send-custom-message").text('{% trans "Send" %}').removeClass("disabled");
+
+      });
     }
 
   %script
