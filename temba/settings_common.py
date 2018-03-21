@@ -453,6 +453,7 @@ PERMISSIONS = {
                    'filter',
                    'json',
                    'launch',
+                   'launch_keyword',
                    'read',
                    'recent_messages',
                    'results',

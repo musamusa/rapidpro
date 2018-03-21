@@ -374,7 +374,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export', 'launch')
+               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword')
 
     model = Flow
 
@@ -1728,6 +1728,67 @@ class FlowCRUDL(SmartCRUDL):
             kwargs['user'] = self.request.user
             kwargs['flow'] = self.object
             return kwargs
+
+    class LaunchKeyword(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
+        class LaunchKeywordForm(forms.ModelForm):
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+
+                super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).__init__(*args, **kwargs)
+
+            keyword_triggers = forms.CharField(required=False, label=_("Keyword triggers"),
+                                               help_text=_("When a user sends any of these keywords they will begin this flow"))
+
+            def clean_keyword_triggers(self):
+                keyword_triggers = self.cleaned_data['keyword_triggers']
+                if not keyword_triggers:  # pragma: needs cover
+                    raise ValidationError(_("You must specify at least one keyword to launch the flow."))
+
+                return keyword_triggers
+
+            def clean(self):
+                cleaned = super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).clean()
+
+                if self.flow.org.is_suspended():
+                    raise ValidationError(_("Sorry, your account is currently suspended. To enable sending messages, please contact support."))
+
+                return cleaned
+
+            class Meta:
+                model = Flow
+                fields = ('keyword_triggers',)
+
+        form_class = LaunchKeywordForm
+        fields = ('keyword_triggers',)
+        success_message = ''
+        submit_button_name = _("Launch")
+        success_url = 'uuid@flows.flow_editor'
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.LaunchKeyword, self).get_context_data(*args, **kwargs)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.LaunchKeyword, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            return kwargs
+
+        def save(self, *args, **kwargs):
+            form = self.form
+            flow = self.object
+
+            user = self.request.user
+            org = user.get_org()
+
+            # create triggers for this flow only if there are keywords and we aren't a survey
+            if flow.flow_type != Flow.SURVEY:
+                if len(form.cleaned_data['keyword_triggers']) > 0:
+                    for keyword in form.cleaned_data['keyword_triggers'].split(','):
+                        Trigger.objects.create(org=org, keyword=keyword, flow=flow, created_by=user, modified_by=user)
+
+            return flow
 
 
 # this is just for adhoc testing of the preprocess url

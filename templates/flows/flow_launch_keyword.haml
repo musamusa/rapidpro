@@ -1,0 +1,33 @@
+-extends 'smartmin/update.html'
+
+{% load smartmin temba compress i18n %}
+
+-block pre-form
+  :css
+    .select2-container-multi .select2-choices .select2-search-field input.select2-active {
+      background: none !important;
+    }
+    .launch-message {
+      color: #569D9B;
+      font-size: 15px;
+    }
+  
+  .launch-message
+    -trans "To start the flow when someone sends a specific word, please specify the keyword(s) below."
+
+-block modal-script
+  {{block.super}}
+
+  :javascript
+  
+    $(document).ready(function() {
+
+      $('#id_keyword_triggers').select2({
+        tags: [],
+        tokenSeparators: [",", " "],
+        minimumResultsForSearch: -1,
+        placeholder: "Add a keyword to begin this flow",
+        containerCssClass: "select2-temba-field"
+      });
+
+    });
