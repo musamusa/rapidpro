@@ -1761,8 +1761,6 @@ class FlowCRUDL(SmartCRUDL):
 
                     # make sure it is unique on this org
                     existing = Trigger.objects.filter(org=org, keyword__iexact=keyword, is_archived=False, is_active=True)
-                    if self.instance:
-                        existing = existing.exclude(flow=self.instance.pk)
 
                     if existing:
                         duplicates.append(keyword)
@@ -1770,15 +1768,15 @@ class FlowCRUDL(SmartCRUDL):
                         cleaned_keywords.append(keyword)
 
                 if wrong_format:
-                    raise forms.ValidationError(_('"%s" must be a single word, less than %d characters, containing only letter '
-                                                'and numbers') % (', '.join(wrong_format), Trigger.KEYWORD_MAX_LEN))
+                    raise ValidationError(_('"%s" must be a single word, less than %d characters, containing only letter '
+                                            'and numbers') % (', '.join(wrong_format), Trigger.KEYWORD_MAX_LEN))
 
                 if duplicates:
                     if len(duplicates) > 1:
                         error_message = _('The keywords "%s" are already used for another flow') % ', '.join(duplicates)
                     else:
                         error_message = _('The keyword "%s" is already used for another flow') % ', '.join(duplicates)
-                    raise forms.ValidationError(error_message)
+                    raise ValidationError(error_message)
 
                 return ','.join(cleaned_keywords)
 

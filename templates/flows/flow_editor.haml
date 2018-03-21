@@ -132,7 +132,7 @@
 
       $(".launch-keyword").live('click', function() {
         modalLaunch.dismiss();
-        var modal = new Modax(gettext('Launch Flow'), '{% url "flows.flow_launch_keyword" object.pk %}');
+        var modal = new Modax(gettext('Trigger Flow'), '{% url "flows.flow_launch_keyword" object.pk %}');
         var onActions = {
           onSuccess: function(data) { 
             $('html').scope().pending = 'KW';
