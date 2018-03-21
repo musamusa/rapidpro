@@ -4,16 +4,61 @@
 
 -block pre-form
   :css
+    .control-label {
+      display: none !important;
+    }
     .select2-container-multi .select2-choices .select2-search-field input.select2-active {
       background: none !important;
     }
     .launch-message {
       color: #569D9B;
       font-size: 15px;
+      margin: 0 0 15px 0;
     }
-  
-  .launch-message
-    -trans "To start the flow when someone sends a specific word, please specify the keyword(s) below."
+
+-block fields
+  -if object.flow_type == 'F' and not send_channel
+    %p
+    -blocktrans with name=brand.name
+      To get started you need to add a channel to your account. A channel is a phone number or social network
+      account which {{ name }} can use to send and receive messages on your behalf. You can choose to use an
+      Android phone and your own cell phone plan, or we can connect you with a service provider in your country
+      directly.
+    %hr
+    %p
+      -trans "You can always test your flow using the simulator, click"
+        %span.glyph.icon-mobile{style:"padding-top:2px;"}
+      -trans "on the right to open it."
+
+  -elif object.flow_type == 'U' and not is_ussd_channel
+    %p
+    -blocktrans with name=brand.name
+      To get started you need to add a USSD channel to your account. You can choose between USSD channels
+      that are available in your country.
+    %hr
+    %p
+      -trans "You can always test your flow using the simulator, click"
+        %span.glyph.icon-mobile{style:"padding-top:2px;"}
+      -trans "on the right to open it."
+
+  -elif object.flow_type == 'V' and not call_channel
+    %p
+      -blocktrans with name=brand.name
+        To get started you need to add a voice-enabled channel to your account. A voice-enabled channel is a
+        phone number which {{ name }} can use to make and receive phone calls on your behalf. For example, Twilio
+        is a service which provides voice-enabled numbers which you can add as channels in your {{ name }} account.
+
+  -else
+    .launch-message
+      -trans "To start the flow when someone sends a specific word, please specify the keyword(s) below."
+
+    .field.keyword_triggers
+      {% render_field 'keyword_triggers' %}
+
+-block form-buttons
+  -if send_channel
+    .form-actions
+      %input.btn.btn-primary{type:"submit", value:"{{ submit_button_name }}"}
 
 -block modal-script
   {{block.super}}

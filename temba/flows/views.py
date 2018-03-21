@@ -1741,11 +1741,46 @@ class FlowCRUDL(SmartCRUDL):
                                                help_text=_("When a user sends any of these keywords they will begin this flow"))
 
             def clean_keyword_triggers(self):
-                keyword_triggers = self.cleaned_data['keyword_triggers']
-                if not keyword_triggers:  # pragma: needs cover
+                org = self.user.get_org()
+                value = self.cleaned_data.get('keyword_triggers', '')
+
+                if not value:  # pragma: needs cover
                     raise ValidationError(_("You must specify at least one keyword to launch the flow."))
 
-                return keyword_triggers
+                duplicates = []
+                wrong_format = []
+                cleaned_keywords = []
+
+                for keyword in value.split(','):
+                    keyword = keyword.lower().strip()
+                    if not keyword:
+                        continue
+
+                    if not regex.match('^\w+$', keyword, flags=regex.UNICODE | regex.V0) or len(keyword) > Trigger.KEYWORD_MAX_LEN:
+                        wrong_format.append(keyword)
+
+                    # make sure it is unique on this org
+                    existing = Trigger.objects.filter(org=org, keyword__iexact=keyword, is_archived=False, is_active=True)
+                    if self.instance:
+                        existing = existing.exclude(flow=self.instance.pk)
+
+                    if existing:
+                        duplicates.append(keyword)
+                    else:
+                        cleaned_keywords.append(keyword)
+
+                if wrong_format:
+                    raise forms.ValidationError(_('"%s" must be a single word, less than %d characters, containing only letter '
+                                                'and numbers') % (', '.join(wrong_format), Trigger.KEYWORD_MAX_LEN))
+
+                if duplicates:
+                    if len(duplicates) > 1:
+                        error_message = _('The keywords "%s" are already used for another flow') % ', '.join(duplicates)
+                    else:
+                        error_message = _('The keyword "%s" is already used for another flow') % ', '.join(duplicates)
+                    raise forms.ValidationError(error_message)
+
+                return ','.join(cleaned_keywords)
 
             def clean(self):
                 cleaned = super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).clean()
