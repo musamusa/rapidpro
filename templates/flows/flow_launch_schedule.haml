@@ -3,6 +3,9 @@
 {% load smartmin temba compress i18n %}
 
 -block pre-form
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}css/bootstrap-datetimepicker.min.css", media:'all'}
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}fonts/awesome/css/font-awesome.min.css", media:'all'}
+
   :css
     .control-label {
       color: #569D9B;
@@ -32,6 +35,72 @@
 
     .error {
       width: initial !important;
+    }
+
+    #start-datetime {
+      width: 100%;
+    }
+
+    .col-md-6 {
+      width: 48%;
+    }
+
+    .datepicker {
+      float: left;
+    }
+
+    .timepicker {
+      float: right;
+      margin: 50px 0 0 0;
+    }
+
+    .bootstrap-datetimepicker-widget table td {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget table td.separator {
+      width: 20px;
+    }
+
+    .bootstrap-datetimepicker-widget .timepicker-hour, .bootstrap-datetimepicker-widget .timepicker-minute, .bootstrap-datetimepicker-widget .timepicker-second {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget a[data-action] {
+      padding: 0;
+    }
+
+    .timepicker-picker a.btn {
+      background-color: transparent !important;
+      border: none;
+      background-image: none;
+      box-shadow: none;
+    }
+
+    .timepicker-picker a.btn span {
+      line-height: 40px;
+      height: 40px;
+      width: 45px;
+      background-color: transparent !important;
+    }
+
+    .weekly-repeat-options .btn-group .btn {
+      margin: 2px;
+      border-radius: 5px;
+    }
+
+    .weekly-repeat-options .btn-group .btn.active {
+      color: #e6e6e6;
+      background-color: #569D9B;
+    }
+
+    .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
+      background-color: #569D9B;
+      color: #FFFFFF;
     }
 
 -block fields
@@ -76,8 +145,8 @@
     #schedule-options
       %label.schedule-options-label{for:"later-option"}
         #start-datetime{ name:'start_datetime', disabled:'true', value:'{% trans "Select a date" %}'}
-      %input#start-datetime-value{ hidden:'true', name:'start_datetime_value', value:''}
-      %input#later-option{name:'start',type:'hidden',value:'later'}
+      %input#start-datetime-value{type:'hidden', name:'start_datetime_value', value:''}
+      %input#later-option{type:'hidden', name:'start',value:'later'}
 
     #recurrence
       .repeat-period
@@ -109,7 +178,8 @@
 
 -block modal-script
   {{ block.super }}
-  
+
+  %script{src:"{{ STATIC_URL }}js/bootstrap-datetimepicker.min.js"}
   %script{src:"{{ STATIC_URL }}js/schedules-ui.js?v=3"}
   %script{src:"{% url 'django.views.i18n.javascript_catalog' %}"}
 
@@ -126,7 +196,7 @@
           minDate.setHours(minDate.getHours() + 1);
       }
 
-      initializeDatetimePicker(minDate, undefined, false);
+      initializeBootstrapDatetimePicker(minDate, undefined, false);
 
       // initialize our omnibox
       prepareOmnibox();
