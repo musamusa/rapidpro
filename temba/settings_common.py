@@ -454,6 +454,7 @@ PERMISSIONS = {
                    'json',
                    'launch',
                    'launch_keyword',
+                   'launch_schedule',
                    'read',
                    'recent_messages',
                    'results',

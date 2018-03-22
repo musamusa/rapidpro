@@ -38,6 +38,8 @@ from temba.flows.tasks import export_flow_results_task
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, PENDING
 from temba.triggers.models import Trigger
+from temba.schedules.models import Schedule
+from temba.schedules.views import BaseScheduleForm
 from temba.utils import analytics, percentage, datetime_to_str, on_transaction_commit, chunk_list
 from temba.utils.expressions import get_function_listing
 from temba.utils.views import BaseActionForm
@@ -374,7 +376,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword')
+               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule')
 
     model = Flow
 
@@ -1822,6 +1824,136 @@ class FlowCRUDL(SmartCRUDL):
                         Trigger.objects.create(org=org, keyword=keyword, flow=flow, created_by=user, modified_by=user)
 
             return flow
+
+    class LaunchSchedule(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
+
+        class LaunchScheduleForm(BaseScheduleForm, forms.ModelForm):
+            repeat_period = forms.ChoiceField(choices=Schedule.REPEAT_CHOICES, label="Repeat")
+            repeat_days = forms.IntegerField(required=False)
+            start = forms.CharField(max_length=16)
+            start_datetime_value = forms.IntegerField(required=False)
+            omnibox = OmniboxField(label=_('Contacts'), required=True,
+                                   help_text=_("The groups and contacts the flow will be broadcast to"))
+
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+
+                super(FlowCRUDL.LaunchSchedule.LaunchScheduleForm, self).__init__(*args, **kwargs)
+
+                self.fields['omnibox'].set_user(self.user)
+
+            def clean_omnibox(self):
+                starting = self.cleaned_data['omnibox']
+                if not starting['groups'] and not starting['contacts']:  # pragma: needs cover
+                    raise ValidationError(_("You must specify at least one contact or one group to schedule the launch this flow."))
+
+                return starting
+
+            def clean(self):
+                cleaned = super(FlowCRUDL.LaunchSchedule.LaunchScheduleForm, self).clean()
+
+                if self.flow.org.is_suspended():
+                    raise ValidationError(_("Sorry, your account is currently suspended. To enable sending messages, please contact support."))
+
+                # only weekly gets repeat days
+                if cleaned['repeat_period'] != 'W':
+                    cleaned['repeat_days'] = None
+
+                return cleaned
+
+            class Meta:
+                model = Flow
+                fields = ('omnibox', 'repeat_period', 'repeat_days', 'start', 'start_datetime_value')
+
+        form_class = LaunchScheduleForm
+        fields = ('omnibox', 'repeat_period', 'repeat_days', 'start', 'start_datetime_value')
+        success_message = ''
+        submit_button_name = _("Launch")
+        success_url = 'uuid@flows.flow_editor'
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.LaunchSchedule, self).get_context_data(*args, **kwargs)
+            context['user_tz'] = timezone.get_current_timezone_name()
+            context['user_tz_offset'] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() / 60)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.LaunchSchedule, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            kwargs['auto_id'] = "id_schedule_%s"
+            return kwargs
+
+        def save(self, *args, **kwargs):
+            form = self.form
+            flow = self.object
+
+            user = self.request.user
+            org = user.get_org()
+
+            analytics.track(self.request.user.username, 'temba.trigger_created_schedule')
+            schedule = Schedule.objects.create(created_by=self.request.user, modified_by=self.request.user)
+
+            if form.starts_never():
+                schedule.reset()
+
+            elif form.stopped():
+                schedule.reset()
+
+            elif form.starts_now():
+                schedule.next_fire = timezone.now() - timedelta(days=1)
+                schedule.repeat_period = 'O'
+                schedule.repeat_days = 0
+                schedule.status = 'S'
+                schedule.save()
+
+            else:
+                # Scheduled case
+                schedule.status = 'S'
+                schedule.repeat_period = form.cleaned_data['repeat_period']
+                start_time = form.get_start_time()
+                if start_time:
+                    schedule.next_fire = start_time
+
+                # create our recurrence
+                if form.is_recurring():
+                    days = None
+                    if 'repeat_days' in form.cleaned_data:
+                        days = form.cleaned_data['repeat_days']
+                    schedule.repeat_days = days
+                    schedule.repeat_hour_of_day = schedule.next_fire.hour
+                    schedule.repeat_minute_of_hour = schedule.repeat_minute_of_hour
+                    schedule.repeat_day_of_month = schedule.next_fire.day
+                schedule.save()
+
+            recipients = self.form.cleaned_data['omnibox']
+
+            trigger = Trigger.objects.create(flow=flow,
+                                             org=org,
+                                             schedule=schedule,
+                                             trigger_type=Trigger.TYPE_SCHEDULE,
+                                             created_by=self.request.user,
+                                             modified_by=self.request.user)
+
+            for group in recipients['groups']:
+                trigger.groups.add(group)
+
+            for contact in recipients['contacts']:
+                trigger.contacts.add(contact)
+
+            self.after_save(trigger)
+
+            return flow
+
+        def after_save(self, obj):
+
+            # fire our trigger schedule if necessary
+            if obj.schedule.is_expired():
+                from temba.schedules.tasks import check_schedule_task
+                on_transaction_commit(lambda: check_schedule_task.delay(obj.schedule.pk))
+
+            return obj
 
 
 # this is just for adhoc testing of the preprocess url
