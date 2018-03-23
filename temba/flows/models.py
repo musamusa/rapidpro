@@ -10,7 +10,6 @@ import six
 import time
 import urllib2
 import requests
-import bitly_api
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
@@ -3662,24 +3661,26 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
+            resthook = None
+            url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            headers = {'Content-Type': 'application/json'}
+
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
             item_uuid = config.get('id')
             item = Link.objects.filter(uuid=item_uuid, org=run.flow.org).first()
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                c = bitly_api.Connection(access_token=settings.BITLY_ACCESS_TOKEN)
-                try:
-                    response = c.shorten(long_url)
-                    short_url = response.get('url')
-                    status_code = 200
-                except Exception as e:
-                    short_url = str(e.args)
-                    status_code = 403
+                data = json.dumps({'longUrl': long_url})
+
+                response = requests.post(url, data=data, headers=headers, timeout=10)
 
                 for rule in self.get_rules():
-                    (result, value) = rule.matches(run, msg, context, str(status_code))
+                    (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                    response_json = response.json()
+                    run.update_fields(response_json)
                     if result > 0:
+                        short_url = response_json.get('id')
                         return rule, short_url
             else:
                 return None, None
