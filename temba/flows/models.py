@@ -3700,7 +3700,10 @@ class RuleSet(models.Model):
                 'Content-Type': 'application/json'
             }
             url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
-            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True), headers=headers)
+
+            day_first = True if run.flow.org.date_format == 'D' else False
+
+            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True, day_first=day_first), headers=headers)
 
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(response.status_code))
