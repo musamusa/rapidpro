@@ -698,7 +698,7 @@ class OrgCRUDL(SmartCRUDL):
                             break
 
                 if spamreader:
-                    import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), collection_real_name, import_file.name, needed_create_header)
+                    import_data_to_parse.delay(org.get_branding(), user.email, list(spamreader), parse_url, parse_headers, collection, collection_type.title(), collection_real_name, import_file.name, needed_create_header, org.timezone.zone, org.get_dayfirst())
 
             except Exception as e:
                 # this is an unexpected error, report it to sentry

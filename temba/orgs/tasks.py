@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import time
 import requests
 import json
+import pytz
 
 from celery.task import task
 from parse_rest.connection import register
@@ -12,6 +13,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 from django.template.defaultfilters import slugify
+from temba.utils import str_to_datetime
 from temba.utils.queues import nonoverlapping_task
 from temba.utils.email import send_template_email
 from .models import CreditAlert, Invitation, Org, TopUpCredits
@@ -56,11 +58,13 @@ def squash_topupcredits():
 
 
 @task(track_started=True, name='import_data_to_parse')
-def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, collection_type, collection_real_name, filename, needed_create_header):  # pragma: needs cover
+def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, collection_type, collection_real_name, filename, needed_create_header, tz, dayfirst):  # pragma: needs cover
     start = time.time()
     print("Started task to import %s row(s) to Parse" % str(len(iterator) - 1))
 
     register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
+
+    tz = pytz.timezone(tz)
 
     new_fields = {}
     fields_map = {}
@@ -104,7 +108,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                     elif fields_map[item].get('type') == 'Date':
                         field_value = field_value.replace('-', '/')
                         try:
-                            field_value = datetime.strptime(field_value, '%m/%d/%Y')
+                            field_value = str_to_datetime(date_str=field_value, tz=tz, dayfirst=dayfirst, fill_time=False)
                         except Exception:
                             field_value = None
                     else:
