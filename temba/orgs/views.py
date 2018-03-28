@@ -600,6 +600,12 @@ class OrgCRUDL(SmartCRUDL):
 
         form_class = ImportParseDataForm
 
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.ImportParseData, self).get_context_data(**kwargs)
+            org = self.request.user.get_org()
+            context['dayfirst'] = org.get_dayfirst()
+            return context
+
         def get_success_url(self):  # pragma: needs cover
             return reverse('orgs.org_import_parse_data')
 

@@ -67,7 +67,10 @@
                       %br
                       -trans "In order for data to be mapped correctly, please add the prefix 'numeric_' to columns that are formatted as numbers, and 'date_' to columns formatted as dates. Accepted date format: "
                       %b
-                        -trans "mm/dd/yyyy"
+                        -if dayfirst
+                          -trans "dd/mm/yyyy"
+                        -else
+                          -trans "mm/dd/yyyy"
                       %br
                       %br
                       -trans "Note: Remember that, if you’re using XLS file you need to set all data as text (no numeric and no datetime field)."
