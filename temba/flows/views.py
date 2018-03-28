@@ -1739,6 +1739,13 @@ class FlowCRUDL(SmartCRUDL):
 
                 super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).__init__(*args, **kwargs)
 
+                flow_triggers = Trigger.objects.filter(
+                    org=self.instance.org, flow=self.instance, is_archived=False, groups=None,
+                    trigger_type=Trigger.TYPE_KEYWORD
+                ).order_by('created_on')
+
+                self.fields['keyword_triggers'].initial = ','.join([t.keyword for t in flow_triggers])
+
             keyword_triggers = forms.CharField(required=False, label=_("Keyword triggers"),
                                                help_text=_("When a user sends any of these keywords they will begin this flow"))
 
@@ -1761,8 +1768,7 @@ class FlowCRUDL(SmartCRUDL):
                     if not regex.match('^\w+$', keyword, flags=regex.UNICODE | regex.V0) or len(keyword) > Trigger.KEYWORD_MAX_LEN:
                         wrong_format.append(keyword)
 
-                    # make sure it is unique on this org
-                    existing = Trigger.objects.filter(org=org, keyword__iexact=keyword, is_archived=False, is_active=True)
+                    existing = Trigger.objects.filter(org=org, keyword__iexact=keyword, is_archived=False, is_active=True).exclude(flow=self.flow)
 
                     if existing:
                         duplicates.append(keyword)
@@ -1817,11 +1823,30 @@ class FlowCRUDL(SmartCRUDL):
             user = self.request.user
             org = user.get_org()
 
-            # create triggers for this flow only if there are keywords and we aren't a survey
             if flow.flow_type != Flow.SURVEY:
-                if len(form.cleaned_data['keyword_triggers']) > 0:
-                    for keyword in form.cleaned_data['keyword_triggers'].split(','):
-                        Trigger.objects.create(org=org, keyword=keyword, flow=flow, created_by=user, modified_by=user)
+                keyword_triggers = form.cleaned_data['keyword_triggers']
+
+                if len(keyword_triggers.split(',')) > 0:
+                    existing_keywords = set(t.keyword for t in flow.triggers.filter(org=org, flow=flow,
+                                                                                    trigger_type=Trigger.TYPE_KEYWORD,
+                                                                                    is_archived=False, groups=None))
+
+                    keywords = set(keyword_triggers.split(','))
+
+                    removed_keywords = existing_keywords.difference(keywords)
+                    for keyword in removed_keywords:
+                        flow.triggers.filter(org=org, flow=flow, keyword=keyword,
+                                             groups=None, is_archived=False).update(is_archived=True)
+
+                    added_keywords = keywords.difference(existing_keywords)
+                    archived_keywords = [t.keyword for t in flow.triggers.filter(org=org, flow=flow, trigger_type=Trigger.TYPE_KEYWORD,
+                                                                                 is_archived=True, groups=None)]
+                    for keyword in added_keywords:
+                        if keyword in archived_keywords:  # pragma: needs cover
+                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(is_archived=False)
+                        else:
+                            Trigger.objects.create(org=org, keyword=keyword, trigger_type=Trigger.TYPE_KEYWORD,
+                                                   flow=flow, created_by=user, modified_by=user)
 
             return flow
 
