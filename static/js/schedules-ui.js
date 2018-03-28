@@ -62,6 +62,7 @@ function initializeBootstrapDatetimePicker(minDate, initialDate, showButtons) {
     $('#start-datetime').datetimepicker({
         inline: true,
         sideBySide: true,
+        minDate: moment(initialDate).tz(user_tz),
         icons: {
             time: "fa fa-clock-o",
             date: "fa fa-calendar",
