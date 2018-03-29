@@ -190,12 +190,6 @@
     $(document).ready(function() {
 
       var minDate = new Date();
-      var minutes = minDate.getMinutes();
-      if (minutes > 0) {
-          minDate.setMinutes(0);
-          minDate.setHours(minDate.getHours() + 1);
-      }
-
       initializeBootstrapDatetimePicker(minDate, undefined, false);
 
       // initialize our omnibox
