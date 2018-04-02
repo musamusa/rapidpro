@@ -1720,7 +1720,7 @@ class FlowCRUDL(SmartCRUDL):
                 response_json = response.json()
                 if response.status_code == 200 and 'fields' in response_json:
                     fields = response_json['fields']
-                    for key in fields.keys():
+                    for key in sorted(fields.keys()):
                         default_fields = ['ACL', 'createdAt', 'updatedAt']
                         if key not in default_fields:
                             collections.append(dict(id=key, text=key))
