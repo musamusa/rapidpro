@@ -895,19 +895,20 @@ class ContactCRUDL(SmartCRUDL):
             return []
 
         def post(self, request, *args, **kwargs):
-            invitation_text = request.POST.get('invitation-text', None)
+            id_optin_flow = request.POST.get('id_optin_flow', None)
 
-            if invitation_text:
-                org_config = self.org.config_json()
-                org_config['invitation_text'] = invitation_text[:160]
-                self.org.config = json.dumps(org_config)
-                self.org.save(update_fields=['config'])
-                messages.success(request, _('Text saved'))
+            if id_optin_flow:
+                self.org.set_optin_flow(request.user, id_optin_flow)
+                messages.success(request, _('Opt-in Flow updated'))
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
         def get_context_data(self, *args, **kwargs):
+            from temba.orgs.models import FLOW_OPT_IN
+            from temba.flows.models import Flow
+
             context = super(ContactCRUDL.Invite, self).get_context_data(*args, **kwargs)
+
             org = self.request.user.get_org()
             counts = ContactGroup.get_system_group_counts(org)
 
@@ -921,7 +922,8 @@ class ContactCRUDL(SmartCRUDL):
                      url=reverse('contacts.contact_invite')),
             ]
 
-            context['invitation_text'] = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
+            context['optin_flow'] = org_config.get(FLOW_OPT_IN, None)
+            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).order_by('name')
             context['actions'] = None
             context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')

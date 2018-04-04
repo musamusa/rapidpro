@@ -52,15 +52,14 @@
                       -include "gear_links_include.haml"
 
               %form{id: 'opt-in', class: 'span6', action: '', method: 'POST'}
-
-                %label
-                  -trans "Invitation text"
-
-                %span.counter
-                  -trans "0/160"
-
-                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}= invitation_text
+                %label{for:'optin-flow'}
+                  -trans "Opt-in Flow"
+                %select{name:'id_optin_flow', style:"height:34px", id:"optin-flow", class:"select2", select2:""}
+                  -for flow in org_flows
+                    <option value="{{ flow.uuid }}"{% if flow.uuid == optin_flow %} selected{% endif %}>{{ flow.name }}</option>
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
+                %a{href: '{% url "flows.flow_editor" optin_flow %}', style: 'display: table'}
+                  -trans "Open at the flow editor"
 
               .list-container
                 %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
@@ -218,22 +217,6 @@
       font-weight: bold;
     }
 
-    form#opt-in textarea {
-      width: 100%;
-      height: 100px;
-      resize: none;
-      -webkit-box-sizing:border-box;
-      -moz-box-sizing:border-box;
-      -ms-box-sizing:border-box;
-      box-sizing:border-box;
-    }
-
-    form#opt-in span.counter {
-      position: absolute;
-      top: 0;
-      right: 0;
-    }
-
     a.not-link {
       cursor: text;
     }
@@ -253,8 +236,7 @@
     });
 
     $(document).ready(function() {
-      var textarea_invitation_text = $('textarea#invitation-text');
-      countChar(textarea_invitation_text, true);
+      $('#optin-flow').select2({ minimumResultsForSearch: 10, width: '370px' });
     });
 
     function inviteContact(element, re_invitation) {
@@ -291,15 +273,6 @@
       });
 
     }
-
-    function countChar(val, onready) {
-      if (onready) {
-        var len = val[0].value.length;
-      } else {
-        var len = val.value.length;
-      }
-      $('span.counter').text(len + '/160');
-    };
 
     {% if org_perms.contacts.contact_create %}
     if($(location).attr('hash') == '#contact') {
