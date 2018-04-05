@@ -58,7 +58,7 @@
                   -for flow in org_flows
                     <option value="{{ flow.uuid }}"{% if flow.uuid == optin_flow %} selected{% endif %}>{{ flow.name }}</option>
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
-                %a{href: '{% url "flows.flow_editor" optin_flow %}', style: 'display: table'}
+                %a{href: '{% url "flows.flow_editor" optin_flow %}', style: 'display: table', target: '_blank'}
                   -trans "Open at the flow editor"
 
               .list-container
