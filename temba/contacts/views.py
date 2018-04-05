@@ -945,7 +945,7 @@ class ContactCRUDL(SmartCRUDL):
             else:
                 qs = group.contacts.all()
 
-            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
+            return qs.filter(is_test=False).order_by('-created_on').prefetch_related('org', 'all_groups')
 
     class InviteSend(OrgObjPermsMixin, SmartReadView):
         title = _("Invite Send")
@@ -962,11 +962,6 @@ class ContactCRUDL(SmartCRUDL):
 
             if existing_contact and invitation_text:
                 existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
-                invited_on = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-                existing_contact.invited_on = invited_on
-                existing_contact.invitation_status = Contact.INVITATION_SENT
-                existing_contact.invitation_order = Contact.ORDER_SENT
-                existing_contact.save(update_fields=['invited_on', 'invitation_status', 'invitation_order'])
                 result = dict(sent=True)
             else:
                 result = dict(sent=False)
@@ -1038,7 +1033,7 @@ class ContactCRUDL(SmartCRUDL):
             else:
                 qs = group.contacts.all()
 
-            return qs.filter(is_test=False).order_by('invitation_order', '-created_on', '-invited_on').prefetch_related('org', 'all_groups')
+            return qs.filter(is_test=False).order_by('-created_on').prefetch_related('org', 'all_groups')
 
     class Blocked(ContactActionMixin, ContactListView):
         title = _("Blocked Contacts")
@@ -1113,7 +1108,7 @@ class ContactCRUDL(SmartCRUDL):
     class Create(ModalMixin, OrgPermsMixin, SmartCreateView):
         form_class = ContactForm
         exclude = ('is_active', 'uuid', 'language', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
+                   'created_by', 'modified_by', 'is_test', 'channel')
         success_message = ''
         submit_button_name = _("Create")
 
@@ -1142,7 +1137,7 @@ class ContactCRUDL(SmartCRUDL):
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = UpdateContactForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'invitation_status')
+                   'created_by', 'modified_by', 'is_test', 'channel')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")
@@ -1213,7 +1208,7 @@ class ContactCRUDL(SmartCRUDL):
     class UpdateFields(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = ContactFieldForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language', 'invitation_status')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")

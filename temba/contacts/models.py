@@ -469,20 +469,6 @@ MAX_HISTORY = 50
 
 @six.python_2_unicode_compatible
 class Contact(TembaModel):
-    ORDER_SENT = 1
-    ORDER_ACCEPTED = 2
-    ORDER_REJECTED = 3
-
-    INVITATION_SENT = 'S'
-    INVITATION_ACCEPTED = 'A'
-    INVITATION_REJECTED = 'R'
-
-    INVITATION_STATUS = (
-        (INVITATION_SENT, _('Sent')),
-        (INVITATION_ACCEPTED, _('Accepted')),
-        (INVITATION_REJECTED, _('Rejected')),
-    )
-
     name = models.CharField(verbose_name=_("Name"), max_length=128, blank=True, null=True,
                             help_text=_("The name of this contact"))
 
@@ -500,14 +486,6 @@ class Contact(TembaModel):
 
     language = models.CharField(max_length=3, verbose_name=_("Language"), null=True, blank=True,
                                 help_text=_("The preferred language for this contact"))
-
-    invited_on = models.DateTimeField(editable=False, blank=True, null=True,
-                                      help_text="When this item was originally invited")
-
-    invitation_status = models.CharField(choices=INVITATION_STATUS, null=True, max_length=1,
-                                         help_text="The invitation status of this contact")
-
-    invitation_order = models.IntegerField(editable=False, blank=True, null=True, help_text="Order", default=0)
 
     simulation = False
 
@@ -801,66 +779,6 @@ class Contact(TembaModel):
 
     def set_cached_field_value(self, key, value):
         setattr(self, '__field__%s' % key, value)
-
-    @classmethod
-    def find_and_handle(cls, msg):
-        from unidecode import unidecode
-        from django.conf import settings
-
-        reply = msg.text
-        words = tokenize(reply)
-
-        handled = False
-        contact = msg.contact
-
-        if not words:
-            return handled
-
-        str_reply = unicode(unidecode('%s' % reply))
-
-        another_possible_responses = dict(yes='y', yep='y', yeah='y', yup='y', no='n', nops='n', nope='n', nah='n',
-                                          si='y', s='y')
-        another_possible_responses['not'] = 'n'
-
-        if contact.is_test:
-            handled = False
-        else:
-            was_accepted = str_reply.lower() == settings.INVITATION_ACCEPT_REPLY or another_possible_responses.get(str_reply.lower()) == settings.INVITATION_ACCEPT_REPLY
-
-            was_rejected = str_reply.lower() == settings.INVITATION_REJECT_REPLY or another_possible_responses.get(str_reply.lower()) == settings.INVITATION_REJECT_REPLY
-
-            existing_rejected_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
-                                                                 name=settings.INVITATION_REJECTED_GROUP_NAME)
-
-            existing_accepted_group = ContactGroup.get_or_create(org=msg.org, user=msg.contact.created_by,
-                                                                 name=settings.INVITATION_ACCEPTED_GROUP_NAME)
-
-            if contact.invited_on and was_accepted and contact.invitation_status != Contact.INVITATION_ACCEPTED:
-                contact.invitation_status = Contact.INVITATION_ACCEPTED
-                contact.invitation_order = Contact.ORDER_ACCEPTED
-                contact.save(update_fields=['invitation_status', 'invitation_order'])
-                contact.send(text=settings.DEFAULT_MSG_INVITATION_ACCEPTED, user=msg.contact.created_by,
-                             trigger_send=True)
-
-                # Update groups
-                existing_rejected_group.remove_contacts(user=msg.contact.created_by, contacts=[contact])
-                existing_accepted_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
-
-                handled = True
-            elif contact.invited_on and was_rejected and contact.invitation_status == Contact.INVITATION_SENT:
-                contact.invitation_status = Contact.INVITATION_REJECTED
-                contact.invitation_order = Contact.ORDER_REJECTED
-                contact.save(update_fields=['invitation_status', 'invitation_order'])
-                contact.send(text=settings.DEFAULT_MSG_INVITATION_REJECTED, user=msg.contact.created_by,
-                             trigger_send=True)
-
-                # Update groups
-                existing_accepted_group.remove_contacts(user=msg.contact.created_by, contacts=[contact])
-                existing_rejected_group.update_contacts(user=msg.contact.created_by, contacts=[contact], add=True)
-
-                handled = True
-
-        return handled
 
     def handle_update(self, attrs=(), urns=(), field=None, group=None):
         """
