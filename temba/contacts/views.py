@@ -952,14 +952,18 @@ class ContactCRUDL(SmartCRUDL):
         slug_url_kwarg = 'id'
 
         def get(self, *args, **kwargs):
+            from temba.orgs.models import FLOW_OPT_IN
+            from temba.flows.models import Flow
+
             org_config = self.org.config_json()
             contact_id = kwargs['id']
 
             existing_contact = Contact.objects.filter(id=contact_id).first()
-            invitation_text = org_config.get('invitation_text', settings.DEFAULT_INVITATION)
+            flow_uuid = org_config.get(FLOW_OPT_IN, None)
+            flow = Flow.objects.filter(org=self.request.user.get_org(), is_active=True, uuid=flow_uuid).first()
 
-            if existing_contact and invitation_text:
-                existing_contact.send(text=invitation_text, user=self.request.user, trigger_send=True)
+            if existing_contact and flow:
+                flow.async_start(self.request.user, list([]), list([existing_contact]), restart_participants=True, include_active=True)
                 result = dict(sent=True)
             else:
                 result = dict(sent=False)
