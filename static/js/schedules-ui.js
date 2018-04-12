@@ -53,15 +53,17 @@ function initializeBootstrapDatetimePicker(minDate, initialDate, showButtons) {
     var dateFormat = "DD, MM d, yy";
     var timeFormat = "h:mm tt";
     var initial = moment(initialDate).tz(user_tz).format('dddd, MMMM D, YYYY [at] h:mm a');
+    var fiveMinutesAhead = moment(initialDate).add(5, 'm').toDate();
 
-    setDatetimeValue(initial, null, initialDate);
+    setDatetimeValue(initial, null, fiveMinutesAhead);
     if (hasInitial) {
-        $("#start-datetime").val(initial);
+        $("#start-datetime").val(fiveMinutesAhead);
     }
 
     $('#start-datetime').datetimepicker({
         inline: true,
         sideBySide: true,
+        defaultDate: moment(fiveMinutesAhead).tz(user_tz),
         minDate: moment(initialDate).tz(user_tz),
         icons: {
             time: "fa fa-clock-o",
