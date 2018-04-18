@@ -923,7 +923,7 @@ class ContactCRUDL(SmartCRUDL):
             ]
 
             context['optin_flow'] = org_config.get(FLOW_OPT_IN, None)
-            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).order_by('name')
+            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).exclude(is_archived=True).order_by('name')
             context['actions'] = None
             context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
@@ -960,7 +960,7 @@ class ContactCRUDL(SmartCRUDL):
 
             existing_contact = Contact.objects.filter(id=contact_id).first()
             flow_uuid = org_config.get(FLOW_OPT_IN, None)
-            flow = Flow.objects.filter(org=self.request.user.get_org(), is_active=True, uuid=flow_uuid).first()
+            flow = Flow.objects.filter(org=self.request.user.get_org(), is_active=True, uuid=flow_uuid).exclude(is_archived=True).first()
 
             if existing_contact and flow:
                 flow.async_start(self.request.user, list([]), list([existing_contact]), restart_participants=True, include_active=True)
@@ -1008,7 +1008,7 @@ class ContactCRUDL(SmartCRUDL):
             ]
 
             context['optin_flow'] = org_config.get(FLOW_OPT_IN, None)
-            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).order_by('name')
+            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).exclude(is_archived=True).order_by('name')
             context['actions'] = []
             context['folders'] = folders
             context['current_group'] = group
