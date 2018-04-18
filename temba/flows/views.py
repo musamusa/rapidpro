@@ -38,6 +38,8 @@ from temba.flows.tasks import export_flow_results_task
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, PENDING
 from temba.triggers.models import Trigger
+from temba.schedules.models import Schedule
+from temba.schedules.views import BaseScheduleForm
 from temba.utils import analytics, percentage, datetime_to_str, on_transaction_commit, chunk_list
 from temba.utils.expressions import get_function_listing
 from temba.utils.views import BaseActionForm
@@ -374,7 +376,7 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export')
+               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule')
 
     model = Flow
 
@@ -977,12 +979,12 @@ class FlowCRUDL(SmartCRUDL):
             flow = self.get_object()
 
             if flow.flow_type not in [Flow.SURVEY, Flow.USSD] \
-                    and self.has_org_perm('flows.flow_broadcast') \
+                    and self.has_org_perm('flows.flow_launch') \
                     and not flow.is_archived:
 
-                links.append(dict(title=_("Start Flow"),
+                links.append(dict(title=_("Launch Flow"),
                                   style='btn-primary',
-                                  js_class='broadcast-rulesflow',
+                                  js_class='broadcast-launch',
                                   href='#'))
 
             if self.has_org_perm('flows.flow_results'):
@@ -1700,6 +1702,283 @@ class FlowCRUDL(SmartCRUDL):
                              restart_participants=form.cleaned_data['restart_participants'],
                              include_active=form.cleaned_data['include_active'])
             return flow
+
+    class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):
+        class LaunchForm(forms.ModelForm):
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+                super(FlowCRUDL.Launch.LaunchForm, self).__init__(*args, **kwargs)
+
+            class Meta:
+                model = Flow
+                exclude = '__all__'
+
+        slug_url_kwarg = 'id'
+        form_class = LaunchForm
+        exclude = '__all__'
+
+        def get_template_names(self):
+            return "flows/flow_launch.haml"
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.Launch, self).get_context_data(*args, **kwargs)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.Launch, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            return kwargs
+
+    class LaunchKeyword(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
+        class LaunchKeywordForm(forms.ModelForm):
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+
+                super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).__init__(*args, **kwargs)
+
+                flow_triggers = Trigger.objects.filter(
+                    org=self.instance.org, flow=self.instance, is_archived=False, groups=None,
+                    trigger_type=Trigger.TYPE_KEYWORD
+                ).order_by('created_on')
+
+                self.fields['keyword_triggers'].initial = ','.join([t.keyword for t in flow_triggers])
+
+            keyword_triggers = forms.CharField(required=False, label=_("Keyword triggers"),
+                                               help_text=_("When a user sends any of these keywords they will begin this flow"))
+
+            def clean_keyword_triggers(self):
+                org = self.user.get_org()
+                value = self.cleaned_data.get('keyword_triggers', '')
+
+                if not value:  # pragma: needs cover
+                    raise ValidationError(_("You must specify at least one keyword to launch the flow."))
+
+                duplicates = []
+                wrong_format = []
+                cleaned_keywords = []
+
+                for keyword in value.split(','):
+                    keyword = keyword.lower().strip()
+                    if not keyword:
+                        continue
+
+                    if not regex.match('^\w+$', keyword, flags=regex.UNICODE | regex.V0) or len(keyword) > Trigger.KEYWORD_MAX_LEN:
+                        wrong_format.append(keyword)
+
+                    existing = Trigger.objects.filter(org=org, keyword__iexact=keyword, is_archived=False, is_active=True).exclude(flow=self.flow)
+
+                    if existing:
+                        duplicates.append(keyword)
+                    else:
+                        cleaned_keywords.append(keyword)
+
+                if wrong_format:
+                    raise ValidationError(_('"%s" must be a single word, less than %d characters, containing only letter '
+                                            'and numbers') % (', '.join(wrong_format), Trigger.KEYWORD_MAX_LEN))
+
+                if duplicates:
+                    if len(duplicates) > 1:
+                        error_message = _('The keywords "%s" are already used for another flow') % ', '.join(duplicates)
+                    else:
+                        error_message = _('The keyword "%s" is already used for another flow') % ', '.join(duplicates)
+                    raise ValidationError(error_message)
+
+                return ','.join(cleaned_keywords)
+
+            def clean(self):
+                cleaned = super(FlowCRUDL.LaunchKeyword.LaunchKeywordForm, self).clean()
+
+                if self.flow.org.is_suspended():
+                    raise ValidationError(_("Sorry, your account is currently suspended. To enable sending messages, please contact support."))
+
+                return cleaned
+
+            class Meta:
+                model = Flow
+                fields = ('keyword_triggers',)
+
+        form_class = LaunchKeywordForm
+        fields = ('keyword_triggers',)
+        success_message = ''
+        submit_button_name = _("Launch")
+        success_url = 'uuid@flows.flow_editor'
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.LaunchKeyword, self).get_context_data(*args, **kwargs)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.LaunchKeyword, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            return kwargs
+
+        def save(self, *args, **kwargs):
+            form = self.form
+            flow = self.object
+
+            user = self.request.user
+            org = user.get_org()
+
+            if flow.flow_type != Flow.SURVEY:
+                keyword_triggers = form.cleaned_data['keyword_triggers']
+
+                if len(keyword_triggers.split(',')) > 0:
+                    existing_keywords = set(t.keyword for t in flow.triggers.filter(org=org, flow=flow,
+                                                                                    trigger_type=Trigger.TYPE_KEYWORD,
+                                                                                    is_archived=False, groups=None))
+
+                    keywords = set(keyword_triggers.split(','))
+
+                    removed_keywords = existing_keywords.difference(keywords)
+                    for keyword in removed_keywords:
+                        flow.triggers.filter(org=org, flow=flow, keyword=keyword,
+                                             groups=None, is_archived=False).update(is_archived=True)
+
+                    added_keywords = keywords.difference(existing_keywords)
+                    archived_keywords = [t.keyword for t in flow.triggers.filter(org=org, flow=flow, trigger_type=Trigger.TYPE_KEYWORD,
+                                                                                 is_archived=True, groups=None)]
+                    for keyword in added_keywords:
+                        if keyword in archived_keywords:  # pragma: needs cover
+                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(is_archived=False)
+                        else:
+                            Trigger.objects.create(org=org, keyword=keyword, trigger_type=Trigger.TYPE_KEYWORD,
+                                                   flow=flow, created_by=user, modified_by=user)
+
+            return flow
+
+    class LaunchSchedule(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
+
+        class LaunchScheduleForm(BaseScheduleForm, forms.ModelForm):
+            repeat_period = forms.ChoiceField(choices=Schedule.REPEAT_CHOICES, label="Repeat")
+            repeat_days = forms.IntegerField(required=False)
+            start = forms.CharField(max_length=16)
+            start_datetime_value = forms.IntegerField(required=False)
+            omnibox = OmniboxField(label=_('Contacts'), required=True,
+                                   help_text=_("The groups and contacts the flow will be broadcast to"))
+
+            def __init__(self, *args, **kwargs):
+                self.user = kwargs.pop('user')
+                self.flow = kwargs.pop('flow')
+
+                super(FlowCRUDL.LaunchSchedule.LaunchScheduleForm, self).__init__(*args, **kwargs)
+
+                self.fields['omnibox'].set_user(self.user)
+
+            def clean_omnibox(self):
+                starting = self.cleaned_data['omnibox']
+                if not starting['groups'] and not starting['contacts']:  # pragma: needs cover
+                    raise ValidationError(_("You must specify at least one contact or one group to schedule the launch this flow."))
+
+                return starting
+
+            def clean(self):
+                cleaned = super(FlowCRUDL.LaunchSchedule.LaunchScheduleForm, self).clean()
+
+                if self.flow.org.is_suspended():
+                    raise ValidationError(_("Sorry, your account is currently suspended. To enable sending messages, please contact support."))
+
+                # only weekly gets repeat days
+                if cleaned['repeat_period'] != 'W':
+                    cleaned['repeat_days'] = None
+
+                return cleaned
+
+            class Meta:
+                model = Flow
+                fields = ('omnibox', 'repeat_period', 'repeat_days', 'start', 'start_datetime_value')
+
+        form_class = LaunchScheduleForm
+        fields = ('omnibox', 'repeat_period', 'repeat_days', 'start', 'start_datetime_value')
+        success_message = ''
+        submit_button_name = _("Launch")
+        success_url = 'uuid@flows.flow_editor'
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowCRUDL.LaunchSchedule, self).get_context_data(*args, **kwargs)
+            context['user_tz'] = timezone.get_current_timezone_name()
+            context['user_tz_offset'] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() / 60)
+            return context
+
+        def get_form_kwargs(self):
+            kwargs = super(FlowCRUDL.LaunchSchedule, self).get_form_kwargs()
+            kwargs['user'] = self.request.user
+            kwargs['flow'] = self.object
+            kwargs['auto_id'] = "id_schedule_%s"
+            return kwargs
+
+        def save(self, *args, **kwargs):
+            form = self.form
+            flow = self.object
+
+            user = self.request.user
+            org = user.get_org()
+
+            analytics.track(self.request.user.username, 'temba.trigger_created_schedule')
+            schedule = Schedule.objects.create(created_by=self.request.user, modified_by=self.request.user)
+
+            if form.starts_never():
+                schedule.reset()
+
+            elif form.stopped():
+                schedule.reset()
+
+            elif form.starts_now():
+                schedule.next_fire = timezone.now() - timedelta(days=1)
+                schedule.repeat_period = 'O'
+                schedule.repeat_days = 0
+                schedule.status = 'S'
+                schedule.save()
+
+            else:
+                # Scheduled case
+                schedule.status = 'S'
+                schedule.repeat_period = form.cleaned_data['repeat_period']
+                start_time = form.get_start_time()
+                if start_time:
+                    schedule.next_fire = start_time
+
+                # create our recurrence
+                if form.is_recurring():
+                    days = None
+                    if 'repeat_days' in form.cleaned_data:
+                        days = form.cleaned_data['repeat_days']
+                    schedule.repeat_days = days
+                    schedule.repeat_hour_of_day = schedule.next_fire.hour
+                    schedule.repeat_minute_of_hour = schedule.repeat_minute_of_hour
+                    schedule.repeat_day_of_month = schedule.next_fire.day
+                schedule.save()
+
+            recipients = self.form.cleaned_data['omnibox']
+
+            trigger = Trigger.objects.create(flow=flow,
+                                             org=org,
+                                             schedule=schedule,
+                                             trigger_type=Trigger.TYPE_SCHEDULE,
+                                             created_by=self.request.user,
+                                             modified_by=self.request.user)
+
+            for group in recipients['groups']:
+                trigger.groups.add(group)
+
+            for contact in recipients['contacts']:
+                trigger.contacts.add(contact)
+
+            self.after_save(trigger)
+
+            return flow
+
+        def after_save(self, obj):
+
+            # fire our trigger schedule if necessary
+            if obj.schedule.is_expired():
+                from temba.schedules.tasks import check_schedule_task
+                on_transaction_commit(lambda: check_schedule_task.delay(obj.schedule.pk))
+
+            return obj
 
 
 # this is just for adhoc testing of the preprocess url
