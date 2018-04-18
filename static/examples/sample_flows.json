@@ -1095,147 +1095,188 @@
       "name": "Sample Flow - Simple Poll"
     },
     {
-      "base_language": "base", 
+      "base_language": "eng",
       "action_sets": [
         {
-          "uuid": "9c4a6439-43fc-43a9-9a88-6600e2c7f2eb", 
-          "exit_uuid": "d2c03f6f-9ea6-412c-86b4-ca2016554cdd", 
-          "y": 0, 
-          "x": 803, 
-          "destination": "fb0e2efb-6b37-4bbf-ab5d-1b8d61ac8351", 
+          "uuid": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6", 
+          "exit_uuid": "b6744d06-3caf-4f1f-8c27-c047569bef04", 
+          "y": 10, 
+          "x": 596, 
+          "destination": "1ad3876c-1d97-440e-bd13-f07d2cc59e53", 
           "actions": [
             {
               "quick_replies": [], 
               "media": {}, 
               "msg": {
-                "base": "This is Kathy from Community Connect. \n\nCan we occasionally send a short survey to this number? Please reply \"Y\" for yes or \"N\" for no."
+                "eng": "Hi, this is Jacob from CommunityConnect Labs. Interested in receiving text messages about services that may help you? Msg&DataRatesMayApply\nReply:\nY Yes\nN No"
               }, 
               "send_all": false, 
               "type": "reply", 
-              "uuid": "17c51d9e-3271-4c15-a002-cedf0193b573"
+              "uuid": "3b9adb39-51c4-4953-aa43-b9faa9391b8d"
             }
           ]
         }, 
         {
-          "uuid": "b9a282dc-fd51-448e-8bd1-a651fb34cac3", 
-          "exit_uuid": "ca81cde4-0fd1-4f7c-9ab7-fbdd9b4c494d", 
-          "y": 427, 
-          "x": 643, 
-          "destination": null, 
+          "uuid": "1d66610f-c687-4518-bb36-40a16d9db847", 
+          "exit_uuid": "6fc5b275-84d1-4a99-9342-6387d8ca633f", 
+          "y": 481, 
+          "x": 424, 
+          "destination": "8d73a36a-7f43-4b4d-b4cf-784aa4f0733d", 
           "actions": [
             {
               "type": "add_group", 
-              "uuid": "8927c086-75c2-4028-bda0-762d6110f9a4", 
+              "uuid": "871750ce-6caf-4a80-867f-e52126c06947", 
               "groups": [
                 {
                   "name": "Opted-In", 
                   "uuid": "8cb028ab-0a7f-4947-b971-b19ae9246627"
                 }
               ]
-            }, 
-            {
-              "field": "opt_in", 
-              "type": "save", 
-              "uuid": "97274b05-55fa-49fc-81f1-b2eddb3ab0a8", 
-              "value": "@flow.optin.category", 
-              "label": "Opt In"
             }
           ]
         }, 
         {
-          "uuid": "1d204bb6-d1fb-464e-b04e-86e889efabe9", 
-          "exit_uuid": "778c79f5-fafa-41d5-a68d-3de92f73da45", 
-          "y": 429, 
-          "x": 886, 
-          "destination": null, 
+          "uuid": "98d23ff8-15cd-416c-891a-d67a954ad620", 
+          "exit_uuid": "6d424c45-1cd6-499f-86f8-d648376f69fd", 
+          "y": 392, 
+          "x": 719, 
+          "destination": "87248e38-be43-490c-a165-d0d559e51ae2", 
           "actions": [
             {
               "type": "del_group", 
-              "uuid": "dad6335e-25e7-4865-83c8-5d7bef40d2b8", 
+              "uuid": "96167c63-dd0c-48f4-af6a-bec8d08f7aeb", 
               "groups": []
-            }, 
+            }
+          ]
+        }, 
+        {
+          "uuid": "f27da93e-644c-47ce-9c8c-c15d5b5c3e78", 
+          "exit_uuid": "9478f520-081a-445c-8c34-ece1260944ff", 
+          "y": 24, 
+          "x": 917, 
+          "destination": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6", 
+          "actions": [
+            {
+              "quick_replies": [], 
+              "media": {}, 
+              "msg": {
+                "eng": "Sorry! We didn't understand that. Reply with the letter Y to opt-in to receiving messages or N to not receive these messages.\n\nTo stop all messages, reply STOP"
+              }, 
+              "send_all": false, 
+              "type": "reply", 
+              "uuid": "9656e9f4-9d11-4469-8dde-45e9bd8c9e56"
+            }
+          ]
+        }, 
+        {
+          "uuid": "87248e38-be43-490c-a165-d0d559e51ae2", 
+          "exit_uuid": "75a1e891-4878-477a-b5da-838660789e31", 
+          "y": 483, 
+          "x": 724, 
+          "destination": "3bb3f798-b341-4f1b-92cc-206ff1aea2db", 
+          "actions": [
             {
               "type": "add_group", 
-              "uuid": "fb32b245-5639-4a8f-8c0e-f3b6f2931276", 
+              "uuid": "806dada9-0e94-40d6-87df-3b81285a06cb", 
               "groups": [
                 {
                   "name": "Opted-Out", 
                   "uuid": "7a82eb3a-c114-4013-ad34-5340c9408707"
                 }
               ]
-            }, 
+            }
+          ]
+        }, 
+        {
+          "uuid": "3bb3f798-b341-4f1b-92cc-206ff1aea2db", 
+          "exit_uuid": "bebf2334-0012-4f4b-a2ca-b27675712d5f", 
+          "y": 581, 
+          "x": 727, 
+          "destination": null, 
+          "actions": [
             {
               "field": "opt_in", 
               "type": "save", 
-              "uuid": "b52967b1-c7a0-4fd3-b370-e54dc888f858", 
-              "value": "@flow.optin.category", 
+              "uuid": "847cb409-326c-4e1a-812e-2dba1aadbb78", 
+              "value": "No", 
               "label": "Opt In"
             }
           ]
         }, 
         {
-          "uuid": "d373d473-5902-4aae-959e-db3faf81225d", 
-          "exit_uuid": "488f4f04-bc81-4bea-a55d-842cf085ab1b", 
-          "y": 297, 
-          "x": 1172, 
-          "destination": "fb0e2efb-6b37-4bbf-ab5d-1b8d61ac8351", 
+          "uuid": "8d73a36a-7f43-4b4d-b4cf-784aa4f0733d", 
+          "exit_uuid": "289a91eb-6512-4107-b859-5f68283ea602", 
+          "y": 589, 
+          "x": 419, 
+          "destination": null, 
           "actions": [
             {
-              "quick_replies": [], 
-              "media": {}, 
-              "msg": {
-                "base": "Invalid option. Reply with Yes or No, please."
-              }, 
-              "send_all": false, 
-              "type": "reply", 
-              "uuid": "a5d030ed-e8d1-41ce-a254-e851bc913ff9"
+              "field": "opt_in", 
+              "type": "save", 
+              "uuid": "f3e99dce-daef-4607-921b-03b78161d509", 
+              "value": "Yes", 
+              "label": "Opt In"
+            }
+          ]
+        }, 
+        {
+          "uuid": "f7d834b8-d44c-4fe5-9c69-c0876decba05", 
+          "exit_uuid": "fbcaca7e-b7a6-4b49-b820-e44627d91ed1", 
+          "y": 381, 
+          "x": 441, 
+          "destination": "1d66610f-c687-4518-bb36-40a16d9db847", 
+          "actions": [
+            {
+              "type": "del_group", 
+              "uuid": "5b60cfdd-04a3-4e45-b8c5-f9df38cca5b4", 
+              "groups": []
             }
           ]
         }
       ], 
-      "version": "10.4", 
-      "flow_type": "F", 
-      "entry": "9c4a6439-43fc-43a9-9a88-6600e2c7f2eb", 
+      "version": "10.4",
+      "flow_type": "F",
+      "entry": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6",
       "rule_sets": [
         {
-          "uuid": "fb0e2efb-6b37-4bbf-ab5d-1b8d61ac8351", 
+          "uuid": "1ad3876c-1d97-440e-bd13-f07d2cc59e53", 
           "rules": [
             {
               "category": {
-                "base": "Yes"
+                "eng": "Y"
               }, 
-              "uuid": "b330193b-cd36-4cea-a6c3-53a66f07ab33", 
-              "destination": "b9a282dc-fd51-448e-8bd1-a651fb34cac3", 
+              "uuid": "fda21ccd-4d70-45b2-b468-13856aae5cf2", 
+              "destination": "f7d834b8-d44c-4fe5-9c69-c0876decba05", 
               "label": null, 
               "destination_type": "A", 
               "test": {
                 "test": {
-                  "base": "yes si s\u00ed s"
+                  "eng": "y yes yeah"
                 }, 
                 "type": "contains_any"
               }
             }, 
             {
               "category": {
-                "base": "No"
+                "eng": "N"
               }, 
-              "uuid": "571c9fbe-2f32-4c13-bb3b-bfbef8fc77d2", 
-              "destination": "1d204bb6-d1fb-464e-b04e-86e889efabe9", 
+              "uuid": "77f5f3c7-c08d-4db6-a0e8-5c34fb0c6af0", 
+              "destination": "98d23ff8-15cd-416c-891a-d67a954ad620", 
               "label": null, 
               "destination_type": "A", 
               "test": {
                 "test": {
-                  "base": "no n"
+                  "eng": "n no nope"
                 }, 
                 "type": "contains_any"
               }
             }, 
             {
               "category": {
-                "base": "Other"
+                "eng": "Other"
               }, 
-              "uuid": "d9f62a61-e35e-4a5f-82f3-a7c84e905818", 
-              "destination": "d373d473-5902-4aae-959e-db3faf81225d", 
+              "uuid": "f45ceba9-891e-4ccf-85f4-38bc68723288", 
+              "destination": "f27da93e-644c-47ce-9c8c-c15d5b5c3e78", 
               "label": null, 
               "destination_type": "A", 
               "test": {
@@ -1244,22 +1285,22 @@
             }
           ], 
           "ruleset_type": "wait_message", 
-          "label": "optin", 
+          "label": "optIn", 
           "operand": "@step.value", 
           "finished_key": null, 
           "response_type": "", 
-          "y": 260, 
-          "x": 770, 
+          "y": 267, 
+          "x": 562, 
           "config": {}
         }
       ], 
       "metadata": {
         "optin": true,
-        "expires": 10080, 
-        "revision": 32, 
-        "uuid": "0068666f-4465-4040-a040-1485a4323d29", 
-        "name": "Opt-in Flow", 
-        "saved_on": "2018-04-03T18:24:04.021364Z"
+        "expires": 10080,
+        "revision": 41,
+        "uuid": "0f5ed0e4-aa27-469a-a945-3f2c84a8e6c7",
+        "name": "Sample Opt-in Flow",
+        "saved_on": "2018-04-18T20:58:03.168011Z"
       }
     }
   ],
