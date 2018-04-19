@@ -923,7 +923,7 @@ class ContactCRUDL(SmartCRUDL):
             ]
 
             context['optin_flow'] = org_config.get(FLOW_OPT_IN, None)
-            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).exclude(is_archived=True).order_by('name')
+            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True, is_archived=False, flow_type=Flow.FLOW).order_by('name')
             context['actions'] = None
             context['folders'] = folders
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
@@ -1008,7 +1008,7 @@ class ContactCRUDL(SmartCRUDL):
             ]
 
             context['optin_flow'] = org_config.get(FLOW_OPT_IN, None)
-            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True).exclude(is_archived=True).order_by('name')
+            context['org_flows'] = Flow.objects.filter(org=self.request.user.get_org(), is_active=True, is_archived=False, flow_type=Flow.FLOW).order_by('name')
             context['actions'] = []
             context['folders'] = folders
             context['current_group'] = group
