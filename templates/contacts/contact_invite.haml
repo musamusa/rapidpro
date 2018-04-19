@@ -100,8 +100,11 @@
 
                         %td.value-received.field_received.button-invitation
                           %nobr
-                            %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this));return false;', data-id: '{{ object.id }}'}
-                              -trans "Invite"
+                            -if object.get_urns
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this));return false;', data-id: '{{ object.id }}'}
+                                -trans "Invite"
+                            -else
+                              -trans "--"
 
                         // This is needed for action buttons
                         %td.hide
@@ -163,6 +166,11 @@
     td.field {
       text-align:center;
       min-width:125px;
+    }
+
+    .span9 .object-list tbody td {
+      padding: 7px 6px;
+      vertical-align: middle;
     }
 
     .span9 .contact_list tr.contacts {
