@@ -1251,7 +1251,7 @@
               "destination_type": "A", 
               "test": {
                 "test": {
-                  "eng": "Y, Yes, S, Si, Yeah, Yea, Ya, Yup, Yep"
+                  "eng": "Y, Yes, S, Si, Sí, Yeah, Yea, Ya, Yup, Yep"
                 }, 
                 "type": "contains_any"
               }
