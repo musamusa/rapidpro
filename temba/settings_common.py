@@ -1152,7 +1152,6 @@ SEND_CHATBASE = False
 SEND_CALLS = False
 
 MESSAGE_HANDLERS = [
-    'temba.contacts.handlers.InvitationHandler',
     'temba.triggers.handlers.TriggerHandler',
     'temba.flows.handlers.FlowHandler',
     'temba.triggers.handlers.CatchAllHandler'

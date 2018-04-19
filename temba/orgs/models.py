@@ -121,6 +121,8 @@ CHATBASE_TYPE_USER = 'user'
 CHATBASE_FEEDBACK = 'CHATBASE_FEEDBACK'
 CHATBASE_VERSION = 'CHATBASE_VERSION'
 
+FLOW_OPT_IN = 'FLOW_OPT_IN'
+
 ORG_STATUS = 'STATUS'
 SUSPENDED = 'suspended'
 RESTORED = 'restored'
@@ -975,6 +977,22 @@ class Org(SmartModel):
                 return NexmoClient(api_key, api_secret, app_id, app_private_key, org=self)
 
         return None
+
+    def set_optin_flow(self, user, flow_uuid):
+        config = self.config_json()
+        flow_optin_config = {FLOW_OPT_IN: flow_uuid}
+        config.update(flow_optin_config)
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
+
+    def get_optin_flow(self):
+        if self.config:
+            config = self.config_json()
+            flow_uuid = config.get(FLOW_OPT_IN, None)
+            return flow_uuid
+        else:
+            return None
 
     def clear_channel_caches(self):
         """

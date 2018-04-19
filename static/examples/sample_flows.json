@@ -1093,6 +1093,216 @@
       "id": 952,
       "flow_type": "F",
       "name": "Sample Flow - Simple Poll"
+    },
+    {
+      "base_language": "eng", 
+      "action_sets": [
+        {
+          "uuid": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
+          "exit_uuid": "87700d3d-3c6d-4dde-9f09-fd46c96e351b", 
+          "y": 10, 
+          "x": 596, 
+          "destination": "dd75b947-05eb-4e3e-ae4a-f04fd7d4518e", 
+          "actions": [
+            {
+              "quick_replies": [], 
+              "media": {}, 
+              "msg": {
+                "eng": "Hi, this is Jacob from CommunityConnect Labs. Interested in receiving text messages about services that may help you? Msg&DataRatesMayApply\nReply:\nY Yes\nN No"
+              }, 
+              "send_all": false, 
+              "type": "reply", 
+              "uuid": "3b9adb39-51c4-4953-aa43-b9faa9391b8d"
+            }
+          ]
+        }, 
+        {
+          "uuid": "25938f4b-3ef5-411a-b343-c0414adcb46c", 
+          "exit_uuid": "4fcaaa57-9f21-4b90-8773-1ed9883e27e5", 
+          "y": 481, 
+          "x": 424, 
+          "destination": "24a84f26-3a12-47b0-8278-fcf5da06cf79", 
+          "actions": [
+            {
+              "type": "add_group", 
+              "uuid": "871750ce-6caf-4a80-867f-e52126c06947", 
+              "groups": [
+                {
+                  "name": "Opted-In", 
+                  "uuid": "8cb028ab-0a7f-4947-b971-b19ae9246627"
+                }
+              ]
+            }
+          ]
+        }, 
+        {
+          "uuid": "edb1d17a-d435-43c7-aee2-896795d66ca1", 
+          "exit_uuid": "6e4612f0-9dcf-47d5-b162-b5948e7deba5", 
+          "y": 392, 
+          "x": 719, 
+          "destination": "3e77465a-7100-4237-91ee-3bd4e42d13d2", 
+          "actions": [
+            {
+              "type": "del_group", 
+              "uuid": "96167c63-dd0c-48f4-af6a-bec8d08f7aeb", 
+              "groups": []
+            }
+          ]
+        }, 
+        {
+          "uuid": "fc90b82e-1799-4efb-abf8-5094e198f598", 
+          "exit_uuid": "8b087d75-261d-41d7-9d23-b0d7e4013e24", 
+          "y": 24, 
+          "x": 917, 
+          "destination": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
+          "actions": [
+            {
+              "quick_replies": [], 
+              "media": {}, 
+              "msg": {
+                "eng": "Sorry! We didn't understand that. Reply with the letter Y to opt-in to receiving messages or N to not receive these messages.\n\nTo stop all messages, reply STOP"
+              }, 
+              "send_all": false, 
+              "type": "reply", 
+              "uuid": "9656e9f4-9d11-4469-8dde-45e9bd8c9e56"
+            }
+          ]
+        }, 
+        {
+          "uuid": "3e77465a-7100-4237-91ee-3bd4e42d13d2", 
+          "exit_uuid": "ae7ac1c4-8e01-4695-a8aa-8b67d1b1e7d0", 
+          "y": 483, 
+          "x": 724, 
+          "destination": "f830d05d-46b4-4b37-992b-992a72aac9db", 
+          "actions": [
+            {
+              "type": "add_group", 
+              "uuid": "806dada9-0e94-40d6-87df-3b81285a06cb", 
+              "groups": [
+                {
+                  "name": "Opted-Out", 
+                  "uuid": "7a82eb3a-c114-4013-ad34-5340c9408707"
+                }
+              ]
+            }
+          ]
+        }, 
+        {
+          "uuid": "f830d05d-46b4-4b37-992b-992a72aac9db", 
+          "exit_uuid": "13e6caff-09cd-410c-b794-c45560515784", 
+          "y": 581, 
+          "x": 727, 
+          "destination": null, 
+          "actions": [
+            {
+              "field": "opt_in", 
+              "type": "save", 
+              "uuid": "847cb409-326c-4e1a-812e-2dba1aadbb78", 
+              "value": "No", 
+              "label": "Opt In"
+            }
+          ]
+        }, 
+        {
+          "uuid": "24a84f26-3a12-47b0-8278-fcf5da06cf79", 
+          "exit_uuid": "d11c450e-af7b-4f9e-be65-c997833b730a", 
+          "y": 589, 
+          "x": 419, 
+          "destination": null, 
+          "actions": [
+            {
+              "field": "opt_in", 
+              "type": "save", 
+              "uuid": "f3e99dce-daef-4607-921b-03b78161d509", 
+              "value": "Yes", 
+              "label": "Opt In"
+            }
+          ]
+        }, 
+        {
+          "uuid": "506525aa-ade7-406b-802d-651ff198a83d", 
+          "exit_uuid": "1f2965eb-3d17-4d2f-a477-9854b0676564", 
+          "y": 381, 
+          "x": 441, 
+          "destination": "25938f4b-3ef5-411a-b343-c0414adcb46c", 
+          "actions": [
+            {
+              "type": "del_group", 
+              "uuid": "5b60cfdd-04a3-4e45-b8c5-f9df38cca5b4", 
+              "groups": []
+            }
+          ]
+        }
+      ], 
+      "version": "10.4", 
+      "flow_type": "F", 
+      "entry": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
+      "rule_sets": [
+        {
+          "uuid": "dd75b947-05eb-4e3e-ae4a-f04fd7d4518e", 
+          "rules": [
+            {
+              "category": {
+                "eng": "Y"
+              }, 
+              "uuid": "a81eb362-826b-4f6d-80df-2fed213b7d3b", 
+              "destination": "506525aa-ade7-406b-802d-651ff198a83d", 
+              "label": null, 
+              "destination_type": "A", 
+              "test": {
+                "test": {
+                  "eng": "Y, Yes, S, Si, Yeah, Yea, Ya, Yup, Yep"
+                }, 
+                "type": "contains_any"
+              }
+            }, 
+            {
+              "category": {
+                "eng": "N"
+              }, 
+              "uuid": "b0a69510-d533-467d-838a-005b92a9ed3c", 
+              "destination": "edb1d17a-d435-43c7-aee2-896795d66ca1", 
+              "label": null, 
+              "destination_type": "A", 
+              "test": {
+                "test": {
+                  "eng": "N, No, Nope, Nopes, Naw, Nah"
+                }, 
+                "type": "contains_any"
+              }
+            }, 
+            {
+              "category": {
+                "eng": "Other"
+              }, 
+              "uuid": "0b42907f-7e35-40ad-95e4-c686a234f054", 
+              "destination": "fc90b82e-1799-4efb-abf8-5094e198f598", 
+              "label": null, 
+              "destination_type": "A", 
+              "test": {
+                "type": "true"
+              }
+            }
+          ], 
+          "ruleset_type": "wait_message", 
+          "label": "optIn", 
+          "operand": "@step.value", 
+          "finished_key": null, 
+          "response_type": "", 
+          "y": 267, 
+          "x": 562, 
+          "config": {}
+        }
+      ], 
+      "metadata": {
+        "optin": true,
+        "expires": 10080, 
+        "name": "Sample Opt-in Flow", 
+        "optin": true, 
+        "uuid": "0f5ed0e4-aa27-469a-a945-3f2c84a8e6c7", 
+        "revision": 44, 
+        "saved_on": "2018-04-19T19:52:08.302210Z"
+      }
     }
   ],
   "triggers": []
