@@ -1095,14 +1095,14 @@
       "name": "Sample Flow - Simple Poll"
     },
     {
-      "base_language": "eng",
+      "base_language": "eng", 
       "action_sets": [
         {
-          "uuid": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6", 
-          "exit_uuid": "b6744d06-3caf-4f1f-8c27-c047569bef04", 
+          "uuid": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
+          "exit_uuid": "87700d3d-3c6d-4dde-9f09-fd46c96e351b", 
           "y": 10, 
           "x": 596, 
-          "destination": "1ad3876c-1d97-440e-bd13-f07d2cc59e53", 
+          "destination": "dd75b947-05eb-4e3e-ae4a-f04fd7d4518e", 
           "actions": [
             {
               "quick_replies": [], 
@@ -1117,11 +1117,11 @@
           ]
         }, 
         {
-          "uuid": "1d66610f-c687-4518-bb36-40a16d9db847", 
-          "exit_uuid": "6fc5b275-84d1-4a99-9342-6387d8ca633f", 
+          "uuid": "25938f4b-3ef5-411a-b343-c0414adcb46c", 
+          "exit_uuid": "4fcaaa57-9f21-4b90-8773-1ed9883e27e5", 
           "y": 481, 
           "x": 424, 
-          "destination": "8d73a36a-7f43-4b4d-b4cf-784aa4f0733d", 
+          "destination": "24a84f26-3a12-47b0-8278-fcf5da06cf79", 
           "actions": [
             {
               "type": "add_group", 
@@ -1136,11 +1136,11 @@
           ]
         }, 
         {
-          "uuid": "98d23ff8-15cd-416c-891a-d67a954ad620", 
-          "exit_uuid": "6d424c45-1cd6-499f-86f8-d648376f69fd", 
+          "uuid": "edb1d17a-d435-43c7-aee2-896795d66ca1", 
+          "exit_uuid": "6e4612f0-9dcf-47d5-b162-b5948e7deba5", 
           "y": 392, 
           "x": 719, 
-          "destination": "87248e38-be43-490c-a165-d0d559e51ae2", 
+          "destination": "3e77465a-7100-4237-91ee-3bd4e42d13d2", 
           "actions": [
             {
               "type": "del_group", 
@@ -1150,11 +1150,11 @@
           ]
         }, 
         {
-          "uuid": "f27da93e-644c-47ce-9c8c-c15d5b5c3e78", 
-          "exit_uuid": "9478f520-081a-445c-8c34-ece1260944ff", 
+          "uuid": "fc90b82e-1799-4efb-abf8-5094e198f598", 
+          "exit_uuid": "8b087d75-261d-41d7-9d23-b0d7e4013e24", 
           "y": 24, 
           "x": 917, 
-          "destination": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6", 
+          "destination": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
           "actions": [
             {
               "quick_replies": [], 
@@ -1169,11 +1169,11 @@
           ]
         }, 
         {
-          "uuid": "87248e38-be43-490c-a165-d0d559e51ae2", 
-          "exit_uuid": "75a1e891-4878-477a-b5da-838660789e31", 
+          "uuid": "3e77465a-7100-4237-91ee-3bd4e42d13d2", 
+          "exit_uuid": "ae7ac1c4-8e01-4695-a8aa-8b67d1b1e7d0", 
           "y": 483, 
           "x": 724, 
-          "destination": "3bb3f798-b341-4f1b-92cc-206ff1aea2db", 
+          "destination": "f830d05d-46b4-4b37-992b-992a72aac9db", 
           "actions": [
             {
               "type": "add_group", 
@@ -1188,8 +1188,8 @@
           ]
         }, 
         {
-          "uuid": "3bb3f798-b341-4f1b-92cc-206ff1aea2db", 
-          "exit_uuid": "bebf2334-0012-4f4b-a2ca-b27675712d5f", 
+          "uuid": "f830d05d-46b4-4b37-992b-992a72aac9db", 
+          "exit_uuid": "13e6caff-09cd-410c-b794-c45560515784", 
           "y": 581, 
           "x": 727, 
           "destination": null, 
@@ -1204,8 +1204,8 @@
           ]
         }, 
         {
-          "uuid": "8d73a36a-7f43-4b4d-b4cf-784aa4f0733d", 
-          "exit_uuid": "289a91eb-6512-4107-b859-5f68283ea602", 
+          "uuid": "24a84f26-3a12-47b0-8278-fcf5da06cf79", 
+          "exit_uuid": "d11c450e-af7b-4f9e-be65-c997833b730a", 
           "y": 589, 
           "x": 419, 
           "destination": null, 
@@ -1220,11 +1220,11 @@
           ]
         }, 
         {
-          "uuid": "f7d834b8-d44c-4fe5-9c69-c0876decba05", 
-          "exit_uuid": "fbcaca7e-b7a6-4b49-b820-e44627d91ed1", 
+          "uuid": "506525aa-ade7-406b-802d-651ff198a83d", 
+          "exit_uuid": "1f2965eb-3d17-4d2f-a477-9854b0676564", 
           "y": 381, 
           "x": 441, 
-          "destination": "1d66610f-c687-4518-bb36-40a16d9db847", 
+          "destination": "25938f4b-3ef5-411a-b343-c0414adcb46c", 
           "actions": [
             {
               "type": "del_group", 
@@ -1234,24 +1234,24 @@
           ]
         }
       ], 
-      "version": "10.4",
-      "flow_type": "F",
-      "entry": "6feb01da-8a2f-4c0f-b73a-a923acfec7b6",
+      "version": "10.4", 
+      "flow_type": "F", 
+      "entry": "50199344-9ceb-467e-a5fe-a6b7106592b6", 
       "rule_sets": [
         {
-          "uuid": "1ad3876c-1d97-440e-bd13-f07d2cc59e53", 
+          "uuid": "dd75b947-05eb-4e3e-ae4a-f04fd7d4518e", 
           "rules": [
             {
               "category": {
                 "eng": "Y"
               }, 
-              "uuid": "fda21ccd-4d70-45b2-b468-13856aae5cf2", 
-              "destination": "f7d834b8-d44c-4fe5-9c69-c0876decba05", 
+              "uuid": "a81eb362-826b-4f6d-80df-2fed213b7d3b", 
+              "destination": "506525aa-ade7-406b-802d-651ff198a83d", 
               "label": null, 
               "destination_type": "A", 
               "test": {
                 "test": {
-                  "eng": "y yes yeah"
+                  "eng": "Y, Yes, S, Si, Yeah, Yea, Ya, Yup, Yep"
                 }, 
                 "type": "contains_any"
               }
@@ -1260,13 +1260,13 @@
               "category": {
                 "eng": "N"
               }, 
-              "uuid": "77f5f3c7-c08d-4db6-a0e8-5c34fb0c6af0", 
-              "destination": "98d23ff8-15cd-416c-891a-d67a954ad620", 
+              "uuid": "b0a69510-d533-467d-838a-005b92a9ed3c", 
+              "destination": "edb1d17a-d435-43c7-aee2-896795d66ca1", 
               "label": null, 
               "destination_type": "A", 
               "test": {
                 "test": {
-                  "eng": "n no nope"
+                  "eng": "n, no, nope, Nopes, Naw nah"
                 }, 
                 "type": "contains_any"
               }
@@ -1275,8 +1275,8 @@
               "category": {
                 "eng": "Other"
               }, 
-              "uuid": "f45ceba9-891e-4ccf-85f4-38bc68723288", 
-              "destination": "f27da93e-644c-47ce-9c8c-c15d5b5c3e78", 
+              "uuid": "0b42907f-7e35-40ad-95e4-c686a234f054", 
+              "destination": "fc90b82e-1799-4efb-abf8-5094e198f598", 
               "label": null, 
               "destination_type": "A", 
               "test": {
@@ -1296,11 +1296,12 @@
       ], 
       "metadata": {
         "optin": true,
-        "expires": 10080,
-        "revision": 41,
-        "uuid": "0f5ed0e4-aa27-469a-a945-3f2c84a8e6c7",
-        "name": "Sample Opt-in Flow",
-        "saved_on": "2018-04-18T20:58:03.168011Z"
+        "expires": 10080, 
+        "name": "Sample Opt-in Flow", 
+        "optin": true, 
+        "uuid": "0f5ed0e4-aa27-469a-a945-3f2c84a8e6c7", 
+        "revision": 44, 
+        "saved_on": "2018-04-19T19:52:08.302210Z"
       }
     }
   ],
