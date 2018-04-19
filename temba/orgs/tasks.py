@@ -7,8 +7,9 @@ import pytz
 
 from celery.task import task
 from parse_rest.connection import register
+from parse_rest.connection import ParseBatcher
 from parse_rest.datatypes import Object
-from datetime import timedelta, datetime
+from datetime import timedelta
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
@@ -72,6 +73,10 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
     failures = []
     success = 0
 
+    batch_size = 50
+    batch_package = []
+    batcher = ParseBatcher()
+
     for i, row in enumerate(iterator):
         if i == 0:
             counter = 0
@@ -121,8 +126,12 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
 
             real_collection = Object.factory(collection)
             new_item = real_collection(**payload)
-            new_item.save()
+            batch_package.append(new_item)
             success += 1
+
+        if i >= batch_size:
+            batcher.batch_save(batch_package)
+            batch_package = []
 
     print(" -- Importation task ran in %0.2f seconds" % (time.time() - start))
 
