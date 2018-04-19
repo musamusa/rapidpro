@@ -25,6 +25,10 @@ def apply_as_migration(apps, schema_editor):
     update_template_optin()
 
 
+def apply_manual():
+    update_template_optin()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
