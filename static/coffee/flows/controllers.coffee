@@ -322,12 +322,6 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
       url: activityURL
       cache: false
       success: (data, status, xhr) ->
-
-        if $rootScope.pending in ['KW', 'SC']
-          $rootScope.activityInterval = 60000
-        else
-          $rootScope.activityInterval = 5000
-
         $rootScope.pending = data.pending
 
         # to be successful we should be a 200 with activity data

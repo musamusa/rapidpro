@@ -135,7 +135,8 @@
         var modal = new Modax(gettext('Trigger Flow'), '{% url "flows.flow_launch_keyword" object.pk %}');
         var onActions = {
           onSuccess: function(data) { 
-            $('html').scope().pending = 'KW';
+            $('html').scope().pending_others = 'KW';
+            setTimeout(function(){ $('html').scope().pending_others = null }, 60000);
           },
           onFormLoaded: function() { }
         }
@@ -154,7 +155,8 @@
         var modal = new Modax(gettext('Scheduled Launch'), '{% url "flows.flow_launch_schedule" object.pk %}');
         var onActions = {
           onSuccess: function(data) {
-            $('html').scope().pending = 'SC';
+            $('html').scope().pending_others = 'SC';
+            setTimeout(function(){ $('html').scope().pending_others = null }, 60000);
           },
           onFormLoaded: function() { }
         }
@@ -297,12 +299,12 @@
           -blocktrans
             This flow is in the process of being sent, this message will disappear once all contacts have been added to the flow.
       
-      #pending{ng-show:'pending == "KW"'}
+      #pending{ng-show:'pending_others == "KW"'}
         %div{class:"alert alert-info"}
           -blocktrans
             This flow will be started when someone sends a keyword set up on Launch Flow.
 
-      #pending{ng-show:'pending == "SC"'}
+      #pending{ng-show:'pending_others == "SC"'}
         %div{class:"alert alert-info"}
           -blocktrans
             Congrats! You've scheduled your flow.
