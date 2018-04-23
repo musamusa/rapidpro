@@ -1,0 +1,198 @@
+-extends 'smartmin/update.html'
+
+{% load smartmin temba compress i18n %}
+
+-block pre-form
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}css/bootstrap-datetimepicker.min.css", media:'all'}
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}fonts/awesome/css/font-awesome.min.css", media:'all'}
+
+  :css
+    .control-label {
+      color: #569D9B;
+    }
+    .select2-container-multi .select2-choices .select2-search-field input.select2-active {
+      background: none !important;
+    }
+    .launch-message {
+      color: #569D9B;
+      font-size: 15px;
+      margin: 0 0 15px 0;
+    }
+    #trigger_flow .control-group .control-label, 
+    #trigger_omnibox .control-group .control-label {
+      float: none;
+      text-align: left;
+    }
+
+    #trigger_flow .control-group .controls, 
+    #trigger_omnibox .control-group .controls {
+      margin-left: 0px;
+    }
+
+    #s2id_id_schedule_omnibox {
+      width: 100% !important;
+    }
+
+    .error {
+      width: initial !important;
+    }
+
+    #start-datetime {
+      width: 100%;
+    }
+
+    .col-md-6 {
+      width: 48%;
+    }
+
+    .datepicker {
+      float: left;
+    }
+
+    .timepicker {
+      float: right;
+      margin: 50px 0 0 0;
+    }
+
+    .bootstrap-datetimepicker-widget table td {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget table td.separator {
+      width: 20px;
+    }
+
+    .bootstrap-datetimepicker-widget .timepicker-hour, .bootstrap-datetimepicker-widget .timepicker-minute, .bootstrap-datetimepicker-widget .timepicker-second {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget a[data-action] {
+      padding: 0;
+    }
+
+    .timepicker-picker a.btn {
+      background-color: transparent !important;
+      border: none;
+      background-image: none;
+      box-shadow: none;
+    }
+
+    .timepicker-picker a.btn span {
+      line-height: 40px;
+      height: 40px;
+      width: 45px;
+      background-color: transparent !important;
+    }
+
+    .weekly-repeat-options .btn-group .btn {
+      margin: 2px;
+      border-radius: 5px;
+    }
+
+    .weekly-repeat-options .btn-group .btn.active {
+      color: #e6e6e6;
+      background-color: #569D9B;
+    }
+
+    .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
+      background-color: #569D9B;
+      color: #FFFFFF;
+    }
+
+-block fields
+  -if object.flow_type == 'F' and not send_channel
+    %p
+    -blocktrans with name=brand.name
+      To get started you need to add a channel to your account. A channel is a phone number or social network
+      account which {{ name }} can use to send and receive messages on your behalf. You can choose to use an
+      Android phone and your own cell phone plan, or we can connect you with a service provider in your country
+      directly.
+    %hr
+    %p
+      -trans "You can always test your flow using the simulator, click"
+        %span.glyph.icon-mobile{style:"padding-top:2px;"}
+      -trans "on the right to open it."
+
+  -elif object.flow_type == 'U' and not is_ussd_channel
+    %p
+    -blocktrans with name=brand.name
+      To get started you need to add a USSD channel to your account. You can choose between USSD channels
+      that are available in your country.
+    %hr
+    %p
+      -trans "You can always test your flow using the simulator, click"
+        %span.glyph.icon-mobile{style:"padding-top:2px;"}
+      -trans "on the right to open it."
+
+  -elif object.flow_type == 'V' and not call_channel
+    %p
+      -blocktrans with name=brand.name
+        To get started you need to add a voice-enabled channel to your account. A voice-enabled channel is a
+        phone number which {{ name }} can use to make and receive phone calls on your behalf. For example, Twilio
+        is a service which provides voice-enabled numbers which you can add as channels in your {{ name }} account.
+
+  -else
+    .launch-message
+      -trans "To launch the flow in the future, please specify the date and time that it should start as well as the recipients."
+
+    #trigger_omnibox
+      {% render_field 'omnibox' %}
+
+    #schedule-options
+      %label.schedule-options-label{for:"later-option"}
+        #start-datetime{ name:'start_datetime', disabled:'true', value:'{% trans "Select a date" %}'}
+      %input#start-datetime-value{type:'hidden', name:'start_datetime_value', value:''}
+      %input#later-option{type:'hidden', name:'start',value:'later'}
+
+    #recurrence
+      .repeat-period
+        %p.instructions
+          -render_field 'repeat_period'
+      .weekly-repeat-options{class:'{% if form.initial.repeat_period == "W" %}{% else%}hide{%endif%}'}
+        .btn-group{'data-toggle':'buttons-checkbox'}
+          #mon.btn{value:2, class:'{% if 0 in days %}active{% endif %}'}
+            -trans "Mon"
+          #tue.btn{value:4, class:'{% if 1 in days %}active{% endif %}'}
+            -trans "Tue"
+          #wed.btn{value:8, class:'{% if 2 in days %}active{% endif %}'}
+            -trans "Wed"
+          #thu.btn{value:16, class:'{% if 3 in days %}active{% endif %}'}
+            -trans "Thu"
+          #fri.btn{value:32, class:'{% if 4 in days %}active{% endif %}'}
+            -trans "Fri"
+          #sat.btn{value:64, class:'{% if 5 in days %}active{% endif %}'}
+            -trans "Sat"
+          #sun.btn{value:128, class:'{% if 6 in days %}active{% endif %}'}
+            -trans "Sun"
+  
+        %input#repeat-days-value{name:'repeat_days', type:'hidden'}
+
+-block form-buttons
+  -if send_channel
+    .form-actions
+      %input.btn.btn-primary{type:"submit", value:"{{ submit_button_name }}"}
+
+-block modal-script
+  {{ block.super }}
+
+  %script{src:"{{ STATIC_URL }}js/bootstrap-datetimepicker.min.js"}
+  %script{src:"{{ STATIC_URL }}js/schedules-ui.js?v=3"}
+  %script{src:"{% url 'django.views.i18n.javascript_catalog' %}"}
+
+  :javascript
+    var user_tz = "{{ user_tz }}";
+    var user_tz_offset = {{ user_tz_offset }};
+  
+    $(document).ready(function() {
+
+      var minDate = new Date();
+      initializeBootstrapDatetimePicker(minDate, undefined, false);
+
+      // initialize our omnibox
+      prepareOmnibox();
+
+    });
