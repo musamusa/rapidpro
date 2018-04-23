@@ -387,6 +387,10 @@ class Flow(TembaModel):
                     flow = Flow.create(org, user, Flow.get_unique_name(org, name), flow_type=flow_type,
                                        expires_after_minutes=expires_minutes)
 
+                is_optin_flow = flow_spec['metadata'].get('optin', False)
+                if is_optin_flow:
+                    org.set_optin_flow(user, flow.uuid)
+
                 created_flows.append(dict(flow=flow, flow_spec=flow_spec))
 
                 if 'uuid' in flow_spec['metadata']:

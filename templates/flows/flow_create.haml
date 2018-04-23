@@ -1,5 +1,6 @@
 -extends 'flows/flow_update.haml'
 
+-load i18n
 
 -block modal-script
   {{block.super}}
@@ -17,4 +18,28 @@
           triggers.show()
         }
       });
+
+      $('.field_keyword_triggers').addClass('hide');
+      $('.field_flow_type').addClass('hide');
+
+      var btnAdvancedOptions = $('a#advanced-options');
+
+      btnAdvancedOptions.click(function() {
+        if (btnAdvancedOptions[0].className === 'active') {
+          $('.field_keyword_triggers').addClass('hide');
+          $('.field_flow_type').addClass('hide');
+          btnAdvancedOptions.removeClass('active');
+          btnAdvancedOptions.html('{% trans "Advanced options" %}');
+        } else {
+          $('.field_keyword_triggers').removeClass('hide');
+          $('.field_flow_type').removeClass('hide');
+          btnAdvancedOptions.addClass('active');
+          btnAdvancedOptions.html('{% trans "Simple options" %}');
+        }
+      });
+
     });
+
+-block form-right
+  %a{href: 'javascript:;', id: 'advanced-options'}
+    -trans "Advanced options"

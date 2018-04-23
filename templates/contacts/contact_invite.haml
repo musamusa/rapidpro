@@ -51,16 +51,15 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
-              %form{id: 'opt-in', class: 'span6', action: '', method: 'POST'}
-
-                %label
-                  -trans "Invitation text"
-
-                %span.counter
-                  -trans "0/160"
-
-                %textarea{name: 'invitation-text', id: 'invitation-text', maxlength: '160', onkeyup: 'countChar(this)'}= invitation_text
+              %form{id: 'opt-in', class: 'span12', action: '', method: 'POST'}
+                %label{for:'optin-flow'}
+                  -trans "Opt-in Flow"
+                %select{name:'id_optin_flow', style:"height:34px", id:"optin-flow", class:"select2", select2:""}
+                  -for flow in org_flows
+                    <option value="{{ flow.uuid }}"{% if flow.uuid == optin_flow %} selected{% endif %}>{{ flow.name }}</option>
                 %input{type: 'submit', class: 'btn btn-primary', value: 'Save'}
+                %a{href: '{% url "flows.flow_editor" optin_flow %}', style: 'display: table', target: '_blank'}
+                  -trans "Open in the flow editor"
 
               .list-container
                 %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
@@ -74,10 +73,6 @@
                     %th
                       - if object_list
                         -trans "Created On"
-
-                    %th
-                      - if object_list
-                        -trans "Invited On"
 
                     %th
                       - if object_list
@@ -103,27 +98,13 @@
                           %nobr
                             {{ object.created_on|gmail_time }}
 
-                        %td.value-received.field_received.value-date
-                          %nobr
-                            -if object.invited_on
-                              {{ object.invited_on|gmail_time }}
-                            -else
-                              -trans "-"
-
                         %td.value-received.field_received.button-invitation
                           %nobr
-                            -if not object.invited_on
-                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this), false);return false;', data-id: '{{ object.id }}'}
+                            -if object.get_urns
+                              %a.btn.btn-primary{href: 'javascript:;', onclick: 'inviteContact($(this));return false;', data-id: '{{ object.id }}'}
                                 -trans "Invite"
-                            -elif object.invitation_status == 'S'
-                              %a{href: 'javascript:;', onclick: 'inviteContact($(this), true);return false;', data-id: '{{ object.id }}'}
-                                -trans "Re-Invite"
-                            -elif object.invitation_status == 'A'
-                              %a.not-link{style: 'color: green;'}
-                                -trans "Accepted"
-                            -elif object.invitation_status == 'R'
-                              %a.not-link{style: 'color: red;'}
-                                -trans "Rejected"
+                            -else
+                              -trans "--"
 
                         // This is needed for action buttons
                         %td.hide
@@ -187,6 +168,11 @@
       min-width:125px;
     }
 
+    .span9 .object-list tbody td {
+      padding: 7px 6px;
+      vertical-align: middle;
+    }
+
     .span9 .contact_list tr.contacts {
       border-top: none;
     }
@@ -218,22 +204,6 @@
       font-weight: bold;
     }
 
-    form#opt-in textarea {
-      width: 100%;
-      height: 100px;
-      resize: none;
-      -webkit-box-sizing:border-box;
-      -moz-box-sizing:border-box;
-      -ms-box-sizing:border-box;
-      box-sizing:border-box;
-    }
-
-    form#opt-in span.counter {
-      position: absolute;
-      top: 0;
-      right: 0;
-    }
-
     a.not-link {
       cursor: text;
     }
@@ -253,26 +223,20 @@
     });
 
     $(document).ready(function() {
-      var textarea_invitation_text = $('textarea#invitation-text');
-      countChar(textarea_invitation_text, true);
+      $('#optin-flow').select2({ minimumResultsForSearch: 10, width: '370px' });
     });
 
-    function inviteContact(element, re_invitation) {
+    function inviteContact(element) {
       var contactId = element.data('id');
 
-      if (!re_invitation) {
-        element.removeClass('btn');
-        element.removeClass('btn-primary');
-        element.attr('onclick', 'inviteContact($(this), true);return false;');
-        element.html('Re-Invite');
-      }
-
-      if (re_invitation) {
-        element.html('Invite Sent');
-        setTimeout(function(){
-          element.html('Re-Invite');
-        }, 3000)
-      }
+      element.removeClass('btn');
+      element.removeClass('btn-primary');
+      element.html('Invite Sent');
+      setTimeout(function(){
+        element.html('Invite');
+        element.addClass('btn');
+        element.addClass('btn-primary');
+      }, 5000)
 
       var headers = { 'X-PJAX': true };
       var type = 'GET';
@@ -291,15 +255,6 @@
       });
 
     }
-
-    function countChar(val, onready) {
-      if (onready) {
-        var len = val[0].value.length;
-      } else {
-        var len = val.value.length;
-      }
-      $('span.counter').text(len + '/160');
-    };
 
     {% if org_perms.contacts.contact_create %}
     if($(location).attr('hash') == '#contact') {
