@@ -6,6 +6,7 @@ import logging
 import plivo
 import nexmo
 import six
+import requests
 
 from collections import OrderedDict
 from datetime import datetime
@@ -2116,12 +2117,49 @@ class OrgCRUDL(SmartCRUDL):
             initial['disconnect'] = 'false'
             return initial
 
+        def get(self, request, *args, **kwargs):
+            org = self.get_object()
+
+            redirect_uri = '%s%s' % (settings.BRANDING.get(settings.DEFAULT_BRAND).get('link'), reverse('orgs.org_salesforce'))
+
+            sf_code = self.request.GET.get('code', None)
+
+            if sf_code:
+                data = {
+                    'grant_type': 'authorization_code',
+                    'redirect_uri': redirect_uri,
+                    'code': sf_code,
+                    'client_id': settings.SALESFORCE_CONSUMER_KEY,
+                    'client_secret': settings.SALESFORCE_CONSUMER_SECRET
+                }
+                headers = {'content-type': 'application/x-www-form-urlencoded'}
+                headers.update(settings.OUTGOING_REQUEST_HEADERS)
+                response = requests.post(settings.SALESFORCE_ACCESS_TOKEN_URL, data=data, headers=headers)
+
+                if response.status_code == 200:
+                    response = response.json()
+                    org.connect_salesforce_account(response.get('instance_url'), response.get('access_token'), response.get('refresh_token'), self.request.user)
+                    return HttpResponseRedirect(reverse('orgs.org_home'))
+                else:
+                    messages.success(self.request, _('There was an error in the Salesforce auth request'))
+
+            return super(OrgCRUDL.Salesforce, self).get(request, *args, **kwargs)
+
         def get_context_data(self, **kwargs):
             context = super(OrgCRUDL.Salesforce, self).get_context_data(**kwargs)
             (sf_instance_url, sf_access_token, sf_refresh_token) = self.object.get_salesforce_credentials()
 
             if sf_instance_url:
                 context['sf_instance_url'] = sf_instance_url
+
+            redirect_uri = '%s%s' % (settings.BRANDING.get(settings.DEFAULT_BRAND).get('link'), reverse('orgs.org_salesforce'))
+
+            salesforce_url = settings.SALESFORCE_AUTHORIZE_URL
+            salesforce_url += '?response_type=code'
+            salesforce_url += ('&client_id=' + settings.SALESFORCE_CONSUMER_KEY)
+            salesforce_url += ('&redirect_uri=' + redirect_uri)
+
+            context['salesforce_url'] = salesforce_url
 
             return context
 
@@ -2231,7 +2269,7 @@ class OrgCRUDL(SmartCRUDL):
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
 
             if self.has_org_perm('orgs.org_salesforce'):
-                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', action='redirect')
+                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', action='redirect', nobutton=True)
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 

@@ -10,28 +10,31 @@
       -trans "Salesforce Account"
 
 -block summary
-  -if instance_url
+  -if sf_instance_url
     -trans "Connected to Salesforce Account"
-    <b>{{instance_url}}</b>.
+    <b>{{sf_instance_url}}</b>.
   -else
     -trans "Connect your Salesforce account"
 
 -block pre-form
-  -if not instance_url
+  -if not sf_instance_url
     -trans "Adding a Salesforce account will allow you to import and export data between Salesforce and Community Connect Labs."
     %hr
 
+    %a.btn.btn-primary{href:'{{ salesforce_url }}'}
+      -trans "Connect to Salesforce"
+
 -block fields
-  -if not instance_url
+  -if not sf_instance_url
     {{ block.super }}
 
 -block form-buttons
 
 -block post-form
-  -if instance_url and request.META.HTTP_X_FORMAX
+  -if sf_instance_url and request.META.HTTP_X_FORMAX
     %p
       -trans "Your Salesforce account is connected: "
-      {{instance_url}}.
+      {{sf_instance_url}}.
 
     %p
       -trans "If you no longer want it connected, you can"
