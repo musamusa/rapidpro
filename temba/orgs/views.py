@@ -51,6 +51,7 @@ from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, 
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
+from .models import SF_INSTANCE_URL, SF_ACCESS_TOKEN, SF_REFRESH_TOKEN
 
 
 def check_login(request):
@@ -455,7 +456,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'salesforce')
 
     model = Org
 
@@ -2090,6 +2091,52 @@ class OrgCRUDL(SmartCRUDL):
 
             return super(OrgCRUDL.Chatbase, self).form_valid(form)
 
+    class Salesforce(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
+
+        class SalesforceForm(forms.ModelForm):
+            disconnect = forms.CharField(widget=forms.HiddenInput, max_length=6, required=True)
+
+            def clean(self):
+                super(OrgCRUDL.Salesforce.SalesforceForm, self).clean()
+                return self.cleaned_data
+
+            class Meta:
+                model = Org
+                fields = ('disconnect', )
+
+        success_message = ''
+        success_url = '@orgs.org_home'
+        form_class = SalesforceForm
+
+        def derive_initial(self):
+            initial = super(OrgCRUDL.Salesforce, self).derive_initial()
+            org = self.get_object()
+            config = org.config_json()
+            initial['instance_url'] = config.get(SF_INSTANCE_URL, None)
+            initial['disconnect'] = 'false'
+            return initial
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.Salesforce, self).get_context_data(**kwargs)
+            (sf_instance_url, sf_access_token, sf_refresh_token) = self.object.get_salesforce_credentials()
+
+            if sf_instance_url:
+                context['sf_instance_url'] = sf_instance_url
+
+            return context
+
+        def form_valid(self, form):
+            user = self.request.user
+            org = user.get_org()
+
+            disconnect = form.cleaned_data.get('disconnect', 'false') == 'true'
+
+            if disconnect:
+                org.remove_salesforce_account(user)
+                return HttpResponseRedirect(reverse('orgs.org_home'))
+
+            return super(OrgCRUDL.Salesforce, self).form_valid(form)
+
     class Home(FormaxMixin, InferOrgMixin, OrgPermsMixin, SmartReadView):
         title = _("Your Account")
 
@@ -2182,6 +2229,9 @@ class OrgCRUDL(SmartCRUDL):
             # only pro orgs get multiple users
             if self.has_org_perm("orgs.org_manage_accounts") and org.is_multi_user_tier():
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
+
+            if self.has_org_perm('orgs.org_salesforce'):
+                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', action='redirect')
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 

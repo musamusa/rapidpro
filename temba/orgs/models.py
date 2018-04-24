@@ -121,6 +121,10 @@ CHATBASE_TYPE_USER = 'user'
 CHATBASE_FEEDBACK = 'CHATBASE_FEEDBACK'
 CHATBASE_VERSION = 'CHATBASE_VERSION'
 
+SF_INSTANCE_URL = 'SF_INSTANCE_URL'
+SF_ACCESS_TOKEN = 'SF_ACCESS_TOKEN'
+SF_REFRESH_TOKEN = 'SF_REFRESH_TOKEN'
+
 FLOW_OPT_IN = 'FLOW_OPT_IN'
 
 ORG_STATUS = 'STATUS'
@@ -906,6 +910,45 @@ class Org(SmartModel):
 
             # clear all our channel configurations
             self.clear_channel_caches()
+
+    def get_salesforce_credentials(self):
+        if self.config:
+            config = self.config_json()
+            sf_instance_url = config.get(SF_INSTANCE_URL, None)
+            sf_access_token = config.get(SF_ACCESS_TOKEN, None)
+            sf_refresh_token = config.get(SF_REFRESH_TOKEN, None)
+            return sf_instance_url, sf_access_token, sf_refresh_token
+        else:
+            return None, None, None
+
+    def connect_salesforce_account(self, instance_url, access_token, refresh_token, user):
+        sf_config = {
+            SF_INSTANCE_URL: instance_url,
+            SF_ACCESS_TOKEN: access_token,
+            SF_REFRESH_TOKEN: refresh_token
+        }
+
+        config = self.config_json()
+        config.update(sf_config)
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
+
+    def remove_salesforce_account(self, user):
+        config = self.config_json()
+
+        if SF_INSTANCE_URL in config:
+            del config[SF_INSTANCE_URL]
+
+        if SF_ACCESS_TOKEN in config:
+            del config[SF_ACCESS_TOKEN]
+
+        if SF_REFRESH_TOKEN in config:
+            del config[SF_REFRESH_TOKEN]
+
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
 
     def connect_chatbase(self, agent_name, api_key, version, user):
         chatbase_config = {
