@@ -2269,7 +2269,7 @@ class OrgCRUDL(SmartCRUDL):
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
 
             if self.has_org_perm('orgs.org_salesforce'):
-                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', action='redirect', nobutton=True)
+                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', nobutton=True)
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 
