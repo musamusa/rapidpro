@@ -2141,7 +2141,7 @@ class OrgCRUDL(SmartCRUDL):
                     org.connect_salesforce_account(response.get('instance_url'), response.get('access_token'), response.get('refresh_token'), self.request.user)
                     return HttpResponseRedirect(reverse('orgs.org_home'))
                 else:
-                    messages.success(self.request, _('There was an error in the Salesforce auth request'))
+                    messages.error(self.request, _('There was an error in the Salesforce auth request'))
 
             return super(OrgCRUDL.Salesforce, self).get(request, *args, **kwargs)
 
