@@ -441,6 +441,12 @@
                   %span.attn
                     [[action.label]]
 
+                // updating salesforce contact
+                %span{ng-show:'action.type == "sf_export"'}
+                  Update value for
+                  %span.attn
+                    [[action.label]]
+
                 // sending emails
                 %span{ng-show:'action.type == "email"'}
                   .subject
