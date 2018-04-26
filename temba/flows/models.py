@@ -5212,7 +5212,6 @@ class SalesforceExportAction(Action):
         return dict(type=self.TYPE, uuid=self.uuid, field=self.field, label=self.label, value=self.value)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
-        print('we are here')
         return []
 
 
