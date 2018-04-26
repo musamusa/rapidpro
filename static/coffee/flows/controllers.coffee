@@ -2127,6 +2127,20 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
 
+  # Export contact data to Salesforce
+  $scope.exportContactDataToSalesforce = (field, value) ->
+
+    if $scope.hasInvalidFields([value])
+      return
+
+    $scope.action.type = 'sf_export'
+    $scope.action.field = field.id
+    $scope.action.label = field.text
+    $scope.action.value = value
+
+    Flow.saveAction(actionset, $scope.action)
+    $modalInstance.close()
+
   # save a webhook action
   $scope.saveWebhook = (method, url) ->
 

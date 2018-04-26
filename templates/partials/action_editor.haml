@@ -194,6 +194,24 @@
       %button{ng-click:"saveUpdateContact(action_editor.field.selected, action.value)",class:"submit hide"}
         -trans "Ok"
 
+    %div{ng-if:'config.type == "sf_export"'}
+      .label
+        -trans "Field"
+      %input{ng-model:"field",name:"field",text:"[[action.label]]", select-static:"[[updateContactFields]]",required:"",key:"[[action.field]]",type:"hidden"}
+      .help-text
+        -blocktrans
+          Select an existing field.
+      -include 'partials/invalid_fields.haml'            
+      .label
+        -trans "Value"
+      %input{ng-model:"action.value",name:"value",auto-complete:"",flow:"[[flowId]]",ng-required:"true",type:"text"}
+      .help-text
+        -blocktrans
+          The value to store can be any text you like. You can also reference other
+          values that have been collected up to this point by typing @flow.
+      %button{ng-click:"exportContactDataToSalesforce(action_editor.field.selected, action.value)",class:"submit hide"}
+        -trans "Ok"
+
     %div{ng-if:'config.type == "email"'}
       .label
         -trans "To"

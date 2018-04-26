@@ -5099,6 +5099,7 @@ class Action(object):
                 PlayAction.TYPE: PlayAction,
                 TriggerFlowAction.TYPE: TriggerFlowAction,
                 EndUssdAction.TYPE: EndUssdAction,
+                SalesforceExportAction.TYPE: SalesforceExportAction,
             }
 
         action_type = json_obj.get(cls.TYPE)
@@ -5185,6 +5186,33 @@ class EmailAction(Action):
             if invalid_addresses:
                 invalid_addresses = ['"%s"' % elt for elt in invalid_addresses]
                 ActionLog.warn(run, _("Some email address appear to be invalid: %s") % ", ".join(invalid_addresses))
+        return []
+
+
+class SalesforceExportAction(Action):
+    """
+    Forwards the steps in this flow to the Salesforce Account (if any)
+    """
+    TYPE = 'sf_export'
+
+    def __init__(self, uuid, field, label, value):
+        super(SalesforceExportAction, self).__init__(uuid)
+        self.field = field
+        self.value = value
+        self.label = label
+
+    @classmethod
+    def from_json(cls, org, json_obj):
+        return cls(json_obj.get(cls.UUID),
+                   json_obj.get('field', None),
+                   json_obj.get('label', None),
+                   json_obj.get('value', None))
+
+    def as_json(self):
+        return dict(type=self.TYPE, uuid=self.uuid, field=self.field, label=self.label, value=self.value)
+
+    def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+        print('we are here')
         return []
 
 
