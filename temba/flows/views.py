@@ -47,6 +47,8 @@ from temba.values.models import Value
 from uuid import uuid4
 from .models import FlowStep, RuleSet, ActionLog, ExportFlowResultsTask, FlowLabel, FlowStart, FlowPathRecentMessage
 
+from simple_salesforce import Salesforce
+
 logger = logging.getLogger(__name__)
 
 
@@ -376,7 +378,8 @@ class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
-               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule')
+               'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule',
+               'salesforce_fields')
 
     model = Flow
 
@@ -1979,6 +1982,26 @@ class FlowCRUDL(SmartCRUDL):
                 on_transaction_commit(lambda: check_schedule_task.delay(obj.schedule.pk))
 
             return obj
+
+    class SalesforceFields(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+            sf_fields = []
+
+            sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+            metadata = sf.Contact.describe()
+            fields = metadata.get('fields', None)
+
+            if fields:
+                fields = sorted(fields, key=lambda x: x.get('label'))
+
+            for item in fields:
+                if item.get('name') is not None:
+                    sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+
+            return JsonResponse(dict(results=sf_fields))
 
 
 # this is just for adhoc testing of the preprocess url

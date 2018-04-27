@@ -50,6 +50,8 @@ from temba.values.models import Value
 from temba_expressions.utils import tokenize
 from uuid import uuid4
 
+from simple_salesforce import Salesforce
+
 
 logger = logging.getLogger(__name__)
 
@@ -5212,6 +5214,18 @@ class SalesforceExportAction(Action):
         return dict(type=self.TYPE, uuid=self.uuid, field=self.field, label=self.label, value=self.value)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+        org = run.flow.org
+        (value, errors) = Msg.evaluate_template(self.value, context, org=org, url_encode=True)
+
+        if errors:
+            ActionLog.warn(run, _("Value appears to contain errors: %s") % ", ".join(errors))
+
+        (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+        if sf_instance_url and run.contact.salesforce_id:
+            sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+            sf.Contact.update(run.contact.salesforce_id, {self.field: value})
+
         return []
 
 

@@ -197,11 +197,10 @@
     %div{ng-if:'config.type == "sf_export"'}
       .label
         -trans "Field"
-      %input{ng-model:"field",name:"field",text:"[[action.label]]", select-static:"[[updateContactFields]]",required:"",key:"[[action.field]]",type:"hidden"}
+      %input{ng-model:"field", name:"field", search:"true", text:"[[action.label]]", select-static:"[[salesforceContactFieldSearch]]", required:"", key:"[[action.field]]", type:"hidden"}
       .help-text
         -blocktrans
           Select an existing field.
-      -include 'partials/invalid_fields.haml'            
       .label
         -trans "Value"
       %input{ng-model:"action.value",name:"value",auto-complete:"",flow:"[[flowId]]",ng-required:"true",type:"text"}

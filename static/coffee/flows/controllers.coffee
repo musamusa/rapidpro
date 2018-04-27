@@ -972,6 +972,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   $scope.contactFields = Flow.contactFieldSearch
   $scope.updateContactFields = Flow.updateContactSearch
+  $scope.salesforceContactFieldSearch = Flow.salesforceContactFieldSearch
 
   $scope.actionConfigs = Flow.actions
   $scope.rulesetConfigs = Flow.rulesets
@@ -2129,10 +2130,6 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   # Export contact data to Salesforce
   $scope.exportContactDataToSalesforce = (field, value) ->
-
-    if $scope.hasInvalidFields([value])
-      return
-
     $scope.action.type = 'sf_export'
     $scope.action.field = field.id
     $scope.action.label = field.text

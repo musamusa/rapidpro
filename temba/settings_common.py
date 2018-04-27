@@ -461,6 +461,7 @@ PERMISSIONS = {
                    'results',
                    'revisions',
                    'run_table',
+                   'salesforce_fields',
                    'simulate',
                    'upload_action_recording',
                    'upload_media_action',

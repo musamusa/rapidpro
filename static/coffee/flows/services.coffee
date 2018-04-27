@@ -1100,6 +1100,14 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         $http.get('/label/').success (labels) ->
           Flow.labels = labels
 
+        $http.get('/flow/salesforce_fields/').success (fields) ->
+          salesforceContactFieldSearch = []
+
+          for field in fields.results
+            salesforceContactFieldSearch.push({ id: field.id, text: field.text })
+
+          Flow.salesforceContactFieldSearch = salesforceContactFieldSearch
+
         $timeout ->
           window.loaded = true
           Plumb.repaint()
