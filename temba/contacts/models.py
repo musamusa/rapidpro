@@ -487,6 +487,9 @@ class Contact(TembaModel):
     language = models.CharField(max_length=3, verbose_name=_("Language"), null=True, blank=True,
                                 help_text=_("The preferred language for this contact"))
 
+    salesforce_id = models.CharField(max_length=255, verbose_name=_("Salesforce ID"), null=True, blank=True,
+                                     help_text=_("Salesforce ID related to this contact"))
+
     simulation = False
 
     NAME = 'name'
