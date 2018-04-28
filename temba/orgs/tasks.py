@@ -1,10 +1,12 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import time
+import requests
 
 from celery.task import task
 from datetime import timedelta
 from django.utils import timezone
+from django.conf import settings
 from temba.utils.queues import nonoverlapping_task
 from .models import CreditAlert, Invitation, Org, TopUpCredits
 
@@ -45,3 +47,25 @@ def calculate_credit_caches():  # pragma: needs cover
 @nonoverlapping_task(track_started=True, name="squash_topupcredits", lock_key='squash_topupcredits')
 def squash_topupcredits():
     TopUpCredits.squash()
+
+
+@task(track_started=True, name='refresh_salesforce_access_tokens')
+def refresh_salesforce_access_tokens():  # pragma: needs cover
+
+    for org in Org.objects.all().order_by('pk'):
+        (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+        if not org.is_suspended() and sf_instance_url and sf_refresh_token:
+            data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': sf_refresh_token,
+                'client_id': settings.SALESFORCE_CONSUMER_KEY,
+                'client_secret': settings.SALESFORCE_CONSUMER_SECRET
+            }
+            headers = {'content-type': 'application/x-www-form-urlencoded'}
+            headers.update(settings.OUTGOING_REQUEST_HEADERS)
+            response = requests.post(settings.SALESFORCE_ACCESS_TOKEN_URL, data=data, headers=headers)
+
+            if response.status_code == 200:
+                response = response.json()
+                org.connect_salesforce_account(sf_instance_url, response.get('access_token'), sf_refresh_token, org.created_by)

@@ -1017,7 +1017,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'refresh_jiochat_access_tokens',
         'schedule': timedelta(seconds=3600),
     },
-
+    "refresh-salesforce-access-tokens": {
+        'task': 'refresh_salesforce_access_tokens',
+        'schedule': timedelta(seconds=3600),
+    },
 }
 
 # Mapping of task name to task function path, used when CELERY_ALWAYS_EAGER is set to True
