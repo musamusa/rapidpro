@@ -56,6 +56,8 @@ def refresh_salesforce_access_tokens():  # pragma: needs cover
         (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
         if not org.is_suspended() and sf_instance_url and sf_refresh_token:
+            print('> Updating Salesforce access token for org %s' % org.slug)
+
             data = {
                 'grant_type': 'refresh_token',
                 'refresh_token': sf_refresh_token,
