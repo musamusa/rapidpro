@@ -33,7 +33,7 @@ from .models import Contact, ContactGroup, ContactGroupCount, ContactField, Cont
 from .models import ExportContactsTask, TEL_SCHEME
 from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
-from .tasks import export_contacts_task
+from .tasks import export_contacts_task, export_salesforce_contacts_task
 
 
 class RemoveContactForm(forms.Form):
@@ -110,10 +110,10 @@ class ContactListView(OrgPermsMixin, SmartListView):
     def derive_group(self):
         return ContactGroup.all_groups.get(org=self.request.user.get_org(), group_type=self.system_group)
 
-    def derive_export_url(self):
+    def derive_export_url(self, reverse_name='contacts.contact_export'):
         search = urlquote_plus(self.request.GET.get('search', ''))
         redirect = urlquote_plus(self.request.get_full_path())
-        return '%s?g=%s&s=%s&redirect=%s' % (reverse('contacts.contact_export'), self.derive_group().uuid, search, redirect)
+        return '%s?g=%s&s=%s&redirect=%s' % (reverse(reverse_name), self.derive_group().uuid, search, redirect)
 
     def get_queryset(self, **kwargs):
         org = self.request.user.get_org()
@@ -343,7 +343,7 @@ class ContactCRUDL(SmartCRUDL):
     model = Contact
     actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
                'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
-               'history', 'invite', 'invite_filter', 'invite_send')
+               'history', 'invite', 'invite_filter', 'invite_send', 'salesforce_export')
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -383,6 +383,40 @@ class ContactCRUDL(SmartCRUDL):
                     messages.info(self.request,
                                   _("Export complete, you can find it here: %s (production users will get an email)")
                                   % dl_url)
+
+            return HttpResponseRedirect(redirect or reverse('contacts.contact_list'))
+
+    class SalesforceExport(OrgPermsMixin, SmartTemplateView):
+        def render_to_response(self, context, **response_kwargs):
+            user = self.request.user
+            org = user.get_org()
+
+            group_uuid = self.request.GET.get('g')
+            search = self.request.GET.get('s')
+            redirect = self.request.GET.get('redirect')
+
+            group = ContactGroup.all_groups.filter(org=org, uuid=group_uuid).first() if group_uuid else None
+
+            # is there already an export taking place?
+            existing = ExportContactsTask.get_recent_unfinished(org)
+            if existing:
+                messages.info(self.request,
+                              _("There is already an export in progress, started by %s. You must wait "
+                                "for that export to complete before starting another." % existing.created_by.username))
+
+            # otherwise, off we go
+            else:
+                previous_export = ExportContactsTask.objects.filter(org=org, created_by=user).order_by('-modified_on').first()
+                if previous_export and previous_export.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
+                    analytics.track(self.request.user.username, 'temba.contact_salesforce_exported')
+
+                export = ExportContactsTask.create(org, user, group, search)
+
+                on_transaction_commit(lambda: export_salesforce_contacts_task.delay(export.pk))
+
+                messages.info(self.request,
+                                _("We are preparing your export. We will e-mail you at %s when it is ready.")
+                                % self.request.user.username)
 
             return HttpResponseRedirect(redirect or reverse('contacts.contact_list'))
 
@@ -876,6 +910,10 @@ class ContactCRUDL(SmartCRUDL):
 
             if self.has_org_perm('contacts.contact_export'):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
+
+            if self.has_org_perm('contacts.contact_salesforce_export'):
+                links.append(dict(title=_('Export to SalesForce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
+
             return links
 
         def get_context_data(self, *args, **kwargs):
@@ -1079,6 +1117,9 @@ class ContactCRUDL(SmartCRUDL):
 
             if self.has_org_perm('contacts.contact_export'):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
+
+            if self.has_org_perm('contacts.contact_salesforce_export'):
+                links.append(dict(title=_('Export to SalesForce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
 
             if self.has_org_perm('contacts.contactgroup_delete'):
                 links.append(dict(title=_('Delete Group'),

@@ -362,6 +362,7 @@ PERMISSIONS = {
                          'invite',
                          'invite_filter',
                          'invite_send',
+                         'salesforce_export'
                          ),
 
     'contacts.contactfield': ('api',
@@ -598,6 +599,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_invite',
         'contacts.contact_invite_filter',
         'contacts.contact_invite_send',
+        'contacts.contact_salesforce_export',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -739,6 +741,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_invite',
         'contacts.contact_invite_filter',
         'contacts.contact_invite_send',
+        'contacts.contact_salesforce_export',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -1019,7 +1022,7 @@ CELERYBEAT_SCHEDULE = {
     },
     "refresh-salesforce-access-tokens": {
         'task': 'refresh_salesforce_access_tokens',
-        'schedule': timedelta(seconds=3600),
+        'schedule': timedelta(seconds=600),
     },
 }
 
