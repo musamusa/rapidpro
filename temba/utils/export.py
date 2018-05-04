@@ -53,7 +53,7 @@ class BaseExportTask(TembaModel):
 
     status = models.CharField(max_length=1, default=STATUS_PENDING, choices=STATUS_CHOICES)
 
-    def perform(self):
+    def perform(self, event='contact'):
         """
         Performs the actual export. If export generation throws an exception it's caught here and the task is marked
         as failed.
@@ -63,9 +63,11 @@ class BaseExportTask(TembaModel):
 
             start = time.time()
 
-            temp_file, extension = self.write_export()
-
-            get_asset_store(model=self.__class__).save(self.id, File(temp_file), extension)
+            if event == 'contact':
+                temp_file, extension = self.write_export()
+                get_asset_store(model=self.__class__).save(self.id, File(temp_file), extension)
+            else:
+                self.salesforce_export()
 
             branding = self.org.get_branding()
 
@@ -84,6 +86,12 @@ class BaseExportTask(TembaModel):
             analytics.track(self.created_by.username, 'temba.%s_latency' % self.analytics_key, properties=dict(value=elapsed))
 
             gc.collect()  # force garbage collection
+
+    def salesforce_export(self):
+        """
+        Should push the contacts to SalesForce API
+        """
+        pass
 
     def write_export(self):  # pragma: no cover
         """

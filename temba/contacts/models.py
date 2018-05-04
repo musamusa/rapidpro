@@ -21,6 +21,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from itertools import chain
 from smartmin.models import SmartModel, SmartImportRowError
 from smartmin.csv_imports.models import ImportTask
+from simple_salesforce import Salesforce
 from temba.assets.models import register_asset_store
 from temba.channels.models import Channel
 from temba.locations.models import AdminBoundary
@@ -2593,6 +2594,103 @@ class ExportContactsTask(BaseExportTask):
                            time.time() - start, predicted))
 
         return exporter.save_file()
+
+    def salesforce_export(self):
+        (sf_instance_url, sf_access_token, sf_refresh_token) = self.org.get_salesforce_credentials()
+        if not sf_instance_url or not sf_access_token:
+            return False
+
+        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+        metadata = sf.Contact.describe()
+        sf_fields = metadata.get('fields', None)
+        salesforce_fields = [f.get('name') for f in sf_fields if f.get('name') is not None]
+
+        fields, scheme_counts = self.get_export_fields_and_schemes()
+
+        fields = [f for f in fields if f['label'] in salesforce_fields]
+
+        group = self.group or ContactGroup.all_groups.get(org=self.org, group_type=ContactGroup.TYPE_ALL)
+
+        if self.search:
+            contacts = Contact.search(self.org, self.search, group)
+        else:
+            contacts = group.contacts.all()
+
+        contact_ids = contacts.filter(is_test=False).order_by('name', 'id').values_list('id', flat=True)
+
+        current_contact = 0
+        start = time.time()
+
+        # write out contacts in batches to limit memory usage
+        for batch_ids in chunk_list(contact_ids, 1000):
+            # fetch all the contacts for our batch
+            batch_contacts = Contact.objects.filter(id__in=batch_ids).select_related('org')
+
+            # to maintain our sort, we need to lookup by id, create a map of our id->contact to aid in that
+            contact_by_id = {c.id: c for c in batch_contacts}
+
+            # bulk initialize them
+            Contact.bulk_cache_initialize(self.org, batch_contacts)
+
+            values = []
+            for contact_id in batch_ids:
+                contact = contact_by_id[contact_id]
+
+                data_field = {}
+                for col in range(len(fields)):
+                    field = fields[col]
+
+                    if field['key'] == Contact.NAME:
+                        field_value = contact.name
+                    elif field['key'] == Contact.UUID:
+                        field_value = contact.uuid
+                    elif field['key'] == Contact.ID:
+                        field_value = six.text_type(contact.id)
+                    elif field['urn_scheme'] is not None:
+                        contact_urns = contact.get_urns()
+                        scheme_urns = []
+                        for urn in contact_urns:
+                            if urn.scheme == field['urn_scheme']:
+                                scheme_urns.append(urn)
+                        position = field['position']
+                        if len(scheme_urns) > position:
+                            urn_obj = scheme_urns[position]
+                            field_value = urn_obj.get_display(org=self.org, formatted=False) if urn_obj else ''
+                        else:
+                            field_value = ''
+                    else:
+                        value = contact.get_field(field['key'])
+                        field_value = Contact.get_field_display_for_value(field['field'], value)
+
+                    if field_value is None:
+                        field_value = ''
+
+                    if field_value:
+                        field_value = six.text_type(clean_string(field_value))
+
+                    if field['label'] == Contact.NAME.capitalize():
+                        field['label'] = 'LastName'
+
+                    data_field[field['label']] = field_value
+
+                values.append(data_field)
+                current_contact += 1
+
+                # output some status information every 10,000 contacts
+                if current_contact % 10000 == 0:  # pragma: no cover
+                    elapsed = time.time() - start
+                    predicted = int(elapsed / (current_contact / (len(contact_ids) * 1.0)))
+
+                    print("Export of %s contacts - %d%% (%s/%s) complete in %0.2fs (predicted %0.0fs)" %
+                          (self.org.name, current_contact * 100 / len(contact_ids),
+                           "{:,}".format(current_contact), "{:,}".format(len(contact_ids)),
+                           time.time() - start, predicted))
+
+            results = sf.bulk.Contact.insert(values)
+            print(results)
+
+        return True
 
 
 @register_asset_store

@@ -415,8 +415,8 @@ class ContactCRUDL(SmartCRUDL):
                 on_transaction_commit(lambda: export_salesforce_contacts_task.delay(export.pk))
 
                 messages.info(self.request,
-                                _("We are preparing your export. We will e-mail you at %s when it is ready.")
-                                % self.request.user.username)
+                              _("We are preparing your export. We will e-mail you at %s when it is ready.")
+                              % self.request.user.username)
 
             return HttpResponseRedirect(redirect or reverse('contacts.contact_list'))
 
@@ -912,7 +912,7 @@ class ContactCRUDL(SmartCRUDL):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
 
             if self.has_org_perm('contacts.contact_salesforce_export'):
-                links.append(dict(title=_('Export to SalesForce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
+                links.append(dict(title=_('Export to Salesforce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
 
             return links
 
@@ -1119,7 +1119,7 @@ class ContactCRUDL(SmartCRUDL):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
 
             if self.has_org_perm('contacts.contact_salesforce_export'):
-                links.append(dict(title=_('Export to SalesForce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
+                links.append(dict(title=_('Export to Salesforce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
 
             if self.has_org_perm('contacts.contactgroup_delete'):
                 links.append(dict(title=_('Delete Group'),

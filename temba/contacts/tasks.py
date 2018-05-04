@@ -16,9 +16,9 @@ def export_contacts_task(id):
 @task(track_started=True, name='export_salesforce_contacts_task')
 def export_salesforce_contacts_task(id):
     """
-    Export contacts to SalesForce and sends an e-mail to the user when it gets the end.
+    Export contacts to Salesforce and sends an e-mail to the user when it gets the end.
     """
-    ExportContactsTask.objects.get(id=id).perform()
+    ExportContactsTask.objects.get(id=id).perform(event='salesforce')
 
 
 @nonoverlapping_task(track_started=True, name='squash_contactgroupcounts')

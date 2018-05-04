@@ -1990,16 +1990,17 @@ class FlowCRUDL(SmartCRUDL):
 
             sf_fields = []
 
-            sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-            metadata = sf.Contact.describe()
-            fields = metadata.get('fields', None)
+            if sf_instance_url and sf_access_token:
+                sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+                metadata = sf.Contact.describe()
+                fields = metadata.get('fields', None)
 
-            if fields:
-                fields = sorted(fields, key=lambda x: x.get('label'))
+                if fields:
+                    fields = sorted(fields, key=lambda x: x.get('label'))
 
-            for item in fields:
-                if item.get('name') is not None:
-                    sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+                for item in fields:
+                    if item.get('name') is not None:
+                        sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
 
             return JsonResponse(dict(results=sf_fields))
 
