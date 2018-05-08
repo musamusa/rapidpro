@@ -50,7 +50,7 @@ from .models import MT_SMS_EVENTS, MO_SMS_EVENTS, MT_CALL_EVENTS, MO_CALL_EVENTS
 from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, NEXMO_KEY
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
-from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
+from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME, FRESHCHAT_API_KEY
 
 
 def check_login(request):
@@ -455,7 +455,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'freshchat')
 
     model = Org
 
@@ -2090,6 +2090,62 @@ class OrgCRUDL(SmartCRUDL):
 
             return super(OrgCRUDL.Chatbase, self).form_valid(form)
 
+    class Freshchat(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
+
+        class FreshchatForm(forms.ModelForm):
+            api_key = forms.CharField(max_length=255, label=_("API Key"), required=False,
+                                      help_text="You can find the Freshchat documentation "
+                                                "<a href='https://developers.freshchat.com/' target='_new'>here</a>")
+            disconnect = forms.CharField(widget=forms.HiddenInput, max_length=6, required=True)
+
+            def clean(self):
+                super(OrgCRUDL.Freshchat.FreshchatForm, self).clean()
+                if self.cleaned_data.get('disconnect', 'false') == 'false':
+                    api_key = self.cleaned_data.get('api_key')
+
+                    if not api_key:
+                        raise ValidationError(_("Missing data: API Key."
+                                                "Please check them again and retry."))
+
+                return self.cleaned_data
+
+            class Meta:
+                model = Org
+                fields = ('api_key', 'disconnect')
+
+        success_message = ''
+        success_url = '@orgs.org_home'
+        form_class = FreshchatForm
+
+        def derive_initial(self):
+            initial = super(OrgCRUDL.Freshchat, self).derive_initial()
+            org = self.get_object()
+            config = org.config_json()
+            initial['api_key'] = config.get(FRESHCHAT_API_KEY, '')
+            initial['disconnect'] = 'false'
+            return initial
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.Freshchat, self).get_context_data(**kwargs)
+            freshchat_api_key = self.object.get_freshchat_credentials()
+            context['freshchat_is_connected'] = True if freshchat_api_key else False
+            return context
+
+        def form_valid(self, form):
+            user = self.request.user
+            org = user.get_org()
+
+            api_key = form.cleaned_data.get('api_key')
+            disconnect = form.cleaned_data.get('disconnect', 'false') == 'true'
+
+            if disconnect:
+                org.remove_freshchat_account(user)
+                return HttpResponseRedirect(reverse('orgs.org_home'))
+            elif api_key:
+                org.connect_freshchat(api_key, user)
+
+            return super(OrgCRUDL.Freshchat, self).form_valid(form)
+
     class Home(FormaxMixin, InferOrgMixin, OrgPermsMixin, SmartReadView):
         title = _("Your Account")
 
@@ -2178,6 +2234,15 @@ class OrgCRUDL(SmartCRUDL):
 
             if self.has_org_perm('orgs.org_resthooks'):
                 formax.add_section('resthooks', reverse('orgs.org_resthooks'), icon='icon-cloud-lightning', dependents="resthooks")
+
+            if self.has_org_perm('orgs.org_freshchat'):
+                freshchat_api_key = self.object.get_chatbase_credentials()
+                if not freshchat_api_key:
+                    formax.add_section('freshchat', reverse('orgs.org_freshchat'), icon='icon-bubbles-2',
+                                       action='redirect', button=_("Connect"))
+                else:  # pragma: needs cover
+                    formax.add_section('freshchat', reverse('orgs.org_freshchat'), icon='icon-bubbles-2',
+                                       action='redirect', nobutton=True)
 
             # only pro orgs get multiple users
             if self.has_org_perm("orgs.org_manage_accounts") and org.is_multi_user_tier():

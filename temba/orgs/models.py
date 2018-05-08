@@ -121,6 +121,8 @@ CHATBASE_TYPE_USER = 'user'
 CHATBASE_FEEDBACK = 'CHATBASE_FEEDBACK'
 CHATBASE_VERSION = 'CHATBASE_VERSION'
 
+FRESHCHAT_API_KEY = 'FRESHCHAT_API_KEY'
+
 FLOW_OPT_IN = 'FLOW_OPT_IN'
 
 ORG_STATUS = 'STATUS'
@@ -944,6 +946,33 @@ class Org(SmartModel):
             return chatbase_api_key, chatbase_version
         else:
             return None, None
+
+    def get_freshchat_credentials(self):
+        if self.config:
+            config = self.config_json()
+            freshchat_api_key = config.get(FRESHCHAT_API_KEY, None)
+            return freshchat_api_key
+        else:
+            return None
+
+    def connect_freshchat(self, api_key, user):
+        freshchat_config = {FRESHCHAT_API_KEY: api_key}
+
+        config = self.config_json()
+        config.update(freshchat_config)
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
+
+    def remove_freshchat_account(self, user):
+        config = self.config_json()
+
+        if FRESHCHAT_API_KEY in config:
+            del config[FRESHCHAT_API_KEY]
+
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
 
     def get_verboice_client(self):  # pragma: needs cover
         from temba.ivr.clients import VerboiceClient
