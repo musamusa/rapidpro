@@ -2104,8 +2104,7 @@ class OrgCRUDL(SmartCRUDL):
                     api_key = self.cleaned_data.get('api_key')
 
                     if not api_key:
-                        raise ValidationError(_("Missing data: API Key."
-                                                "Please check them again and retry."))
+                        raise ValidationError(_("Missing data: API Key. Please check it and retry."))
 
                 return self.cleaned_data
 
@@ -2236,7 +2235,7 @@ class OrgCRUDL(SmartCRUDL):
                 formax.add_section('resthooks', reverse('orgs.org_resthooks'), icon='icon-cloud-lightning', dependents="resthooks")
 
             if self.has_org_perm('orgs.org_freshchat'):
-                freshchat_api_key = self.object.get_chatbase_credentials()
+                freshchat_api_key = self.object.get_freshchat_credentials()
                 if not freshchat_api_key:
                     formax.add_section('freshchat', reverse('orgs.org_freshchat'), icon='icon-bubbles-2',
                                        action='redirect', button=_("Connect"))
