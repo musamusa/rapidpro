@@ -6,6 +6,7 @@ import logging
 import plivo
 import nexmo
 import six
+import requests
 
 from collections import OrderedDict
 from datetime import datetime
@@ -2098,13 +2099,32 @@ class OrgCRUDL(SmartCRUDL):
                                                 "<a href='https://developers.freshchat.com/' target='_new'>here</a>")
             disconnect = forms.CharField(widget=forms.HiddenInput, max_length=6, required=True)
 
+            def clean_api_key(self):
+                api_key = self.cleaned_data.get('api_key')
+
+                if api_key:
+                    url = '%s/user' % settings.FRESHCHAT_BASE_URL
+                    headers = settings.OUTGOING_REQUEST_HEADERS
+                    headers.update({
+                        'Content-Type': 'application/json',
+                        'Authorization': api_key
+                    })
+
+                    data = dict(firstName='CCL Test User', type='USER')
+                    response = requests.post(url, data=json.dumps(data), headers=headers)
+
+                    if response.status_code not in [200, 201]:
+                        raise ValidationError(_("Invalid token, please try again with a valid token."))
+
+                return api_key
+
             def clean(self):
                 super(OrgCRUDL.Freshchat.FreshchatForm, self).clean()
                 if self.cleaned_data.get('disconnect', 'false') == 'false':
                     api_key = self.cleaned_data.get('api_key')
 
                     if not api_key:
-                        raise ValidationError(_("Missing data: API Key. Please check it and retry."))
+                        raise ValidationError(_("Please check the API Key and retry."))
 
                 return self.cleaned_data
 

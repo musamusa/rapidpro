@@ -1256,3 +1256,5 @@ CHATBASE_API_URL = 'https://chatbase.com/api/message'
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
 GOOGLE_SHORTEN_URL_API_KEY = '__YOUR_GOOGLE_SHORTEN_URL_API_KEY__'
+
+FRESHCHAT_BASE_URL = 'https://web.freshchat.com/app/services/app/v1'
