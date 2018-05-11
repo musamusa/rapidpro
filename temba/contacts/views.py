@@ -902,6 +902,9 @@ class ContactCRUDL(SmartCRUDL):
         def get_gear_links(self):
             links = []
 
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
             if self.has_org_perm('contacts.contactgroup_create') and self.request.GET.get('search') and not self.search_error:
                 links.append(dict(title=_('Save as Group'), js_class='add-dynamic-group', href="#"))
 
@@ -911,7 +914,7 @@ class ContactCRUDL(SmartCRUDL):
             if self.has_org_perm('contacts.contact_export'):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
 
-            if self.has_org_perm('contacts.contact_salesforce_export'):
+            if self.has_org_perm('contacts.contact_salesforce_export') and sf_instance_url and sf_access_token:
                 links.append(dict(title=_('Export to Salesforce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
 
             return links
