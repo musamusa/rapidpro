@@ -536,6 +536,10 @@
                   .webhook
                     [[action.webhook]]
 
+                // freshchat
+                %span{ng-show:'action.type == "freshchat_call"'}
+                  -trans "Send data to Freshchat"
+
                 // setting channel
                 %span{ng-show:'action.type == "channel"'}
                   .channel
