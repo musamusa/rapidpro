@@ -501,6 +501,7 @@ class Contact(TembaModel):
     CONTACT_UUID = 'contact uuid'
     GROUPS = 'groups'
     ID = 'id'
+    SALESFORCE_ID = 'Id'
 
     # reserved contact fields
     RESERVED_FIELDS = [
@@ -2604,11 +2605,13 @@ class ExportContactsTask(BaseExportTask):
 
         metadata = sf.Contact.describe()
         sf_fields = metadata.get('fields', None)
+
         salesforce_fields = [f.get('name') for f in sf_fields if f.get('name') is not None]
 
         fields, scheme_counts = self.get_export_fields_and_schemes()
 
         fields = [f for f in fields if f['label'] in salesforce_fields]
+        fields.append({'field': None, 'urn_scheme': None, 'id': 0, 'key': 'Id', 'label': 'Id'})
 
         group = self.group or ContactGroup.all_groups.get(org=self.org, group_type=ContactGroup.TYPE_ALL)
 
@@ -2622,6 +2625,8 @@ class ExportContactsTask(BaseExportTask):
         current_contact = 0
         start = time.time()
 
+        print('> Starting export to Salesforce for %s contact(s)' % len(contact_ids))
+
         # write out contacts in batches to limit memory usage
         for batch_ids in chunk_list(contact_ids, 1000):
             # fetch all the contacts for our batch
@@ -2633,7 +2638,12 @@ class ExportContactsTask(BaseExportTask):
             # bulk initialize them
             Contact.bulk_cache_initialize(self.org, batch_contacts)
 
-            values = []
+            values_add = []
+            values_update = []
+
+            batch_ids_add = []
+            batch_ids_update = []
+
             for contact_id in batch_ids:
                 contact = contact_by_id[contact_id]
 
@@ -2647,6 +2657,8 @@ class ExportContactsTask(BaseExportTask):
                         field_value = contact.uuid
                     elif field['key'] == Contact.ID:
                         field_value = six.text_type(contact.id)
+                    elif field['key'] == Contact.SALESFORCE_ID:
+                        field_value = contact.salesforce_id
                     elif field['urn_scheme'] is not None:
                         contact_urns = contact.get_urns()
                         scheme_urns = []
@@ -2674,7 +2686,14 @@ class ExportContactsTask(BaseExportTask):
 
                     data_field[field['label']] = field_value
 
-                values.append(data_field)
+                if contact.salesforce_id:
+                    values_update.append(data_field)
+                    batch_ids_update.append(contact.id)
+                else:
+                    del data_field['Id']
+                    values_add.append(data_field)
+                    batch_ids_add.append(contact.id)
+
                 current_contact += 1
 
                 # output some status information every 10,000 contacts
@@ -2687,8 +2706,27 @@ class ExportContactsTask(BaseExportTask):
                            "{:,}".format(current_contact), "{:,}".format(len(contact_ids)),
                            time.time() - start, predicted))
 
-            results = sf.bulk.Contact.insert(values)
-            print(results)
+            if values_add:
+                results = sf.bulk.Contact.insert(values_add)
+
+                for index, contact_id in enumerate(batch_ids_add):
+                    contact = contact_by_id[contact_id]
+                    result_contact = results[index]
+
+                    if not contact.salesforce_id and result_contact.get('success', False) and result_contact.get('id', None):
+                        contact.salesforce_id = result_contact.get('id')
+                        contact.save()
+
+            if values_update:
+                results = sf.bulk.Contact.update(values_update)
+
+                for index, contact_id in enumerate(batch_ids_update):
+                    contact = contact_by_id[contact_id]
+                    result_contact = results[index]
+
+                    if not result_contact.get('success', False) and result_contact.get('errors', []):
+                        # TODO handle this results to remove SF ID from the contact if it was deleted on SF side
+                        print(result_contact)
 
         return True
 
