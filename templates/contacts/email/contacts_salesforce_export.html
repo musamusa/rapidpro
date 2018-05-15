@@ -10,7 +10,7 @@
 
 {% for item in errors %}
     <p style="margin: 5px 0;">
-        {% trans "Contact: " %}{{ item.contact }} <br>
+        {% trans "Contact: " %}{% if item.contact.name %}{{ item.contact }}{% else %}{{ item.contact.uuid }}{% endif %}<br>
         {% trans "Message: " %}{{ item.error }}
     </p>
 {% endfor %}

@@ -16,12 +16,8 @@ We got some warnings from Salesforce related to export process:
 
 {% for item in errors %}
 
-{% blocktrans %}
-
-Contact: {{ item.contact }}
-Message: {{ item.error }}
-
-{% endblocktrans %}
+{% blocktrans %}Contact: {% endblocktrans %}{% if item.contact.name %}{{ item.contact }}{% else %}{{ item.contact.uuid }}{% endif %}
+{% blocktrans %}Message: {% endblocktrans %}{{ item.error }}
 
 {% endfor %}
 
