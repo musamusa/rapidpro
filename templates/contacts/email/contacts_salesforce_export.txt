@@ -11,7 +11,7 @@ Your contacts export to Salesforce is ready.
 {% if errors %}
 
 {% blocktrans %}
-We got some warnings related to exportation process to Salesforce:
+We got some warnings from Salesforce related to export process:
 {% endblocktrans %}
 
 {% for item in errors %}
