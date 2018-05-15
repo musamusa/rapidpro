@@ -2654,7 +2654,8 @@ class ExportContactsTask(BaseExportTask):
                     field = fields[col]
 
                     if field['key'] == Contact.NAME:
-                        field_value = contact.name
+                        urn = contact.get_urn()
+                        field_value = contact.name or (urn.path if urn else None)
                     elif field['key'] == Contact.UUID:
                         field_value = contact.uuid
                     elif field['key'] == Contact.ID:
