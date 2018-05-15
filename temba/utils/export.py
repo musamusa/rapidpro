@@ -63,17 +63,22 @@ class BaseExportTask(TembaModel):
 
             start = time.time()
 
+            branding = self.org.get_branding()
+
             if event == 'contact':
                 temp_file, extension = self.write_export()
                 get_asset_store(model=self.__class__).save(self.id, File(temp_file), extension)
+
+                # notify user who requested this export
+                send_template_email(self.created_by.username, self.email_subject, self.email_template,
+                                    self.get_email_context(branding), branding)
             else:
-                self.salesforce_export()
+                (is_exported, errors) = self.salesforce_export()
 
-            branding = self.org.get_branding()
+                # notify user who requested this export
+                send_template_email(self.created_by.username, self.email_subject,
+                                    'contacts/email/contacts_salesforce_export', {'errors': errors}, branding)
 
-            # notify user who requested this export
-            send_template_email(self.created_by.username, self.email_subject, self.email_template,
-                                self.get_email_context(branding), branding)
         except Exception:
             import traceback
             traceback.print_exc()

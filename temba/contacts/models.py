@@ -2597,9 +2597,11 @@ class ExportContactsTask(BaseExportTask):
         return exporter.save_file()
 
     def salesforce_export(self):
+        errors = []
+
         (sf_instance_url, sf_access_token, sf_refresh_token) = self.org.get_salesforce_credentials()
         if not sf_instance_url or not sf_access_token:
-            return False
+            return False, errors
 
         sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
 
@@ -2686,6 +2688,7 @@ class ExportContactsTask(BaseExportTask):
 
                     data_field[field['label']] = field_value
 
+                # TODO Double check when save SF ID for the users
                 if contact.salesforce_id:
                     values_update.append(data_field)
                     batch_ids_update.append(contact.id)
@@ -2725,10 +2728,10 @@ class ExportContactsTask(BaseExportTask):
                     result_contact = results[index]
 
                     if not result_contact.get('success', False) and result_contact.get('errors', []):
-                        # TODO handle this results to remove SF ID from the contact if it was deleted on SF side
-                        print(result_contact)
+                        for error in result_contact.get('errors', []):
+                            errors.append(dict(contact=contact, error=error.get('message', None)))
 
-        return True
+        return True, errors
 
 
 @register_asset_store
