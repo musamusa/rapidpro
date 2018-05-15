@@ -2688,7 +2688,6 @@ class ExportContactsTask(BaseExportTask):
 
                     data_field[field['label']] = field_value
 
-                # TODO Double check when save SF ID for the users
                 if contact.salesforce_id:
                     values_update.append(data_field)
                     batch_ids_update.append(contact.id)
@@ -2716,7 +2715,12 @@ class ExportContactsTask(BaseExportTask):
                     contact = contact_by_id[contact_id]
                     result_contact = results[index]
 
-                    if not contact.salesforce_id and result_contact.get('success', False) and result_contact.get('id', None):
+                    if not result_contact.get('success', False) and result_contact.get('errors'):
+                        for error in result_contact.get('errors', []):
+                            err = '[%s] %s' % (error.get('statusCode', None), error.get('message', None))
+                            errors.append(dict(contact=contact, error=err))
+
+                    elif not contact.salesforce_id and result_contact.get('success', False) and result_contact.get('id', None):
                         contact.salesforce_id = result_contact.get('id')
                         contact.save()
 
@@ -2727,9 +2731,10 @@ class ExportContactsTask(BaseExportTask):
                     contact = contact_by_id[contact_id]
                     result_contact = results[index]
 
-                    if not result_contact.get('success', False) and result_contact.get('errors', []):
+                    if not result_contact.get('success', False) and result_contact.get('errors'):
                         for error in result_contact.get('errors', []):
-                            errors.append(dict(contact=contact, error=error.get('message', None)))
+                            err = '[%s] %s' % (error.get('statusCode', None), error.get('message', None))
+                            errors.append(dict(contact=contact, error=err))
 
         return True, errors
 
