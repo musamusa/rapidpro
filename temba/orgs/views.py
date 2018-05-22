@@ -2835,3 +2835,24 @@ class StripeHandler(View):  # pragma: no cover
 
         # empty response, 200 lets Stripe know we handled it
         return HttpResponse("Ignored, uninteresting event")
+
+
+class FreshchatHandler(View):  # pragma: no cover
+    """
+    Handles WebHook events from Freshchat.
+    """
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(FreshchatHandler, self).dispatch(*args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponse("ILLEGAL METHOD")
+
+    def post(self, request, *args, **kwargs):
+        from temba.orgs.models import Org, TopUp
+
+        # Freshchat delivers a JSON payload
+        data = json.loads(request.body)
+        print(request.body)
+
+        return HttpResponse(data)
