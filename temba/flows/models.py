@@ -5099,6 +5099,7 @@ class Action(object):
                 PlayAction.TYPE: PlayAction,
                 TriggerFlowAction.TYPE: TriggerFlowAction,
                 EndUssdAction.TYPE: EndUssdAction,
+                FreshchatAction.TYPE: FreshchatAction,
             }
 
         action_type = json_obj.get(cls.TYPE)
@@ -5227,6 +5228,40 @@ class WebhookAction(Action):
                 headers[item.get('name')] = item.get('value')
 
         WebHookEvent.trigger_flow_event(run, value, actionset_uuid, msg, self.action, headers=headers)
+        return []
+
+
+class FreshchatAction(Action):
+    """
+    Forwards the steps in this flow to the Freshchat (if any)
+    """
+    TYPE = 'freshchat_call'
+
+    def __init__(self, uuid, msg=None, freshchat_fields=None):
+        super(FreshchatAction, self).__init__(uuid)
+        self.msg = msg
+        self.freshchat_fields = freshchat_fields
+
+    @classmethod
+    def from_json(cls, org, json_obj):
+        return cls(json_obj.get(cls.UUID),
+                   json_obj.get('msg'),
+                   json_obj.get('freshchat_fields', []))
+
+    def as_json(self):
+        return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, freshchat_fields=self.freshchat_fields)
+
+    def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+        text = run.flow.get_localized_text(self.msg, run.contact) if self.msg else ''
+        (msg, errors) = Msg.evaluate_template(text, context, org=run.flow.org, url_encode=True)
+
+        fields = {}
+        freshchat_fields = self.freshchat_fields or []
+
+        for item in freshchat_fields:
+            (value, errors) = Msg.evaluate_template(item.get('value'), context, org=run.flow.org, url_encode=True)
+            fields[item.get('name')] = value
+
         return []
 
 

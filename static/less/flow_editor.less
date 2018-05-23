@@ -1022,6 +1022,13 @@
     }
   }
 
+  .freshchat_call {
+    .title {
+      text-shadow: 0px 1px rgb(12, 164, 219);
+      .bg-gradient(rgb(69, 164, 237), rgb(12, 164, 219));
+    }
+  }
+
   .email {
     .title {
       text-shadow: 0px 1px @color-send-email - #222;
@@ -1444,19 +1451,19 @@
       margin: 5px 0;
       display: inline-block;
     }
-    .webhook-headers{
+    .webhook-headers, .freshchat-headers{
       a.add-header{
         margin: 5px 0;
         display: inline-block;
       }
-      .modal-webhook-header-pair{
+      .modal-webhook-header-pair, .modal-freshchat-header-pair{
         margin: 0;
-        .modal-webhook-header{
+        .modal-webhook-header, .modal-freshchat-header{
           width: 46%;
           display: inline-block;
           position: relative;
 
-          &.modal-webhook-header-name {
+          &.modal-webhook-header-name, &.modal-freshchat-header-name {
             margin: 0 1% 0 0;
             input{
               width: 100%;
@@ -1468,7 +1475,7 @@
             }
           }
 
-          &.modal-webhook-header-value {
+          &.modal-webhook-header-value, &.modal-freshchat-header-value {
             margin: 0 0 0 1%;
             input{
               width: 100%;
@@ -1480,7 +1487,7 @@
             }
           }
 
-          &.modal-webhook-header-remove {
+          &.modal-webhook-header-remove, &.modal-freshchat-header-remove {
             width: 1% !important;
             display: inline-block;
             position: relative;
@@ -1494,8 +1501,8 @@
           }
         }
         &:hover{
-          .modal-webhook-header{
-            &.modal-webhook-header-remove {
+          .modal-webhook-header, .modal-freshchat-header{
+            &.modal-webhook-header-remove, &.modal-freshchat-header-remove {
               .icon{
                 display: inline-block;
               }

@@ -293,8 +293,30 @@
         -trans "Ok"
 
     %span{ng-if:'config.type == "freshchat_call"'}
-      -include 'partials/invalid_fields.haml'
-      %span{auto-complete:"",msg:"action.msg",type:"sms",data-message:"message",show-counter:"false"}
+      %span{show-counter:"false",auto-complete:"",msg:"action.msg",type:"sms",data-message:"message"}
+      %a.additional-options{href:"javascript:;",ng-click:"actionFreshchatFields()",ng-show:"!formData.isActionFreshchatFieldsVisible"}
+        -trans "Show fields"
+
+      .freshchat-headers{ng-show:"formData.isActionFreshchatFieldsVisible"}
+        .modal-freshchat-header-pair
+          .modal-freshchat-header.modal-freshchat-header-name
+            .message
+              -trans "Field Name"
+          .modal-freshchat-header.modal-freshchat-header-value
+            .message
+              -trans "Field Value"
+        .modal-freshchat-header-pair{ng-repeat:"field in action.freshchat_fields"}
+          .modal-freshchat-header.modal-freshchat-header-name
+            %input{type:"text",name:"freshchat-field-name",ng-model:"action_freshchat_fields_name[$index]"}
+          .modal-freshchat-header.modal-freshchat-header-value
+            %input{type:"text",name:"freshchat-field-value",ng-model:"action_freshchat_fields_value[$index]",auto-complete:""}
+          .modal-freshchat-header.modal-freshchat-header-remove
+            .icon.icon-close{ng-click:"removeActionFreshchatField($index)"}
+
+        %a.add-header{href:"javascript:;",ng-click:"addNewActionFreshchatField()"}
+          -trans "Add field"
+      %button{ng-click:"saveFreshchatAction(message)",class:"submit hide"}
+        -trans "Ok"
     </ng-form>
 .modal-footer
 

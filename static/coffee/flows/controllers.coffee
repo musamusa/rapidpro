@@ -1862,6 +1862,9 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.action_webhook_headers_name = []
   $scope.action_webhook_headers_value = []
 
+  $scope.action_freshchat_fields_name = []
+  $scope.action_freshchat_fields_value = []
+
   $scope.showAttachOptions = false
   $scope.showAttachVariable = false
   
@@ -1890,6 +1893,17 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0
 
+  if $scope.action.freshchat_fields
+    item_counter = 0
+    for item in $scope.action.freshchat_fields
+      $scope.action_freshchat_fields_name[item_counter] = item.name
+      $scope.action_freshchat_fields_value[item_counter] = item.value
+      item_counter++
+  else
+    $scope.action.freshchat_fields = []
+
+  formData.isActionFreshchatFieldsVisible = $scope.action.freshchat_fields.length > 0
+
   $scope.actionWebhookAdditionalOptions = () ->
     if formData.isActionWebhookAdditionalOptionsVisible == true
       formData.isActionWebhookAdditionalOptionsVisible = false
@@ -1912,6 +1926,29 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
     if $scope.action.webhook_headers.length == 0
       $scope.addNewActionWebhookHeader()
+
+  $scope.actionFreshchatFields = () ->
+    if formData.isActionFreshchatFieldsVisible == true
+      formData.isActionFreshchatFieldsVisible = false
+    else
+      formData.isActionFreshchatFieldsVisible = true
+
+    if $scope.action.freshchat_fields.length == 0
+      $scope.addNewActionFreshchatField()
+
+  $scope.addNewActionFreshchatField = () ->
+    if !$scope.action.freshchat_fields
+      $scope.action.freshchat_fields = []
+
+    $scope.action.freshchat_fields.push({name: '', value: ''})
+
+  $scope.removeActionFreshchatField = (index) ->
+    $scope.action.freshchat_fields.splice(index, 1)
+    $scope.action_freshchat_fields_name.splice(index, 1)
+    $scope.action_freshchat_fields_value.splice(index, 1)
+
+    if $scope.action.freshchat_fields.length == 0
+      $scope.addNewActionFreshchatField()
 
   $scope.addNewQuickReply = ->
     $scope.showQuickReplyButton = false
@@ -2147,6 +2184,30 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       item_counter++
 
     $scope.action.webhook_headers = webhook_headers
+
+    Flow.saveAction(actionset, $scope.action)
+    $modalInstance.close()
+
+  # save a freshchat action
+  $scope.saveFreshchatAction = (message) ->
+
+    if typeof($scope.action.msg) != "object"
+      $scope.action.msg = {}
+
+    $scope.action.msg[$scope.base_language] = message
+
+    $scope.action.type = 'freshchat_call'
+
+    freshchat_fields = []
+    item_counter = 0
+    for item in $scope.action.freshchat_fields
+      item_name = if $scope.action_freshchat_fields_name then $scope.action_freshchat_fields_name[item_counter] else null
+      item_value = if $scope.action_freshchat_fields_value then $scope.action_freshchat_fields_value[item_counter] else null
+      if item_name and item_value
+        freshchat_fields.push({name: item_name, value: item_value})
+      item_counter++
+
+    $scope.action.freshchat_fields = freshchat_fields
 
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
