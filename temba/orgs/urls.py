@@ -15,5 +15,5 @@ urlpatterns += [
     # for backwards compatibility
     url(r'^api/v1/stripe/$', StripeHandler.as_view()),
 
-    url(r'^handlers/freshchat/org/(?P<slug>\w+)/(?P<pk>\d+)/?$', FreshchatHandler.as_view(), name='handlers.freshchat_handler'),
+    url(r'^handlers/freshchat/org/(?P<slug>[\w-]+)/(?P<pk>\d+)/?$', FreshchatHandler.as_view(), name='handlers.freshchat_handler'),
 ]

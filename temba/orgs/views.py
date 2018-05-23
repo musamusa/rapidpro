@@ -2852,7 +2852,10 @@ class FreshchatHandler(View):  # pragma: no cover
         from temba.orgs.models import Org, TopUp
 
         # Freshchat delivers a JSON payload
-        data = json.loads(request.body)
-        print(request.body)
+        if request.body:
+            data = json.loads(request.body)
+            print(request.body)
+        else:
+            data = json.loads({})
 
         return HttpResponse(data)
