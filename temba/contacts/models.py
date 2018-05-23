@@ -487,6 +487,11 @@ class Contact(TembaModel):
     language = models.CharField(max_length=3, verbose_name=_("Language"), null=True, blank=True,
                                 help_text=_("The preferred language for this contact"))
 
+    freshchat_id = models.CharField(max_length=255, verbose_name=_("Freshchat ID"), null=True, blank=True)
+
+    in_attendance = models.BooleanField(default=False, verbose_name=_("In Attendance"),
+                                        help_text=_("Whether this contact is in attendance with a human agent"))
+
     simulation = False
 
     NAME = 'name'
