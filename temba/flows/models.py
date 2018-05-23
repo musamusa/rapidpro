@@ -5262,6 +5262,55 @@ class FreshchatAction(Action):
             (value, errors) = Msg.evaluate_template(item.get('value'), context, org=run.flow.org, url_encode=True)
             fields[item.get('name')] = value
 
+        urn = run.contact.get_urn()
+        phone = urn.path if urn and urn.scheme == 'tel' else None
+        email = urn.path if urn and urn.scheme == 'mailto' else None
+
+        org = run.flow.org
+        freshchat_api_key = org.get_freshchat_credentials()
+
+        if freshchat_api_key:
+            headers = settings.OUTGOING_REQUEST_HEADERS
+            headers.update({
+                'Content-Type': 'application/json',
+                'Authorization': freshchat_api_key
+            })
+
+            if run.contact.freshchat_id:
+                freshchat_user_id = run.contact.freshchat_id
+            else:
+                create_user_url = '%s/user' % settings.FRESHCHAT_BASE_URL
+                user_data = dict(phone=phone,
+                                 email=email,
+                                 firstName=run.contact.name,
+                                 identifier=run.contact.uuid,
+                                 type='USER',
+                                 meta=fields)
+
+                response_user = requests.post(create_user_url, data=json.dumps(user_data), headers=headers)
+                response_data = response_user.json()
+                freshchat_user_id = response_data.get('id', None)
+                if freshchat_user_id:
+                    run.contact.freshchat_id = freshchat_user_id
+                    run.contact.save(update_fields=['freshchat_id'])
+
+            if freshchat_user_id:
+                create_message_url = '%s/user/%s/message' % (settings.FRESHCHAT_BASE_URL, freshchat_user_id)
+
+                headers.update({
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'content-type': "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
+                })
+
+                message_payload = "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"message_event\"\r\n\r\n{\"type\": \"MESSAGE\", \"messageContents\": [{ \"text\":\"%s\", \"type\": \"TEXT\" }]}\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--" % msg
+
+                response = requests.post(create_message_url, data=message_payload, headers=headers)
+
+                print(response.content)
+
+                run.contact.in_attendance = True
+                run.contact.save(update_fields=['in_attendance'])
+
         return []
 
 
