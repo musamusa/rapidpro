@@ -16,6 +16,7 @@ from django.db.models import Q
 from django.db.models.functions import Upper
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import View
 from django.utils import timezone
 from django.utils.http import urlquote_plus
 from django.utils.translation import ugettext_lazy as _
@@ -1562,3 +1563,28 @@ class ContactFieldCRUDL(SmartCRUDL):
                 errors = self.form._errors.setdefault(forms.forms.NON_FIELD_ERRORS, forms.utils.ErrorList())
                 errors.append(message)
                 return self.render_to_response(self.get_context_data(form=form))
+
+
+class StopFreshchatAttendance(View):  # pragma: no cover
+    """
+    Handles WebHook events from Freshchat.
+    """
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(StopFreshchatAttendance, self).dispatch(*args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponse("ILLEGAL METHOD")
+
+    def post(self, request, *args, **kwargs):
+        contact_uuid = kwargs.get('uuid', None)
+
+        contact = Contact.objects.filter(uuid=contact_uuid, in_attendance=True).first() if contact_uuid else None
+        if contact:
+            contact.in_attendance = False
+            contact.save(update_fields=['in_attendance'])
+            data = dict(uuid=contact_uuid)
+        else:
+            data = dict(error=_('Contact not found'))
+
+        return HttpResponse(json.dumps(data), content_type='application/json')
