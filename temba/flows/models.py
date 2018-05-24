@@ -49,6 +49,7 @@ from temba.utils.queues import push_task
 from temba.values.models import Value
 from temba_expressions.utils import tokenize
 from uuid import uuid4
+from requests_toolbelt import MultipartEncoder
 
 
 logger = logging.getLogger(__name__)
@@ -5297,19 +5298,14 @@ class FreshchatAction(Action):
             if freshchat_user_id:
                 create_message_url = '%s/user/%s/message' % (settings.FRESHCHAT_BASE_URL, freshchat_user_id)
 
-                headers.update({
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'content-type': "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW"
-                })
+                fields = dict(message_event=json.dumps({"type": "MESSAGE", "messageContents": [{"text": msg, "type": "TEXT"}]}))
+                m = MultipartEncoder(fields)
+                headers.update({'Content-Type': m.content_type})
+                response = requests.post(create_message_url, data=m.to_string(), headers=headers)
 
-                message_payload = "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"message_event\"\r\n\r\n{\"type\": \"MESSAGE\", \"messageContents\": [{ \"text\":\"%s\", \"type\": \"TEXT\" }]}\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--" % msg
-
-                response = requests.post(create_message_url, data=message_payload, headers=headers)
-
-                print(response.content)
-
-                run.contact.in_attendance = True
-                run.contact.save(update_fields=['in_attendance'])
+                if response.status_code in [200, 201]:
+                    run.contact.in_attendance = True
+                    run.contact.save(update_fields=['in_attendance'])
 
         return []
 
