@@ -37,6 +37,7 @@ from smartmin.views import SmartModelFormView, SmartModelActionView
 from datetime import timedelta
 from temba.api.models import APIToken
 from temba.campaigns.models import Campaign
+from temba.contacts.models import Contact
 from temba.channels.models import Channel
 from temba.flows.models import Flow, RuleSet
 from temba.links.models import Link
@@ -2849,13 +2850,20 @@ class FreshchatHandler(View):  # pragma: no cover
         return HttpResponse("ILLEGAL METHOD")
 
     def post(self, request, *args, **kwargs):
-        from temba.orgs.models import Org, TopUp
-
         # Freshchat delivers a JSON payload
         if request.body:
             data = json.loads(request.body)
-            print(request.body)
+            conversations = data.get('conversations', [])
+            for conversation in conversations:
+                user_id = conversation.get('userId', None)
+                contact = Contact.objects.filter(freshchat_id=user_id, in_attendance=True).first()
+                messages = conversation.get('messages', [])
+                for message in messages:
+                    message_contents = message.get('messageContents', [])
+                    for content in message_contents:
+                        text = content.get('text', None)
+                        contact.send(text, contact.created_by)
         else:
-            data = json.loads({})
+            data = {'error': _('Couldn\'t find the request body')}
 
-        return HttpResponse(data)
+        return HttpResponse(json.dumps(data))
