@@ -1399,6 +1399,7 @@ class Msg(models.Model):
             if contact.in_attendance and contact.freshchat_id:
                 freshchat_api_key = org.get_freshchat_credentials()
                 on_transaction_commit(lambda: send_message_to_freshchat.delay(freshchat_api_key, contact.freshchat_id, text))
+                cls.mark_handled(msg)
             else:
                 msg.handle()
 

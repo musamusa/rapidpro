@@ -1579,7 +1579,7 @@ class StopFreshchatAttendance(View):  # pragma: no cover
     def post(self, request, *args, **kwargs):
         contact_uuid = kwargs.get('uuid', None)
 
-        contact = Contact.objects.filter(uuid=contact_uuid, in_attendance=True).first() if contact_uuid else None
+        contact = Contact.objects.filter(uuid=contact_uuid).first() if contact_uuid else None
         if contact:
             contact.in_attendance = False
             contact.save(update_fields=['in_attendance'])
