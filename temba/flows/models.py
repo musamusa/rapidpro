@@ -5254,13 +5254,13 @@ class FreshchatAction(Action):
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         text = run.flow.get_localized_text(self.msg, run.contact) if self.msg else ''
-        (msg, errors) = Msg.evaluate_template(text, context, org=run.flow.org, url_encode=True)
+        (msg, errors) = Msg.evaluate_template(text, context, org=run.flow.org, url_encode=False)
 
         fields = {}
         freshchat_fields = self.freshchat_fields or []
 
         for item in freshchat_fields:
-            (value, errors) = Msg.evaluate_template(item.get('value'), context, org=run.flow.org, url_encode=True)
+            (value, errors) = Msg.evaluate_template(item.get('value'), context, org=run.flow.org, url_encode=False)
             fields[item.get('name')] = value
 
         urn = run.contact.get_urn()
