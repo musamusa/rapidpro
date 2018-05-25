@@ -10,6 +10,7 @@ import time
 import traceback
 import uuid
 
+from requests_toolbelt import MultipartEncoder
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -929,6 +930,22 @@ class Msg(models.Model):
         requests.post(settings.CHATBASE_API_URL, data=json.dumps(message), headers=headers)
 
     @classmethod
+    def send_msg_to_freshchat(cls, freshchat_api_key, freshchat_user_id, text):
+        """
+        Send message to Freshchat
+        """
+        if not freshchat_api_key:
+            raise Exception("!! Skipping Freshchat request, API Key not found")
+
+        create_message_url = '%s/user/%s/message' % (settings.FRESHCHAT_BASE_URL, freshchat_user_id)
+
+        fields = dict(message_event=json.dumps({"type": "MESSAGE", "messageContents": [{"text": text, "type": "TEXT"}]}))
+        m = MultipartEncoder(fields)
+        headers = http_headers(extra={'Authorization': freshchat_api_key, 'Content-Type': m.content_type})
+
+        requests.post(create_message_url, data=m.to_string(), headers=headers)
+
+    @classmethod
     def get_messages(cls, org, is_archived=False, direction=None, msg_type=None):
         messages = Msg.objects.filter(org=org)
 
@@ -1304,6 +1321,8 @@ class Msg(models.Model):
                         status=PENDING, attachments=None, msg_type=None, topup=None, external_id=None, connection=None):
 
         from temba.api.models import WebHookEvent
+        from .tasks import send_message_to_freshchat
+
         if not org and channel:
             org = channel.org
 
@@ -1377,7 +1396,11 @@ class Msg(models.Model):
 
         # ivr messages are handled in handle_call
         if status == PENDING and msg_type != IVR:
-            msg.handle()
+            if contact.in_attendance and contact.freshchat_id:
+                freshchat_api_key = org.get_freshchat_credentials()
+                on_transaction_commit(lambda: send_message_to_freshchat.delay(freshchat_api_key, contact.freshchat_id, text))
+            else:
+                msg.handle()
 
             # fire an event off for this message
             WebHookEvent.trigger_sms_event(WebHookEvent.TYPE_SMS_RECEIVED, msg, date)

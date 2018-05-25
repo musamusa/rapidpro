@@ -439,3 +439,8 @@ def clear_old_msg_external_ids():
         Msg.objects.filter(pk__in=msg_id_batch).update(external_id=None)
 
     print("Cleared external ids on %d messages" % len(msg_ids))
+
+
+@task(track_started=True, name='send_message_to_freshchat')
+def send_message_to_freshchat(freshchat_api_key, freshchat_user_id, text):
+    Msg.send_msg_to_freshchat(freshchat_api_key, freshchat_user_id, text)
