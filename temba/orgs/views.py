@@ -2857,12 +2857,15 @@ class FreshchatHandler(View):  # pragma: no cover
             for conversation in conversations:
                 user_id = conversation.get('userId', None)
                 contact = Contact.objects.filter(freshchat_id=user_id, in_attendance=True).first()
-                messages = conversation.get('messages', [])
-                for message in messages:
-                    message_contents = message.get('messageContents', [])
-                    for content in message_contents:
-                        text = content.get('text', None)
-                        contact.send(text, contact.created_by)
+                if contact:
+                    messages = conversation.get('messages', [])
+                    for message in messages:
+                        message_contents = message.get('messageContents', [])
+                        for content in message_contents:
+                            text = content.get('text', None)
+                            contact.send(text, contact.created_by)
+                else:
+                    data = {'error': _('Contact is not in attendance anymore')}
         else:
             data = {'error': _('Couldn\'t find the request body')}
 
