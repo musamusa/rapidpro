@@ -2860,8 +2860,6 @@ class FreshchatHandler(View):  # pragma: no cover
                         for content in message_contents:
                             text = content.get('text', None)
                             contact.send(text, contact.created_by)
-                else:
-                    data = {'error': _('Contact is not in attendance anymore')}
         else:
             data = {'error': _('Couldn\'t find the request body')}
 
