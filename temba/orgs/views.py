@@ -2104,17 +2104,13 @@ class OrgCRUDL(SmartCRUDL):
                 api_key = self.cleaned_data.get('api_key')
 
                 if api_key:
-                    url = '%s/user' % settings.FRESHCHAT_BASE_URL
+                    url = '%s/ping' % settings.FRESHCHAT_BASE_URL
                     headers = settings.OUTGOING_REQUEST_HEADERS
-                    headers.update({
-                        'Content-Type': 'application/json',
-                        'Authorization': api_key
-                    })
+                    headers.update({'Authorization': api_key})
 
-                    data = dict(firstName='CCL Test User', type='USER')
-                    response = requests.post(url, data=json.dumps(data), headers=headers)
+                    response = requests.get(url, headers=headers)
 
-                    if response.status_code not in [200, 201]:
+                    if response.status_code != 200:
                         raise ValidationError(_("Invalid token, please try again with a valid token."))
 
                 return api_key
