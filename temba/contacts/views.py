@@ -1585,6 +1585,6 @@ class ResumeFreshchatLiveChat(View):  # pragma: no cover
             contact.save(update_fields=['in_live_chat'])
             data = dict(uuid=contact_uuid)
         else:
-            data = dict(error=_('Contact not found'))
+            data = dict(error='Contact not found')
 
         return HttpResponse(json.dumps(data), content_type='application/json')
