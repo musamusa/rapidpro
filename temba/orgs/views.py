@@ -2852,15 +2852,25 @@ class FreshchatHandler(View):  # pragma: no cover
             conversations = data.get('conversations', [])
             for conversation in conversations:
                 user_id = conversation.get('userId', None)
-                contact = Contact.objects.filter(freshchat_id=user_id, in_attendance=True).first()
-                if contact:
-                    messages = conversation.get('messages', [])
-                    for message in messages:
+                contact = Contact.objects.filter(freshchat_id=user_id, in_live_chat=True).first()
+
+                if not contact:
+                    return HttpResponse(_("Contact not found"), status=404)
+
+                messages = conversation.get('messages', [])
+                for message in messages:
+                    if message.get('type') == 'STATUS_RESOLVED':
+                        contact.in_live_chat = False
+                        contact.save(update_fields=['in_live_chat'])
+                    else:
                         message_contents = message.get('messageContents', [])
                         for content in message_contents:
                             text = content.get('text', None)
                             contact.send(text, contact.created_by)
+            message = _('Messages received')
+            status_code = 201
         else:
-            data = {'error': _('Couldn\'t find the request body')}
+            message = _('Couldn\'t find the request body')
+            status_code = 400
 
-        return HttpResponse(json.dumps(data))
+        return HttpResponse(message, status=status_code)

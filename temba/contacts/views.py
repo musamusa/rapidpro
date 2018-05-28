@@ -1113,7 +1113,7 @@ class ContactCRUDL(SmartCRUDL):
     class Create(ModalMixin, OrgPermsMixin, SmartCreateView):
         form_class = ContactForm
         exclude = ('is_active', 'uuid', 'language', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'freshchat_id', 'in_attendance')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'freshchat_id', 'in_live_chat')
         success_message = ''
         submit_button_name = _("Create")
 
@@ -1142,7 +1142,7 @@ class ContactCRUDL(SmartCRUDL):
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = UpdateContactForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'freshchat_id', 'in_attendance')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'freshchat_id', 'in_live_chat')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")
@@ -1213,7 +1213,7 @@ class ContactCRUDL(SmartCRUDL):
     class UpdateFields(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = ContactFieldForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language', 'freshchat_id', 'in_attendance')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language', 'freshchat_id', 'in_live_chat')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")
@@ -1565,13 +1565,13 @@ class ContactFieldCRUDL(SmartCRUDL):
                 return self.render_to_response(self.get_context_data(form=form))
 
 
-class StopFreshchatAttendance(View):  # pragma: no cover
+class ResumeFreshchatLiveChat(View):  # pragma: no cover
     """
     Handles WebHook events from Freshchat.
     """
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
-        return super(StopFreshchatAttendance, self).dispatch(*args, **kwargs)
+        return super(ResumeFreshchatLiveChat, self).dispatch(*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         return HttpResponse("ILLEGAL METHOD")
@@ -1581,8 +1581,8 @@ class StopFreshchatAttendance(View):  # pragma: no cover
 
         contact = Contact.objects.filter(uuid=contact_uuid).first() if contact_uuid else None
         if contact:
-            contact.in_attendance = False
-            contact.save(update_fields=['in_attendance'])
+            contact.in_live_chat = True
+            contact.save(update_fields=['in_live_chat'])
             data = dict(uuid=contact_uuid)
         else:
             data = dict(error=_('Contact not found'))

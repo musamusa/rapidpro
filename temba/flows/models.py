@@ -5304,8 +5304,8 @@ class FreshchatAction(Action):
                 response = requests.post(create_message_url, data=m.to_string(), headers=headers)
 
                 if response.status_code in [200, 201]:
-                    run.contact.in_attendance = True
-                    run.contact.save(update_fields=['in_attendance'])
+                    run.contact.in_live_chat = True
+                    run.contact.save(update_fields=['in_live_chat'])
                 else:
                     raise FlowException(_("Error on sent contact to Freshchat. Please, check the services."))
 

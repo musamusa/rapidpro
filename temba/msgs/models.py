@@ -1396,7 +1396,7 @@ class Msg(models.Model):
 
         # ivr messages are handled in handle_call
         if status == PENDING and msg_type != IVR:
-            if contact.in_attendance and contact.freshchat_id:
+            if contact.in_live_chat and contact.freshchat_id:
                 freshchat_api_key = org.get_freshchat_credentials()
                 on_transaction_commit(lambda: send_message_to_freshchat.delay(freshchat_api_key, contact.freshchat_id, text))
                 cls.mark_handled(msg)

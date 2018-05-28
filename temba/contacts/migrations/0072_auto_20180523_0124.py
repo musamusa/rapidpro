@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='contact',
-            name='in_attendance',
-            field=models.BooleanField(default=False, help_text='Whether this contact is in attendance with a human agent', verbose_name='In Attendance'),
+            name='in_live_chat',
+            field=models.BooleanField(default=False, help_text='Whether this contact is in live chat with a human agent', verbose_name='In Live Chat'),
         ),
     ]
