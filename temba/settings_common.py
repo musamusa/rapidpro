@@ -754,6 +754,7 @@ GROUP_PERMISSIONS = {
         'orgs.org_api',
         'orgs.org_download',
         'orgs.org_export',
+        'orgs.org_freshchat',
         'orgs.org_home',
         'orgs.org_import',
         'orgs.org_profile',
