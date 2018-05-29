@@ -5277,20 +5277,27 @@ class FreshchatAction(Action):
                 'Authorization': freshchat_api_key
             })
 
+            user_data = dict(phone=phone,
+                             email=email,
+                             firstName=run.contact.name,
+                             identifier=run.contact.uuid,
+                             type='USER',
+                             meta=fields)
+
             if run.contact.freshchat_id:
                 freshchat_user_id = run.contact.freshchat_id
+                update_user_url = '%s/user/%s' % (settings.FRESHCHAT_BASE_URL, freshchat_user_id)
+                response_user = requests.put(update_user_url, data=json.dumps(user_data), headers=headers)
+
+                if response_user.status_code != 202:
+                    raise FlowException(_("Error on update contact on Freshchat. Please, check the services."))
+
             else:
                 create_user_url = '%s/user' % settings.FRESHCHAT_BASE_URL
-                user_data = dict(phone=phone,
-                                 email=email,
-                                 firstName=run.contact.name,
-                                 identifier=run.contact.uuid,
-                                 type='USER',
-                                 meta=fields)
-
                 response_user = requests.post(create_user_url, data=json.dumps(user_data), headers=headers)
                 response_data = response_user.json()
                 freshchat_user_id = response_data.get('id', None)
+
                 if freshchat_user_id:
                     run.contact.freshchat_id = freshchat_user_id
                     run.contact.save(update_fields=['freshchat_id'])
