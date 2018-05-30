@@ -77,7 +77,7 @@
 
         {
           "urn": ["tel:+250788123123", "tel:+250788123124"],
-          "text": "Walk into the club like, whattup, I have a big clock"
+          "text": "Reminder: your appointment is at 4pm tomorrow"
         }
 
   %a{ name:"mo_sms" }
@@ -86,10 +86,10 @@
     ### Receiving SMS Messages
 
     Say you set your webhook URL to ```http://www.yourapp.com/app.php?password=akabanga```.  If your Android
-    phone receives the text message "Im gonna pop some tags" from "+250788123132" then {{ brand.name }} will ```POST``` the following:
+    phone receives the text message "Thanks! We'll be there." from "+250788123132" then {{ brand.name }} will ```POST``` the following:
 
         POST http://www.yourapp.com/app.php?password=akabanga
-        event=mo_sms&id=23554&channel=254&channel_phone=%2B250788111111&phone=%2B250788123123&text=Im+gonna+pop+some+tags&time=2013-01-01T05:34:34.034
+        event=mo_sms&id=23554&channel=254&channel_phone=%2B250788111111&phone=%2B250788123123&text=Thanks!+we%27ll+be+there.&time=2013-01-01T05:34:34.034
 
   <table class="table table-params">
       <tr><td>event</td><td><code>mo_sms</code></td></tr>
@@ -114,11 +114,11 @@
     channel as well as when the message was delivered to the final recipient. (note that some messages may never receive
     delivery reports)  The sent and delivered events will be represented by the ```mt_sent``` and ```mt_dlvd``` events.
 
-    Say you have sent the message "Only got $20 in my pocket" to "+250788383383".  When your Android phone has successfully
+    Say you have sent the message "Don't forget your paperwork!" to "+250788383383".  When your Android phone has successfully
     sent the message, you will notified with the following message:
 
         POST http://www.yourapp.com/app.php?password=akabanga
-        event=mt_sent&id=23555&relayer=254&relayer_phone=%2B250788111111&phone=%2B250788123123&text=Only+got+$20+in+my+pocket&time=2013-01-01T05:34:34.034
+        event=mt_sent&id=23555&relayer=254&relayer_phone=%2B250788111111&phone=%2B250788123123&text=Don%27t+forget+your+paperwork!&time=2013-01-01T05:34:34.034
 
     <table class="table table-params">
         <tr><td>event</td><td><code>mt_sent</code> or <code>mt_dlvd</code></td></tr>
