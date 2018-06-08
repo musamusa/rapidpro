@@ -5222,9 +5222,14 @@ class SalesforceExportAction(Action):
 
         (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
-        if sf_instance_url and run.contact.salesforce_id:
+        if sf_instance_url:
             sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-            sf.Contact.update(run.contact.salesforce_id, {self.field: value})
+            if run.contact.salesforce_id:
+                sf.Contact.update(run.contact.salesforce_id, {self.field: value})
+            else:
+                result = sf.Contact.create({self.field: value})
+                run.contact.salesforce_id = result.get('id', None)
+                run.contact.save()
 
         return []
 
