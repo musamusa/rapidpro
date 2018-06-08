@@ -5227,7 +5227,13 @@ class SalesforceExportAction(Action):
             if run.contact.salesforce_id:
                 sf.Contact.update(run.contact.salesforce_id, {self.field: value})
             else:
-                result = sf.Contact.create({self.field: value})
+                urn = run.contact.get_urn()
+                last_name = run.contact.name or (urn.path if urn else None)
+                result = sf.Contact.create({
+                    'LastName': last_name,
+                    'Phone': urn.path if urn.scheme == 'tel' else None,
+                    self.field: value
+                })
                 run.contact.salesforce_id = result.get('id', None)
                 run.contact.save()
 
