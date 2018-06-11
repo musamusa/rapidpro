@@ -5,7 +5,7 @@
 
 - block pjax
   #pjax
-    .row{style:"height:250px;"}
+    .row
       .span3
         #big-help.glyph.icon-address-book
 
@@ -144,7 +144,21 @@
                     %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
                     %a.btn{onclick:"javascript:history.go(-1)"}
                       -trans "Cancel"
- 
+
+    .row.salesforce-import
+      .title-text
+        %h2
+          -trans "Import Salesforce Contacts"
+        .span3
+          #big-help.glyph.icon-cloud
+        .span9.salesforce-form
+          %p
+            -trans "You can import your contacts from Salesforce."
+          %p
+            -trans "By clicking the button below, your contacts will be imported from Salesforce. Before clicking on import, choose what fields you want to import to Community Connect Labs."
+
+      .span3.top-form
+        .pull-right
 
 {% block extra-style %}
 :css
@@ -155,6 +169,14 @@
   #example {
     margin-top: 20px;
     background: #f8f8f8;
+  }
+
+  .salesforce-import {
+    margin: 40px 0 0 0;
+  }
+
+  .salesforce-import .salesforce-form {
+    margin: 40px 0 0 0;
   }
 
   #file-upload {
