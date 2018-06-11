@@ -45,6 +45,7 @@ from temba.utils import analytics, languages
 from temba.utils.timezones import TimeZoneFormField
 from temba.utils.email import is_valid_address
 from twilio.rest import TwilioRestClient
+from simple_salesforce import Salesforce
 from .models import Org, OrgCache, OrgEvent, TopUp, Invitation, UserSettings, get_stripe_credentials, ACCOUNT_SID, \
     ACCOUNT_TOKEN
 from .models import MT_SMS_EVENTS, MO_SMS_EVENTS, MT_CALL_EVENTS, MO_CALL_EVENTS, ALARM_EVENTS
@@ -52,7 +53,7 @@ from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, 
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
-from .models import SF_INSTANCE_URL, SF_ACCESS_TOKEN, SF_REFRESH_TOKEN
+from .models import SF_INSTANCE_URL
 
 
 def check_login(request):
@@ -2138,8 +2139,20 @@ class OrgCRUDL(SmartCRUDL):
 
                 if response.status_code == 200:
                     response = response.json()
-                    org.connect_salesforce_account(response.get('instance_url'), response.get('access_token'), response.get('refresh_token'), self.request.user)
-                    return HttpResponseRedirect(reverse('orgs.org_home'))
+
+                    try:
+                        sf_instance_url = response.get('instance_url')
+                        sf_access_token = response.get('access_token')
+
+                        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+                        sf.query("SELECT Id, Email FROM Contact LIMIT 1")
+
+                        org.connect_salesforce_account(sf_instance_url, sf_access_token, response.get('refresh_token'), self.request.user)
+                        return HttpResponseRedirect(reverse('orgs.org_home'))
+
+                    except Exception:
+                        messages.error(self.request, _('Your account does not have the required permissions for Import and Export contacts'))
+
                 else:
                     messages.error(self.request, _('There was an error in the Salesforce auth request'))
 
