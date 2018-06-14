@@ -341,7 +341,7 @@ class UpdateContactForm(ContactForm):
 
 class ContactCRUDL(SmartCRUDL):
     model = Contact
-    actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
+    actions = ('create', 'update', 'stopped', 'list', 'import', 'import_salesforce', 'read', 'filter', 'blocked', 'omnibox',
                'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
                'history', 'invite', 'invite_filter', 'invite_send', 'salesforce_export')
 
@@ -705,6 +705,106 @@ class ContactCRUDL(SmartCRUDL):
         def get_success_url(self):
             return reverse("contacts.contact_customize", args=[self.object.pk])
 
+    class ImportSalesforce(OrgPermsMixin, SmartCreateView):
+        class ImportSalesforceForm(forms.ModelForm):
+            salesforce_fields = forms.CharField(required=True, )
+
+            def __init__(self, *args, **kwargs):
+                self.org = kwargs['org']
+                del kwargs['org']
+                super(ContactCRUDL.ImportSalesforce.ImportSalesforceForm, self).__init__(*args, **kwargs)
+
+            def clean(self):
+                groups_count = ContactGroup.user_groups.filter(org=self.org).count()
+                if groups_count >= ContactGroup.MAX_ORG_CONTACTGROUPS:
+                    raise forms.ValidationError(_("This org has %s groups and the limit is %s. "
+                                                  "You must delete existing ones before you can "
+                                                  "create new ones." % (groups_count,
+                                                                        ContactGroup.MAX_ORG_CONTACTGROUPS)))
+
+                return self.cleaned_data
+
+            class Meta:
+                model = ImportTask
+                fields = '__all__'
+
+        form_class = ImportSalesforceForm
+        model = ImportTask
+        fields = ('salesforce_fields',)
+        success_message = ''
+        title = 'Import Salesforce Contacts'
+
+        def pre_save(self, task):
+            super(ContactCRUDL.ImportSalesforce, self).pre_save(task)
+
+            previous_import = ImportTask.objects.filter(created_by=self.request.user).order_by('-created_on').first()
+            if previous_import and previous_import.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
+                analytics.track(self.request.user.username, 'temba.contact_imported')
+
+            return task
+
+        def post_save(self, task):
+            # configure import params with current org and timezone
+            org = self.derive_org()
+            params = dict(org_id=org.id, timezone=six.text_type(org.timezone), extra_fields=[], original_filename=self.form.cleaned_data['csv_file'].name)
+            params_dump = json.dumps(params)
+            ImportTask.objects.filter(pk=task.pk).update(import_params=params_dump)
+
+            return task
+
+        def get_form_kwargs(self):
+            kwargs = super(ContactCRUDL.ImportSalesforce, self).get_form_kwargs()
+            kwargs['org'] = self.derive_org()
+            return kwargs
+
+        def get_context_data(self, **kwargs):
+            context = super(ContactCRUDL.ImportSalesforce, self).get_context_data(**kwargs)
+
+            org = self.request.user.get_org()
+
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+            context['salesforce_connect'] = True if sf_instance_url else False
+            context['task'] = None
+            context['group'] = None
+            context['show_form'] = True
+
+            task_id = self.request.GET.get('task', None)
+            if task_id:
+                tasks = ImportTask.objects.filter(pk=task_id, created_by=self.request.user)
+
+                if tasks:
+                    task = tasks[0]
+                    context['task'] = task
+                    context['show_form'] = False
+                    context['results'] = json.loads(task.import_results) if task.import_results else dict()
+
+                    groups = ContactGroup.user_groups.filter(import_task=task)
+
+                    if groups:
+                        context['group'] = groups[0]
+
+                    elif not task.status() in ['PENDING', 'RUNNING', 'STARTED']:  # pragma: no cover
+                        context['show_form'] = True
+
+            return context
+
+        def derive_refresh(self):
+            task_id = self.request.GET.get('task', None)
+            if task_id:
+                tasks = ImportTask.objects.filter(pk=task_id, created_by=self.request.user)
+                if tasks and tasks[0].status() in ['PENDING', 'RUNNING', 'STARTED']:  # pragma: no cover
+                    return 3000
+                elif not ContactGroup.user_groups.filter(import_task__id=task_id).exists():
+                    return 3000
+            return 0
+
+        def derive_success_message(self):
+            return None
+
+        def get_success_url(self):
+            return reverse("contacts.contact_customize", args=[self.object.pk])
+
     class Omnibox(OrgPermsMixin, SmartListView):
         paginate_by = 75
         fields = ('id', 'text')
@@ -923,7 +1023,10 @@ class ContactCRUDL(SmartCRUDL):
             context = super(ContactCRUDL.List, self).get_context_data(*args, **kwargs)
             org = self.request.user.get_org()
 
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
             context['actions'] = ('label', 'block')
+            context['salesforce_connected'] = True if sf_instance_url else False
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 

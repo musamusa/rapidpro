@@ -1,0 +1,203 @@
+-extends "smartmin/form.html"
+
+-load smartmin
+-load i18n
+
+- block pjax
+  #pjax
+    .row
+      .span3
+        #big-help.glyph.icon-cloud
+
+      .span9
+        %p
+          -trans "You can import your contacts from Salesforce."
+
+        %p
+          -trans "By clicking the button below, your contacts will be imported from Salesforce. Before clicking on import, choose what fields you want to import to Community Connect Labs."
+
+        - block import-status
+          #import-status
+            #import-message
+              - if task
+                - if task.status == "PENDING" or task.status == "RUNNING" or task.status == "STARTED"
+                  %p
+                    Importing..
+                    %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
+                
+
+                - else 
+                  - if task.status == "SUCCESS" and group.contacts.all
+                    - if results.creates
+                      .import-result
+                        .glyph.icon-checkmark.success
+                        -blocktrans count results.creates as create_count
+                          Created {{ create_count }} new contact
+                          -plural
+                            Created {{ create_count }} new contacts
+
+                    - if results.updates
+                      .import-result
+                        .glyph.icon-checkmark.success
+                        -blocktrans count results.updates as update_count
+                          Updated {{ update_count }} contact with an existing phone number
+                          -plural
+                            Updated {{ update_count }} contacts with existing phone numbers
+
+                    .import-result
+                      .glyph.icon-checkmark.success
+                      -blocktrans with contacts_count=results.records
+                        Added all contacts to the new
+                      %a{href:"{% url 'contacts.contact_filter' group.uuid %}"}= group.name
+                      group
+
+                    - if results.errors
+                      .import-result
+                        .well.well-small
+                          %strong
+                            -blocktrans
+                              Some rows were not imported
+                          %br
+                          %strong
+                            -blocktrans
+                              Errors description
+                          %br
+                            - for error_message in results.error_messages
+                              Row {{ error_message.line }}: {{ error_message.error }}
+                              %br
+
+                  - elif results.errors
+                    .import-result
+                      .glyph.icon-warning.warning
+                      -blocktrans count results.errors as error_count
+                        Failed to import {{ error_count }} contact due to missing or invalid phone number
+                        -plural
+                          Failed to import {{ error_count }} contacts due to missing or invalid phone numbers
+
+                    .import-result
+                      .well.well-small
+                        %strong
+                          -blocktrans
+                            Errors description
+
+                        %br
+                          - for error_message in results.error_messages
+                            Row {{ error_message.line }}: {{ error_message.error }}
+                            %br
+
+                  - elif task.status == "SUCCESS" and not group.contacts.all
+                    %p
+                      Grouping..
+                      %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
+
+                  - elif not group.contacts.all
+                    %p
+                      -blocktrans
+                        No contacts imported, please make sure your have a channel connected.
+
+            - if show_form and salesforce_connect
+              %p
+
+                %form#import-form.smartmin-form.horizontal-form{method:"post", action:"{% url 'contacts.contact_import_salesforce' %}", enctype:"multipart/form-data"}
+                  - if form.non_field_errors
+                    .alert.alert-error.form-errors
+                      {{ form.non_field_errors }}
+                  
+                  -csrf_token
+
+                  -block fields
+                    #salesforce_fields_errors
+                      {{ form.salesforce_fields.errors }}
+                    #salesforce-fields
+                      %input{type:"text", id:"salesforce-fields", name: "salesforce-fields"}
+                    
+                  .form-buttons
+                    %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
+                    %a.btn{onclick:"javascript:history.go(-1)"}
+                      -trans "Cancel"
+            -elif not salesforce_connect
+              %p
+                %b{style: "color: #F00"}
+                  -trans "Your Salesforce isn't connected."
+
+
+{% block extra-style %}
+:css
+  .form-buttons {
+    margin-top: 10px;
+  }
+
+  #file-upload {
+    position:relative;
+  }
+
+  #csv_file_errors {
+    font-size: 20px;
+  }
+
+  #real-button {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 1;
+    height:35px;
+    width:340px;
+  }
+
+  #file-field {
+    width:255px;
+    height:25px;
+    font-size:16px;
+    border:solid 1px #000;
+    margin-bottom: 0px;
+  }
+
+  #csv_file {
+    position:absolute;
+    width:385px;
+    height:35px;
+    top: 0px;
+    left: 0px;
+    text-align: right;
+    -moz-opacity:0 ;
+    filter:alpha(opacity: 0);
+    opacity: 0;
+    z-index: 2;
+  }
+
+  #import-message .import-result {
+    padding-bottom: 10px;
+    font-size: 20px;
+  }
+
+  #import-message .import-result .glyph {
+    font-size: 28px;
+    margin: 0px 20px;
+    line-height: 22px;
+  }
+
+  #import-message .import-result .well {
+    font-size: 14px;
+  }
+
+  #import-message .import-result a {
+    text-decoration :none;
+  }
+
+{% endblock %}
+
+{% block extra-script %}
+  :javascript
+    $(document).ready(function() {
+      $.ajax("{% url 'flows.flow_salesforce_fields' %}").success(function(data) {
+        $('#salesforce-fields').select2({
+          tags: true,
+          tokenSeparators: [",", " "],
+          minimumResultsForSearch: -1,
+          placeholder: "Salesforce Fields like Name, Email...",
+          containerCssClass: "select2-temba-field",
+          data: data.results
+        });
+      });
+    });
+{% endblock %}
