@@ -707,12 +707,17 @@ class ContactCRUDL(SmartCRUDL):
 
     class ImportSalesforce(OrgPermsMixin, SmartCreateView):
         class ImportSalesforceForm(forms.ModelForm):
-            salesforce_fields = forms.CharField(required=True, )
+            salesforce_fields = forms.CharField(required=True)
+            query_fields = forms.CharField(required=False)
 
             def __init__(self, *args, **kwargs):
                 self.org = kwargs['org']
                 del kwargs['org']
                 super(ContactCRUDL.ImportSalesforce.ImportSalesforceForm, self).__init__(*args, **kwargs)
+
+            def clean_query_fields(self):
+                print(self.data)
+                return self.cleaned_data
 
             def clean(self):
                 groups_count = ContactGroup.user_groups.filter(org=self.org).count()

@@ -108,8 +108,41 @@
                   -block fields
                     #salesforce_fields_errors
                       {{ form.salesforce_fields.errors }}
-                    #salesforce-fields
+                    #salesforce_fields
                       %input{type:"text", id:"salesforce-fields", name: "salesforce-fields"}
+
+                    %p
+                      %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
+                        -trans "Advanced options"
+
+                    #salesforce_query_fields.active
+                      
+                      %p
+                        -trans "Select the fields and the query, to import only contacts that match these requirements."
+
+                      .templates
+                        .salesforce-header-pair.hide
+                          .field.header-field.field-select2
+                            %input{type: 'text', id: 'header_0_field', name: 'header_0_field', select2: ''}
+                          .field.header-rule
+                            %select{id: 'header_0_rule', name: 'header_0_rule'}
+                              %option{value: "Test"} Test
+                          .field.header-value
+                            %input{type: 'text', id: 'header_0_value', name: 'header_0_value'}
+                  
+                      #real-fields
+                        .salesforce-header-pair
+                          .field.header-field
+                            %label
+                              -trans "Field"
+                          .field.header-rule
+                            %label
+                              -trans "Rule"
+                          .field.header-value
+                            %label
+                              -trans "Value"
+                      %a.add-query{href: 'javascript:;', onclick: 'addNewQuery()'}
+                        .icon.icon-plus-circle2
                     
                   .form-buttons
                     %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
@@ -123,46 +156,16 @@
 
 {% block extra-style %}
 :css
+  .select2-temba-field {
+    width: 100%;
+  }
+
+  .select2-container-multi {
+    width: 520px;
+  }
+
   .form-buttons {
-    margin-top: 10px;
-  }
-
-  #file-upload {
-    position:relative;
-  }
-
-  #csv_file_errors {
-    font-size: 20px;
-  }
-
-  #real-button {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    z-index: 1;
-    height:35px;
-    width:340px;
-  }
-
-  #file-field {
-    width:255px;
-    height:25px;
-    font-size:16px;
-    border:solid 1px #000;
-    margin-bottom: 0px;
-  }
-
-  #csv_file {
-    position:absolute;
-    width:385px;
-    height:35px;
-    top: 0px;
-    left: 0px;
-    text-align: right;
-    -moz-opacity:0 ;
-    filter:alpha(opacity: 0);
-    opacity: 0;
-    z-index: 2;
+    margin-top: 30px;
   }
 
   #import-message .import-result {
@@ -184,11 +187,43 @@
     text-decoration :none;
   }
 
+  #salesforce_query_fields {
+    display: none;
+  }
+
+  #salesforce_query_fields.active {
+    display: table;
+  }
+
+  #salesforce_query_fields .templates {
+    display: none;
+  }
+
+  #salesforce_query_fields .salesforce-header-pair {
+    width: 100%;
+  }
+
+  #salesforce_query_fields .field {
+    width: 190px;
+    position: relative;
+    display: inline-block;
+  }
+
+  #salesforce_query_fields .field input, #salesforce_query_fields .field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 35px;
+  }
+
 {% endblock %}
 
 {% block extra-script %}
   :javascript
+
+    var salesforceFields = [];
+    
     $(document).ready(function() {
+      addNewQuery();
       $.ajax("{% url 'flows.flow_salesforce_fields' %}").success(function(data) {
         $('#salesforce-fields').select2({
           tags: true,
@@ -198,6 +233,47 @@
           containerCssClass: "select2-temba-field",
           data: data.results
         });
+        $('input[select2]').select2({
+          data: data.results,
+          containerCssClass: "select2-temba-field"
+        });
+        salesforceFields = data.results;
       });
     });
+
+    function addNewQuery() {
+      var numPairs = $("#real-fields").children(".salesforce-header-pair").length
+      var ele = $('.templates > .salesforce-header-pair').clone();
+
+      ele.find('input[id^="header_"]').each(function(){
+        var id = $(this).attr('id');
+        $(this).attr('id', id.replace(/0/g, numPairs));
+        var name = $(this).attr('name');
+        console.log(id);
+        console.log($(this));
+        $(this).attr('name', name.replace(/0/g, numPairs));
+      });
+      
+      $("#real-fields").append(ele);
+      ele.toggleClass('hide');
+
+      ele.find('input[id^="header_"]').select2({
+        data: salesforceFields,
+        containerCssClass: "select2-temba-field"
+      });
+
+    }
+
+    function showAndHideAdvancedOptions() {
+      var btn = $('#advancedOptionsButton');
+      var el = $('#salesforce_query_fields');
+      if (el.hasClass('active')) {
+        el.removeClass('active');
+        btn.html('Advanced options');
+      } else {
+        el.addClass('active');
+        btn.html('Simple options');
+      }
+    }
+
 {% endblock %}
