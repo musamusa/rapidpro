@@ -35,6 +35,8 @@ from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
 from .tasks import export_contacts_task, export_salesforce_contacts_task
 
+from simple_salesforce import Salesforce
+
 
 class RemoveContactForm(forms.Form):
     contact = forms.ModelChoiceField(Contact.objects.all())
@@ -769,10 +771,32 @@ class ContactCRUDL(SmartCRUDL):
 
             (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
-            context['salesforce_connect'] = True if sf_instance_url else False
             context['task'] = None
             context['group'] = None
             context['show_form'] = True
+
+            if sf_instance_url and sf_access_token:
+                context['salesforce_connect'] = True
+
+                sf_fields = []
+
+                sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+                metadata = sf.Contact.describe()
+                fields = metadata.get('fields', None)
+
+                fields = sorted(fields, key=lambda x: x.get('label')) if fields else []
+
+                for item in fields:
+                    if item.get('name') is not None:
+                        sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+
+                context['sf_fields'] = sf_fields
+                context['sf_rules'] = [
+                    dict(id='equals', text=_('Equals')),
+                    dict(id='contains', text=_('Contains')),
+                    dict(id='has_a_date_equals', text=_('Has a date equals')),
+                ]
 
             task_id = self.request.GET.get('task', None)
             if task_id:

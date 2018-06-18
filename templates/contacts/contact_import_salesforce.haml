@@ -115,7 +115,7 @@
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
                         -trans "Advanced options"
 
-                    #salesforce_query_fields.active
+                    #salesforce_query_fields
                       
                       %p
                         -trans "Select the fields and the query, to import only contacts that match these requirements."
@@ -123,12 +123,17 @@
                       .templates
                         .salesforce-header-pair.hide
                           .field.header-field.field-select2
-                            %input{type: 'text', id: 'header_0_field', name: 'header_0_field', select2: ''}
+                            %select{id: 'header_0_field', name: 'header_0_field'}
+                              -for item in sf_fields
+                                %option{value: '{{item.id}}'} {{item.text}}
                           .field.header-rule
                             %select{id: 'header_0_rule', name: 'header_0_rule'}
-                              %option{value: "Test"} Test
+                              -for item in sf_rules
+                                %option{value: '{{item.id}}'} {{item.text}}
                           .field.header-value
                             %input{type: 'text', id: 'header_0_value', name: 'header_0_value'}
+                          .field.header-action{onclick: 'removeQuery($(this))'}
+                            .icon.icon-close
                   
                       #real-fields
                         .salesforce-header-pair
@@ -156,6 +161,11 @@
 
 {% block extra-style %}
 :css
+  .add-query {
+    margin: 10px 0 0 0;
+    display: table;
+  }
+
   .select2-temba-field {
     width: 100%;
   }
@@ -201,6 +211,12 @@
 
   #salesforce_query_fields .salesforce-header-pair {
     width: 100%;
+    margin: 0 0 4px 0;
+  }
+
+  #salesforce_query_fields .salesforce-header-pair .header-action div {
+    color: #ccc;
+    cursor: pointer;
   }
 
   #salesforce_query_fields .field {
@@ -213,14 +229,13 @@
     width: 100%;
     box-sizing: border-box;
     height: 35px;
+    margin-bottom: 0;
   }
 
 {% endblock %}
 
 {% block extra-script %}
   :javascript
-
-    var salesforceFields = [];
     
     $(document).ready(function() {
       addNewQuery();
@@ -233,13 +248,16 @@
           containerCssClass: "select2-temba-field",
           data: data.results
         });
-        $('input[select2]').select2({
-          data: data.results,
-          containerCssClass: "select2-temba-field"
-        });
-        salesforceFields = data.results;
       });
     });
+
+    function removeQuery(ele) {
+      ele.parent().remove();
+      var numPairs = $("#real-fields").children(".salesforce-header-pair").length;
+      if (numPairs == 1) {
+        addNewQuery();
+      }
+    }
 
     function addNewQuery() {
       var numPairs = $("#real-fields").children(".salesforce-header-pair").length
@@ -249,19 +267,11 @@
         var id = $(this).attr('id');
         $(this).attr('id', id.replace(/0/g, numPairs));
         var name = $(this).attr('name');
-        console.log(id);
-        console.log($(this));
         $(this).attr('name', name.replace(/0/g, numPairs));
       });
       
       $("#real-fields").append(ele);
       ele.toggleClass('hide');
-
-      ele.find('input[id^="header_"]').select2({
-        data: salesforceFields,
-        containerCssClass: "select2-temba-field"
-      });
-
     }
 
     function showAndHideAdvancedOptions() {
