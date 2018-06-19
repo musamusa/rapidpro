@@ -108,7 +108,7 @@
                     #salesforce_fields_errors
                       {{ form.salesforce_fields.errors }}
                     #salesforce_fields
-                      %input{type:"text", id:"salesforce_fields", name: "salesforce_fields"}
+                      {{ form.salesforce_fields }}
 
                     %p
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
@@ -239,7 +239,7 @@
     $(document).ready(function() {
       addNewQuery();
       $.ajax("{% url 'flows.flow_salesforce_fields' %}").success(function(data) {
-        $('#salesforce_fields').select2({
+        $('#id_salesforce_fields').select2({
           tags: true,
           tokenSeparators: [",", " "],
           minimumResultsForSearch: -1,
@@ -261,6 +261,13 @@
     function addNewQuery() {
       var numPairs = $("#real-fields").children(".salesforce-header-pair").length
       var ele = $('.templates > .salesforce-header-pair').clone();
+
+      ele.find('select[id^="header_"]').each(function(){
+        var id = $(this).attr('id');
+        $(this).attr('id', id.replace(/0/g, numPairs));
+        var name = $(this).attr('name');
+        $(this).attr('name', name.replace(/0/g, numPairs));
+      });
 
       ele.find('input[id^="header_"]').each(function(){
         var id = $(this).attr('id');

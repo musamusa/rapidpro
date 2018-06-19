@@ -718,14 +718,36 @@ class ContactCRUDL(SmartCRUDL):
                 super(ContactCRUDL.ImportSalesforce.ImportSalesforceForm, self).__init__(*args, **kwargs)
 
             def clean_salesforce_fields(self):
-                print('clean_salesforce_fields')
-                print(self.data)
-                return self.cleaned_data
+                salesforce_fields = self.cleaned_data.get('salesforce_fields', None)
+
+                if not salesforce_fields:
+                    raise forms.ValidationError(_("The Salesforce fields are required"))
+
+                salesforce_fields = salesforce_fields.split(',')
+                salesforce_fields = ', '.join(salesforce_fields)
+
+                return salesforce_fields
 
             def clean_query_fields(self):
-                print('clean_query_fields')
-                print(self.data)
-                return self.cleaned_data
+                idx = 1
+                headers = []
+                field = 'header_%d_field' % idx
+                rule = 'header_%d_rule' % idx
+                value = 'header_%d_value' % idx
+
+                while field in self.data:
+                    if self.data.get(value, ''):
+                        header = dict(field=self.data[field],
+                                      rule=self.data[rule],
+                                      value=self.data[value])
+                        headers.append(header)
+
+                    idx += 1
+                    field = 'header_%d_field' % idx
+                    rule = 'header_%d_rule' % idx
+                    value = 'header_%d_value' % idx
+
+                return headers
 
             def clean(self):
                 groups_count = ContactGroup.user_groups.filter(org=self.org).count()
@@ -762,16 +784,20 @@ class ContactCRUDL(SmartCRUDL):
 
                 sf_fields = []
 
-                sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+                try:
+                    sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
 
-                metadata = sf.Contact.describe()
-                fields = metadata.get('fields', None)
+                    metadata = sf.Contact.describe()
+                    fields = metadata.get('fields', None)
 
-                fields = sorted(fields, key=lambda x: x.get('label')) if fields else []
+                    fields = sorted(fields, key=lambda x: x.get('label')) if fields else []
 
-                for item in fields:
-                    if item.get('name') is not None:
-                        sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+                    for item in fields:
+                        if item.get('name') is not None:
+                            sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+
+                except Exception:
+                    messages.warning(self.request, _('Your Salesforce access token is expired. We will renew it, please, try again 10min later.'))
 
                 context['sf_fields'] = sf_fields
                 context['sf_rules'] = [
@@ -783,7 +809,6 @@ class ContactCRUDL(SmartCRUDL):
             return context
 
         def derive_success_message(self):
-            print('derive_success_message')
             return None
 
         def get_success_url(self):
@@ -794,10 +819,19 @@ class ContactCRUDL(SmartCRUDL):
             user = self.request.user
             org = user.get_org()
 
-            print(cleaned_data)
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+            if 'salesforce_fields' not in cleaned_data:
+                messages.error(self.request, _('Please, you should inform the Salesforce fields that you want to import.'))
+            elif sf_instance_url and sf_access_token:
+                sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+                records = sf.query("SELECT Id, Name, Email FROM Contact WHERE Email != null LIMIT 100")
+                records = records['records']
+                print(records)
+            else:
+                messages.error(self.request, _('Your Salesforce isn\'t connected.'))
 
             return HttpResponseRedirect(self.get_success_url())
-
 
     class Omnibox(OrgPermsMixin, SmartListView):
         paginate_by = 75
