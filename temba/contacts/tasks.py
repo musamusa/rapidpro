@@ -32,9 +32,10 @@ def squash_contactgroupcounts():
 
 
 @task(track_started=True, name='import_salesforce_contacts_task')
-def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query):
+def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_queries):
     sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-    print(sf_query)
-    records = sf.query(sf_query)
-    records = records['records']
-    # print(records)
+    for query in sf_queries:
+        print(query)
+        records = sf.query(query)
+        records = records['records']
+        # print(records)

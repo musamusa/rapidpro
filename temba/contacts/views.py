@@ -817,6 +817,7 @@ class ContactCRUDL(SmartCRUDL):
             user = self.request.user
             org = user.get_org()
             limit_sf_query = 2000
+            initial_sf_query = "SELECT %s FROM Contact "
 
             def get_loop_length(counter, limit):
                 counterx = float(counter) / float(limit)
@@ -838,7 +839,8 @@ class ContactCRUDL(SmartCRUDL):
 
                 salesforce_fields = ', '.join(salesforce_fields)
 
-                sf_query = "SELECT %s FROM Contact " % salesforce_fields
+                sf_query = initial_sf_query % salesforce_fields
+                sf_query_counter = initial_sf_query % ('COUNT(Id)')
 
                 sf_query_conditional = ""
 
@@ -860,7 +862,7 @@ class ContactCRUDL(SmartCRUDL):
                         counter += 1
 
                 sf_query = "{initial_query}{conditional_query}".format(initial_query=sf_query, conditional_query=sf_query_conditional)
-                sf_query_count = "SELECT COUNT(Id) FROM Contact {conditional_query}".format(conditional_query=sf_query_conditional)
+                sf_query_count = "{initial_query}{conditional_query}".format(initial_query=sf_query_counter, conditional_query=sf_query_conditional)
 
                 records = sf.query(sf_query_count)
                 sf_count_records = records['records']
@@ -872,13 +874,16 @@ class ContactCRUDL(SmartCRUDL):
 
                 loop_lenght = get_loop_length(counter_query, limit_sf_query)
 
+                queries = []
                 for i in range(loop_lenght):
                     if i == 0:
-                        sf_query += " LIMIT {limit}".format(limit=limit_sf_query)
+                        sf_real_query = "{sf_query} LIMIT {limit}".format(sf_query=sf_query, limit=limit_sf_query)
                     else:
-                        sf_query += " LIMIT {limit} OFFSET {offset}".format(limit=limit_sf_query, offset=limit_sf_query)
+                        sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit}".format(sf_query=sf_query, limit=limit_sf_query)
 
-                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query))
+                    queries.append(sf_real_query)
+
+                on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, queries))
 
                 messages.info(self.request,
                               _("We are preparing your Salesforce import. We will e-mail you at %s when it is ready.")
