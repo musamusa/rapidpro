@@ -4,6 +4,8 @@ from celery.task import task
 from temba.utils.queues import nonoverlapping_task
 from .models import ExportContactsTask, ContactGroupCount
 
+from simple_salesforce import Salesforce
+
 
 @task(track_started=True, name='export_contacts_task')
 def export_contacts_task(id):
@@ -27,3 +29,12 @@ def squash_contactgroupcounts():
     Squashes our ContactGroupCounts into single rows per ContactGroup
     """
     ContactGroupCount.squash()
+
+
+@task(track_started=True, name='import_salesforce_contacts_task')
+def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query):
+    sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+    print(sf_query)
+    records = sf.query(sf_query)
+    records = records['records']
+    # print(records)

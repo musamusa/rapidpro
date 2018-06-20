@@ -33,7 +33,7 @@ from .models import Contact, ContactGroup, ContactGroupCount, ContactField, Cont
 from .models import ExportContactsTask, TEL_SCHEME
 from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
-from .tasks import export_contacts_task, export_salesforce_contacts_task
+from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task
 
 from simple_salesforce import Salesforce
 
@@ -724,8 +724,6 @@ class ContactCRUDL(SmartCRUDL):
                     raise forms.ValidationError(_("The Salesforce fields are required"))
 
                 salesforce_fields = salesforce_fields.split(',')
-                salesforce_fields = ', '.join(salesforce_fields)
-
                 return salesforce_fields
 
             def clean_query_fields(self):
@@ -818,16 +816,73 @@ class ContactCRUDL(SmartCRUDL):
             cleaned_data = form.cleaned_data
             user = self.request.user
             org = user.get_org()
+            limit_sf_query = 2000
+
+            def get_loop_length(counter, limit):
+                counterx = float(counter) / float(limit)
+                result = 1 if counterx <= 1 else int(counterx) + 1
+                return result
+
+            query_fields = cleaned_data.get('query_fields', [])
+            salesforce_fields = cleaned_data.get('salesforce_fields', [])
 
             (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
-            if 'salesforce_fields' not in cleaned_data:
+            if not salesforce_fields:
                 messages.error(self.request, _('Please, you should inform the Salesforce fields that you want to import.'))
             elif sf_instance_url and sf_access_token:
+                if 'Id' not in salesforce_fields:
+                    salesforce_fields.append('Id')
+
                 sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-                records = sf.query("SELECT Id, Name, Email FROM Contact WHERE Email != null LIMIT 100")
-                records = records['records']
-                print(records)
+
+                salesforce_fields = ', '.join(salesforce_fields)
+
+                sf_query = "SELECT %s FROM Contact " % salesforce_fields
+
+                sf_query_conditional = ""
+
+                if query_fields:
+                    sf_query_conditional += "WHERE "
+                    counter = 0
+
+                    for query in query_fields:
+                        if counter != 0:
+                            sf_query_conditional += " AND "
+
+                        rule = query.get('rule', 'equals')
+
+                        if rule in ['equals', 'has_a_date_equals']:
+                            sf_query_conditional += "{field}='{value}'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'contains':
+                            sf_query_conditional += "{field} LIKE '%{value}%'".format(field=query.get('field'), value=query.get('value'))
+
+                        counter += 1
+
+                sf_query = "{initial_query}{conditional_query}".format(initial_query=sf_query, conditional_query=sf_query_conditional)
+                sf_query_count = "SELECT COUNT(Id) FROM Contact {conditional_query}".format(conditional_query=sf_query_conditional)
+
+                records = sf.query(sf_query_count)
+                sf_count_records = records['records']
+
+                counter_query = 0
+                for item in sf_count_records:
+                    counter_query = item.get('expr0')
+                    break
+
+                loop_lenght = get_loop_length(counter_query, limit_sf_query)
+
+                for i in range(loop_lenght):
+                    if i == 0:
+                        sf_query += " LIMIT {limit}".format(limit=limit_sf_query)
+                    else:
+                        sf_query += " LIMIT {limit} OFFSET {offset}".format(limit=limit_sf_query, offset=limit_sf_query)
+
+                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query))
+
+                messages.info(self.request,
+                              _("We are preparing your Salesforce import. We will e-mail you at %s when it is ready.")
+                              % self.request.user.username)
             else:
                 messages.error(self.request, _('Your Salesforce isn\'t connected.'))
 
