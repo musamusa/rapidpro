@@ -800,8 +800,11 @@ class ContactCRUDL(SmartCRUDL):
                 context['sf_fields'] = sf_fields
                 context['sf_rules'] = [
                     dict(id='equals', text=_('Equals')),
+                    dict(id='does_not_equal', text=_('Does not equal')),
                     dict(id='contains', text=_('Contains')),
                     dict(id='has_a_date_equals', text=_('Has a date equals')),
+                    dict(id='has_a_date_more_than', text=_('Has a date more than')),
+                    dict(id='has_a_date_less_than', text=_('Has a date less than')),
                 ]
 
             return context
@@ -837,9 +840,9 @@ class ContactCRUDL(SmartCRUDL):
 
                 sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
 
-                salesforce_fields = ', '.join(salesforce_fields)
+                sf_fields = ', '.join(salesforce_fields)
 
-                sf_query = initial_sf_query % salesforce_fields
+                sf_query = initial_sf_query % sf_fields
                 sf_query_counter = initial_sf_query % ('COUNT(Id)')
 
                 sf_query_conditional = ""
@@ -854,40 +857,59 @@ class ContactCRUDL(SmartCRUDL):
 
                         rule = query.get('rule', 'equals')
 
-                        if rule in ['equals', 'has_a_date_equals']:
+                        if rule == 'equals':
                             sf_query_conditional += "{field}='{value}'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_equals':
+                            sf_query_conditional += "{field}={value}".format(field=query.get('field'), value=query.get('value'))
                         elif rule == 'contains':
                             sf_query_conditional += "{field} LIKE '%{value}%'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'does_not_equal':
+                            sf_query_conditional += "{field}!='{value}'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_more_than':
+                            sf_query_conditional += "{field}>{value}".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_less_than':
+                            sf_query_conditional += "{field}<{value}".format(field=query.get('field'), value=query.get('value'))
 
                         counter += 1
 
                 sf_query = "{initial_query}{conditional_query}".format(initial_query=sf_query, conditional_query=sf_query_conditional)
                 sf_query_count = "{initial_query}{conditional_query}".format(initial_query=sf_query_counter, conditional_query=sf_query_conditional)
 
-                records = sf.query(sf_query_count)
-                sf_count_records = records['records']
+                for field in salesforce_fields:
+                    key = ContactField.make_key(label=field)
+                    is_valid_key = ContactField.is_valid_key(key)
+                    is_valid_label = ContactField.is_valid_label(field)
+                    if is_valid_key and is_valid_label:
+                        ContactField.get_or_create(org, user, key, label=field)
 
-                counter_query = 0
-                for item in sf_count_records:
-                    counter_query = item.get('expr0')
-                    break
+                try:
+                    records = sf.query(sf_query_count)
+                    sf_count_records = records['records']
 
-                loop_lenght = get_loop_length(counter_query, limit_sf_query)
+                    counter_query = 0
+                    for item in sf_count_records:
+                        counter_query = item.get('expr0')
+                        break
 
-                queries = []
-                for i in range(loop_lenght):
-                    if i == 0:
-                        sf_real_query = "{sf_query} LIMIT {limit}".format(sf_query=sf_query, limit=limit_sf_query)
-                    else:
-                        sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit}".format(sf_query=sf_query, limit=limit_sf_query)
+                    loop_lenght = get_loop_length(counter_query, limit_sf_query)
 
-                    queries.append(sf_real_query)
+                    queries = []
+                    for i in range(loop_lenght):
+                        if i == 0:
+                            sf_real_query = "{sf_query} LIMIT {limit}".format(sf_query=sf_query, limit=limit_sf_query)
+                        else:
+                            sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit}".format(sf_query=sf_query, limit=limit_sf_query)
 
-                on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, queries))
+                        queries.append(sf_real_query)
 
-                messages.info(self.request,
-                              _("We are preparing your Salesforce import. We will e-mail you at %s when it is ready.")
-                              % self.request.user.username)
+                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, queries))
+
+                    messages.info(self.request,
+                                  _("We are preparing your Salesforce import. We will e-mail you at %s when it is ready.")
+                                  % self.request.user.username)
+                except Exception:
+                    messages.info(self.request, _("Please, review your advanced query."))
+
             else:
                 messages.error(self.request, _('Your Salesforce isn\'t connected.'))
 
