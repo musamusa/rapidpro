@@ -2,9 +2,7 @@ from __future__ import unicode_literals
 
 from celery.task import task
 from temba.utils.queues import nonoverlapping_task
-from .models import ExportContactsTask, ContactGroupCount
-
-from simple_salesforce import Salesforce
+from .models import ExportContactsTask, ContactGroupCount, Contact
 
 
 @task(track_started=True, name='export_contacts_task')
@@ -32,10 +30,8 @@ def squash_contactgroupcounts():
 
 
 @task(track_started=True, name='import_salesforce_contacts_task')
-def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_queries):
-    sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-    for query in sf_queries:
-        print(query)
-        records = sf.query(query)
-        records = records['records']
-        # print(records)
+def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_queries, fields, user_id, org_id, counter):
+    """
+    Import contacts from Salesforce and sends an e-mail to the user when it gets the end.
+    """
+    Contact.import_from_salesforce(sf_instance_url, sf_access_token, sf_queries, fields, user_id, org_id, counter)

@@ -838,6 +838,40 @@ class Contact(TembaModel):
             return None
 
     @classmethod
+    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_queries, fields, user_id, org_id, counter):
+        from django.contrib.auth.models import User
+
+        print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
+
+        user = User.objects.filter(id=user_id).first()
+        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+        start = time.time()
+
+        for query in sf_queries:
+            records = sf.query(query)
+            records = records.get('records', [])
+
+            for item in records:
+                field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
+                contact_sf_id = field_values.pop('id')
+                contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
+
+                field_values['created_by'] = user
+                field_values['org'] = Org.objects.get(pk=org_id)
+                field_values['name'] = contact_sf_name
+
+                existing = cls.objects.filter(salesforce_id=contact_sf_id).first()
+                if existing:
+                    field_values['uuid'] = existing.uuid
+
+                record = cls.create_instance(field_values)
+                record.salesforce_id = contact_sf_id
+                record.save()
+
+        print('> Salesforce import complete (org: #%s) in %0.2fs' % (org_id, time.time() - start))
+
+    @classmethod
     def get_or_create(cls, org, user, name=None, urns=None, channel=None, uuid=None, language=None, is_test=False, force_urn_update=False, auth=None):
         """
         Gets or creates a contact with the given URNs
