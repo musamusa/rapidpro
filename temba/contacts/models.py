@@ -2653,7 +2653,7 @@ class ExportContactsTask(BaseExportTask):
                 for col in range(len(fields)):
                     field = fields[col]
 
-                    if field['key'] == Contact.NAME:
+                    if field['key'] == Contact.NAME or field['key'] == 'lastname':
                         urn = contact.get_urn()
                         field_value = contact.name or (urn.path if urn else None)
                     elif field['key'] == Contact.UUID:
@@ -2687,7 +2687,8 @@ class ExportContactsTask(BaseExportTask):
                     if field['label'] == Contact.NAME.capitalize():
                         field['label'] = 'LastName'
 
-                    data_field[field['label']] = field_value
+                    if field_value:
+                        data_field[field['label']] = field_value
 
                 if contact.salesforce_id:
                     values_update.append(data_field)
