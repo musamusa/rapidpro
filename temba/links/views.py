@@ -16,7 +16,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse, HttpResponseRedirect
 
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartReadView
-from smartmin.views import SmartTemplateView
 
 from temba.utils import analytics, datetime_to_ms, ms_to_datetime, on_transaction_commit
 from temba.utils.views import BaseActionForm

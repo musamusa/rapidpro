@@ -33,7 +33,6 @@ from temba.utils.profiler import time_monitor
 from temba.utils.text import clean_string, truncate
 from temba.utils.email import send_template_email
 from temba.values.models import Value
-from temba_expressions.utils import tokenize
 
 
 logger = logging.getLogger(__name__)
