@@ -2754,7 +2754,8 @@ class ExportContactsTask(BaseExportTask):
                     values_update.append(data_field)
                     batch_ids_update.append(contact.id)
                 else:
-                    del data_field['Id']
+                    if 'Id' in data_field:
+                        del data_field['Id']
                     values_add.append(data_field)
                     batch_ids_add.append(contact.id)
 
