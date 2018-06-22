@@ -31,6 +31,7 @@ from temba.utils.models import SquashableModel, TembaModel
 from temba.utils.export import BaseExportAssetStore, BaseExportTask, TableExporter
 from temba.utils.profiler import time_monitor
 from temba.utils.text import clean_string, truncate
+from temba.utils.email import send_template_email
 from temba.values.models import Value
 from temba_expressions.utils import tokenize
 
@@ -843,33 +844,59 @@ class Contact(TembaModel):
 
         print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
 
+        records_ok = []
+        error_messages = []
+        org = Org.objects.get(pk=org_id)
+
         user = User.objects.filter(id=user_id).first()
         sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
 
         start = time.time()
 
         for query in sf_queries:
-            records = sf.query(query)
-            records = records.get('records', [])
+            records_query = sf.query(query)
+            records = records_query.get('records', [])
 
             for item in records:
+
                 field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
+
                 contact_sf_id = field_values.pop('id')
                 contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
 
                 field_values['created_by'] = user
-                field_values['org'] = Org.objects.get(pk=org_id)
+                field_values['org'] = org
                 field_values['name'] = contact_sf_name
 
-                existing = cls.objects.filter(salesforce_id=contact_sf_id).first()
+                existing = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
                 if existing:
                     field_values['uuid'] = existing.uuid
 
-                record = cls.create_instance(field_values)
-                record.salesforce_id = contact_sf_id
-                record.save()
+                try:
+                    contact = cls.create_instance(field_values)
+
+                    if not existing:
+                        contact.salesforce_id = str(contact_sf_id)
+                        contact.save()
+
+                    if contact:
+                        records_ok.append(contact)
+                    else:  # pragma: needs cover
+                        error_messages.append(dict(contact=contact_sf_id, error='Error on save contact'))
+
+                except SmartImportRowError as e:
+                    error_messages.append(dict(contact=contact_sf_id, error=str(e)))
+
+                except Exception as e:  # pragma: needs cover
+                    raise Exception("Error on importing salesforce contact %s: %s" % (contact_sf_id, str(e)))
 
         print('> Salesforce import complete (org: #%s) in %0.2fs' % (org_id, time.time() - start))
+
+        branding = org.get_branding()
+
+        send_template_email(user.username, 'Your Salesforce import is ready',
+                            'contacts/email/contacts_salesforce_import',
+                            {'errors': error_messages, 'ok_count': len(records_ok)}, branding)
 
     @classmethod
     def get_or_create(cls, org, user, name=None, urns=None, channel=None, uuid=None, language=None, is_test=False, force_urn_update=False, auth=None):

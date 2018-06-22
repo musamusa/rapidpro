@@ -905,8 +905,8 @@ class ContactCRUDL(SmartCRUDL):
                     on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, queries, salesforce_fields, user.id, org.id, counter_query))
 
                     messages.info(self.request,
-                                  _("We are preparing your Salesforce import. We will e-mail you at %s when it is ready.")
-                                  % self.request.user.username)
+                                  _("We are preparing your Salesforce import for %s contact%s. We will e-mail you at %s when it is ready.")
+                                  % (counter_query, 's' if counter_query > 1 else '', self.request.user.username))
                 except Exception:
                     messages.info(self.request, _("Please, review your advanced query."))
 

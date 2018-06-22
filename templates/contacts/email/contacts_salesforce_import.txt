@@ -1,0 +1,33 @@
+{% load tz %}
+{% load i18n %}
+
+{% blocktrans %}
+Hi there!
+{% endblocktrans %}
+
+{% blocktrans count ok_count as counter %}
+
+Your Salesforce contacts import is ready. {{ counter }} contact imported.
+{% plural %}
+Your Salesforce contacts import is ready. {{ counter }} contacts imported.
+
+{% endblocktrans %}
+
+{% if errors %}
+
+{% blocktrans %}
+We got some warnings from Salesforce related to import process:
+{% endblocktrans %}
+
+{% for item in errors %}
+
+{% blocktrans %}Contact: {% endblocktrans %}{{ item.contact }}
+{% blocktrans %}Message: {% endblocktrans %}{{ item.error }}
+
+{% endfor %}
+
+{% endif %}
+
+Thanks,
+
+{% blocktrans with brand=branding.name %}The {{ brand }} Team {% endblocktrans %}
