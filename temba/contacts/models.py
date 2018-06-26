@@ -2744,7 +2744,14 @@ class ExportContactsTask(BaseExportTask):
                     if field_value:
                         field_value = six.text_type(clean_string(field_value))
 
-                    if field['label'] == Contact.NAME.capitalize():
+                    if field['label'] == Contact.NAME.capitalize() or field['label'] == 'LastName':
+                        names = field_value.split(' ')
+
+                        if len(names) > 1:
+                            first_name = names[0]
+                            data_field['FirstName'] = first_name
+                            field_value = names[-1]
+
                         field['label'] = 'LastName'
 
                     if field_value:
