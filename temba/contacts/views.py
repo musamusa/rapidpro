@@ -1302,6 +1302,11 @@ class ContactCRUDL(SmartCRUDL):
             context = super(ContactCRUDL.Blocked, self).get_context_data(*args, **kwargs)
             context['actions'] = ('unblock', 'delete') if self.has_org_perm("contacts.contact_delete") else ('unblock',)
             context['reply_disabled'] = True
+
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
     class Stopped(ContactActionMixin, ContactListView):
@@ -1313,6 +1318,11 @@ class ContactCRUDL(SmartCRUDL):
             context = super(ContactCRUDL.Stopped, self).get_context_data(*args, **kwargs)
             context['actions'] = ['block', 'unstop']
             context['reply_disabled'] = True
+
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
     class Filter(ContactActionMixin, ContactListView):
@@ -1357,6 +1367,10 @@ class ContactCRUDL(SmartCRUDL):
             context['actions'] = actions
             context['current_group'] = group
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
+
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
         @classmethod
