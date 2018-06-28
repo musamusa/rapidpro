@@ -719,11 +719,10 @@ class ContactCRUDL(SmartCRUDL):
 
             def clean_salesforce_fields(self):
                 salesforce_fields = self.cleaned_data.get('salesforce_fields', None)
-
-                if not salesforce_fields:
-                    raise forms.ValidationError(_("The Salesforce fields are required"))
-
-                salesforce_fields = salesforce_fields.split(',')
+                if salesforce_fields:
+                    salesforce_fields = salesforce_fields.split(',')
+                else:
+                    salesforce_fields = []
                 return salesforce_fields
 
             def clean_query_fields(self):
@@ -832,11 +831,8 @@ class ContactCRUDL(SmartCRUDL):
 
             (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
-            if not salesforce_fields:
-                messages.error(self.request, _('Please, you should inform the Salesforce fields that you want to import.'))
-            elif sf_instance_url and sf_access_token:
-                if 'Id' not in salesforce_fields:
-                    salesforce_fields.append('Id')
+            if sf_instance_url and sf_access_token:
+                salesforce_fields.extend(['Id', 'Name', 'Phone'])
 
                 sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
 

@@ -109,15 +109,18 @@
                       {{ form.salesforce_fields.errors }}
                     #salesforce_fields
                       {{ form.salesforce_fields }}
+                      %p
+                        -trans "The fields 'Id', 'Name' and 'Phone' are imported by default."
 
                     %p
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
                         -trans "Advanced options"
 
                     #salesforce_query_fields
-                      
                       %p
                         -trans "Select the fields and the query, to import only contacts that match these requirements."
+                        %br
+                        -trans "This query is always doing a \"and\". So we are only importing contacts that match all the criteria. For date fields use the following format YYYY-MM-DD."
 
                       .templates
                         .salesforce-header-pair.hide
@@ -147,9 +150,6 @@
                               -trans "Value"
                       %a.add-query{href: 'javascript:;', onclick: 'addNewQuery()'}
                         .icon.icon-plus-circle2
-
-                      %p
-                        -trans "This query is always doing a \"and\". So we are only importing contacts that match all the criteria. For date fields use the following format YYYY-MM-DD."
                     
                   .form-buttons
                     %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
@@ -216,6 +216,12 @@
     margin: 0 0 4px 0;
   }
 
+  #salesforce_query_fields .salesforce-header-pair .header-action {
+    width: 25px;
+    cursor: pointer;
+    text-align: center;
+  }
+
   #salesforce_query_fields .salesforce-header-pair .header-action div {
     color: #ccc;
     cursor: pointer;
@@ -242,13 +248,20 @@
     $(document).ready(function() {
       addNewQuery();
       $.ajax("{% url 'flows.flow_salesforce_fields' %}").success(function(data) {
+        var results = data.results;
+        var requiredFields = ['Id', 'Name', 'Phone'];
+        for (result in results) {
+          if (requiredFields.indexOf(results[result].id) > -1) {
+            results.splice(result, 1);
+          }
+        }
         $('#id_salesforce_fields').select2({
           tags: true,
           tokenSeparators: [",", " "],
           minimumResultsForSearch: -1,
-          placeholder: "Salesforce Fields like Name, Email...",
+          placeholder: "Salesforce Fields",
           containerCssClass: "select2-temba-field",
-          data: data.results
+          data: results
         });
       });
     });
