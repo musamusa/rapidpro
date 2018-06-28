@@ -871,12 +871,16 @@ class ContactCRUDL(SmartCRUDL):
                 sf_query = "{initial_query}{conditional_query}".format(initial_query=sf_query, conditional_query=sf_query_conditional)
                 sf_query_count = "{initial_query}{conditional_query}".format(initial_query=sf_query_counter, conditional_query=sf_query_conditional)
 
+                salesforce_date_fields = ['EmailBouncedDate', 'LastModifiedDate', 'LastCURequestDate', 'LastViewedDate',
+                                          'CreatedDate', 'Birthdate', 'LastCUUpdateDate', 'LastActivityDate', 'LastReferencedDate']
+
                 for field in salesforce_fields:
                     key = ContactField.make_key(label=field)
                     is_valid_key = ContactField.is_valid_key(key)
                     is_valid_label = ContactField.is_valid_label(field)
                     if is_valid_key and is_valid_label:
-                        ContactField.get_or_create(org, user, key, label=field)
+                        field_type = Value.TYPE_DATETIME if field in salesforce_date_fields else Value.TYPE_TEXT
+                        ContactField.get_or_create(org, user, key, label=field, value_type=field_type)
 
                 try:
                     records = sf.query(sf_query_count)
