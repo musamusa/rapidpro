@@ -843,7 +843,8 @@ class Contact(TembaModel):
 
         print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
 
-        records_ok = []
+        created_counter = 0
+        updated_counter = 0
         error_messages = []
         org = Org.objects.get(pk=org_id)
 
@@ -857,7 +858,6 @@ class Contact(TembaModel):
             records = records_query.get('records', [])
 
             for item in records:
-
                 field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
 
                 contact_sf_id = field_values.pop('id')
@@ -882,13 +882,14 @@ class Contact(TembaModel):
                 try:
                     contact = cls.create_instance(field_values)
 
-                    if not existing:
+                    if existing:
+                        updated_counter += 1
+                    else:
                         contact.salesforce_id = str(contact_sf_id)
                         contact.save()
+                        created_counter += 1
 
-                    if contact:
-                        records_ok.append(contact)
-                    else:  # pragma: needs cover
+                    if not contact:
                         error_messages.append(dict(contact=contact_sf_id, error='Error on save contact'))
 
                 except SmartImportRowError as e:
@@ -901,9 +902,15 @@ class Contact(TembaModel):
 
         branding = org.get_branding()
 
-        send_template_email(user.username, 'Your Salesforce import is ready',
+        send_template_email(user.username,
+                            'Your Salesforce import is ready',
                             'contacts/email/contacts_salesforce_import',
-                            {'errors': error_messages, 'ok_count': len(records_ok)}, branding)
+                            {
+                                'errors': error_messages,
+                                'inserted_counter': created_counter,
+                                'updated_counter': updated_counter
+                            },
+                            branding)
 
     @classmethod
     def get_or_create(cls, org, user, name=None, urns=None, channel=None, uuid=None, language=None, is_test=False, force_urn_update=False, auth=None):

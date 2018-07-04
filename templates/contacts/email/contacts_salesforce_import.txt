@@ -5,12 +5,8 @@
 Hi there!
 {% endblocktrans %}
 
-{% blocktrans count ok_count as counter %}
-
-Your Salesforce contacts import is ready. {{ counter }} contact imported.
-{% plural %}
-Your Salesforce contacts import is ready. {{ counter }} contacts imported.
-
+{% blocktrans %}
+Your Salesforce contacts import is ready. {{ inserted_counter }} inserted and {{ updated_counter }} updated.
 {% endblocktrans %}
 
 {% if errors %}
