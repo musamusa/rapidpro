@@ -863,6 +863,13 @@ class Contact(TembaModel):
                 contact_sf_id = field_values.pop('id')
                 contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
 
+                phone_number = field_values.get('phone')
+
+                country = org.get_country_code()
+                (normalized, is_valid) = URN.normalize_number(phone_number, country)
+                if is_valid:
+                    field_values['phone'] = normalized
+
                 field_values['created_by'] = user
                 field_values['org'] = org
                 field_values['name'] = contact_sf_name
