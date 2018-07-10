@@ -875,22 +875,17 @@ class Contact(TembaModel):
                 field_values['org'] = org
                 field_values['name'] = contact_sf_name
 
-                existing = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
-                if existing:
-                    field_values['uuid'] = existing.uuid
-
+                contact = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
                 try:
-                    contact = cls.create_instance(field_values)
-
-                    if existing:
+                    if contact:
+                        field_values['contact uuid'] = contact.uuid
+                        cls.create_instance(field_values)
                         updated_counter += 1
                     else:
+                        contact = cls.create_instance(field_values)
                         contact.salesforce_id = str(contact_sf_id)
                         contact.save()
                         created_counter += 1
-
-                    if not contact:
-                        error_messages.append(dict(contact=contact_sf_id, error='Error on save contact'))
 
                 except SmartImportRowError as e:
                     error_messages.append(dict(contact=contact_sf_id, error=str(e)))
