@@ -845,6 +845,7 @@ class Contact(TembaModel):
 
         created_counter = 0
         updated_counter = 0
+        errors_counter = 0
         error_messages = []
         org = Org.objects.get(pk=org_id)
 
@@ -888,9 +889,11 @@ class Contact(TembaModel):
                         created_counter += 1
 
                 except SmartImportRowError as e:
+                    errors_counter += 1
                     error_messages.append(dict(contact=contact_sf_id, error=str(e)))
 
                 except Exception as e:  # pragma: needs cover
+                    errors_counter += 1
                     raise Exception("Error on importing salesforce contact %s: %s" % (contact_sf_id, str(e)))
 
         print('> Salesforce import complete (org: #%s) in %0.2fs' % (org_id, time.time() - start))
@@ -903,7 +906,8 @@ class Contact(TembaModel):
                             {
                                 'errors': error_messages,
                                 'inserted_counter': created_counter,
-                                'updated_counter': updated_counter
+                                'updated_counter': updated_counter,
+                                'errors_counter': errors_counter
                             },
                             branding)
 
