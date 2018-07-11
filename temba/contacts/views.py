@@ -898,7 +898,7 @@ class ContactCRUDL(SmartCRUDL):
                         if i == 0:
                             sf_real_query = "{sf_query} LIMIT {limit}".format(sf_query=sf_query, limit=limit_sf_query)
                         else:
-                            sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit}".format(sf_query=sf_query, limit=limit_sf_query)
+                            sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit_offset}".format(sf_query=sf_query, limit=limit_sf_query, limit_offset=limit_sf_query * i)
 
                         queries.append(sf_real_query)
 
