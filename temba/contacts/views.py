@@ -891,18 +891,7 @@ class ContactCRUDL(SmartCRUDL):
                         counter_query = item.get('expr0')
                         break
 
-                    loop_lenght = get_loop_length(counter_query, limit_sf_query)
-
-                    queries = []
-                    for i in range(loop_lenght):
-                        if i == 0:
-                            sf_real_query = "{sf_query} LIMIT {limit}".format(sf_query=sf_query, limit=limit_sf_query)
-                        else:
-                            sf_real_query = "{sf_query} LIMIT {limit} OFFSET {limit_offset}".format(sf_query=sf_query, limit=limit_sf_query, limit_offset=limit_sf_query * i)
-
-                        queries.append(sf_real_query)
-
-                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, queries, salesforce_fields, user.id, org.id, counter_query))
+                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query, salesforce_fields, user.id, org.id, counter_query))
 
                     messages.info(self.request,
                                   _("We are preparing your Salesforce import for %s contact%s. We will e-mail you at %s when it is ready.")

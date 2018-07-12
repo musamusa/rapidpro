@@ -838,7 +838,7 @@ class Contact(TembaModel):
             return None
 
     @classmethod
-    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_queries, fields, user_id, org_id, counter):
+    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter):
         from django.contrib.auth.models import User
 
         print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
@@ -854,47 +854,46 @@ class Contact(TembaModel):
 
         start = time.time()
 
-        for query in sf_queries:
-            records_query = sf.query(query)
-            records = records_query.get('records', [])
+        records_query = sf.query_all(sf_query)
+        records = records_query.get('records', [])
 
-            for item in records:
-                field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
+        for item in records:
+            field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
 
-                contact_sf_id = field_values.pop('id')
-                contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
+            contact_sf_id = field_values.pop('id')
+            contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
 
-                phone_number = field_values.get('phone', None)
+            phone_number = field_values.get('phone', None)
 
-                if phone_number:
-                    country = org.get_country_code()
-                    (normalized, is_valid) = URN.normalize_number(phone_number, country)
-                    if is_valid:
-                        field_values['phone'] = normalized
+            if phone_number:
+                country = org.get_country_code()
+                (normalized, is_valid) = URN.normalize_number(phone_number, country)
+                if is_valid:
+                    field_values['phone'] = normalized
 
-                field_values['created_by'] = user
-                field_values['org'] = org
-                field_values['name'] = contact_sf_name
+            field_values['created_by'] = user
+            field_values['org'] = org
+            field_values['name'] = contact_sf_name
 
-                contact = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
-                try:
-                    if contact:
-                        field_values['contact uuid'] = contact.uuid
-                        cls.create_instance(field_values)
-                        updated_counter += 1
-                    else:
-                        contact = cls.create_instance(field_values)
-                        contact.salesforce_id = str(contact_sf_id)
-                        contact.save()
-                        created_counter += 1
+            contact = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
+            try:
+                if contact:
+                    field_values['contact uuid'] = contact.uuid
+                    cls.create_instance(field_values)
+                    updated_counter += 1
+                else:
+                    contact = cls.create_instance(field_values)
+                    contact.salesforce_id = str(contact_sf_id)
+                    contact.save()
+                    created_counter += 1
 
-                except SmartImportRowError as e:
-                    errors_counter += 1
-                    error_messages.append(dict(contact=contact_sf_id, error=str(e)))
+            except SmartImportRowError as e:
+                errors_counter += 1
+                error_messages.append(dict(contact=contact_sf_id, error=str(e)))
 
-                except Exception as e:  # pragma: needs cover
-                    errors_counter += 1
-                    raise Exception("Error on importing salesforce contact %s: %s" % (contact_sf_id, str(e)))
+            except Exception as e:  # pragma: needs cover
+                errors_counter += 1
+                raise Exception("Error on importing salesforce contact %s: %s" % (contact_sf_id, str(e)))
 
         print('> Salesforce import complete (org: #%s) in %0.2fs' % (org_id, time.time() - start))
 
