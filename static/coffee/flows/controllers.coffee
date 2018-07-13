@@ -1862,6 +1862,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.action = utils.clone(action)
   $scope.action_webhook_headers_name = []
   $scope.action_webhook_headers_value = []
+  $scope.action_salesforce_fields = []
+  $scope.action_salesforce_values = []
 
   $scope.showAttachOptions = false
   $scope.showAttachVariable = false
@@ -1888,6 +1890,16 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       item_counter++
   else
     $scope.action.webhook_headers = []
+
+  if $scope.action.salesforce_fields
+    item_counter = 0
+    for item in $scope.action.salesforce_fields
+      $scope.action_salesforce_fields[item_counter] = item.name
+      $scope.action_salesforce_values[item_counter] = item.value
+      item_counter++
+  else
+    $scope.action.salesforce_fields = []
+    $scope.action.salesforce_fields.push({name: '', value: ''})
 
   formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0
 
@@ -1927,6 +1939,20 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     if $scope.quickReplies.length == 0
       $scope.showQuickReplyButton = true
       $scope.action.quick_replies = []
+
+  $scope.addNewActionSalesforceField = () ->
+    if !$scope.action.salesforce_fields
+      $scope.action.salesforce_fields = []
+
+    $scope.action.salesforce_fields.push({name: '', value: ''})
+
+  $scope.removeActionSalesforceField = (index) ->
+    $scope.action.salesforce_fields.splice(index, 1)
+    $scope.action_salesforce_fields.splice(index, 1)
+    $scope.action_salesforce_values.splice(index, 1)
+
+    if $scope.action.salesforce_fields.length == 0
+      $scope.addNewActionSalesforceField()
 
   $scope.actionset = actionset
   $scope.flowId = window.flowId

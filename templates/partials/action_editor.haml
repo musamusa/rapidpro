@@ -195,19 +195,30 @@
         -trans "Ok"
 
     %div{ng-if:'config.type == "sf_export"'}
-      .label
-        -trans "Field"
-      %input{ng-model:"field", name:"field", search:"true", text:"[[action.label]]", select-static:"[[salesforceContactFieldSearch]]", non-new-variable: true, required:"", key:"[[action.field]]", type:"hidden"}
-      .help-text
-        -blocktrans
-          Select an existing field.
-      .label
-        -trans "Value"
-      %input{ng-model:"action.value",name:"value",auto-complete:"",flow:"[[flowId]]",ng-required:"true",type:"text"}
+      .salesforce-fields
+        .modal-salesforce-field-pair
+          .modal-salesforce-field.modal-salesforce-field-name
+            .message
+              -trans "Field"
+          .modal-salesforce-field.modal-salesforce-field-value
+            .message
+              -trans "Value"
+        .modal-salesforce-field-pair{ng-repeat:"field in action.salesforce_fields"}
+          .modal-salesforce-field.modal-salesforce-field-name
+            %input{type:"text",name:"field-name",ng-model:"action_salesforce_fields[$index]", search:"true", select-static:"[[salesforceContactFieldSearch]]", non-new-variable: true, required:""}
+          .modal-salesforce-field.modal-salesforce-field-value
+            %input{type:"text",name:"field-value",ng-model:"action_salesforce_values[$index]", auto-complete:""}
+          .modal-salesforce-field.modal-salesforce-field-remove
+            .icon.icon-close{ng-click:"removeActionSalesforceField($index)"}
+
+        %a.add-salesforce-field{href:"javascript:;",ng-click:"addNewActionSalesforceField()"}
+          .icon.icon-plus-circle2
+
       .help-text
         -blocktrans
           The value to store can be any text you like. You can also reference other
           values that have been collected up to this point by typing @flow.
+
       %button{ng-click:"exportContactDataToSalesforce(action_editor.field.selected, action.value)",class:"submit hide"}
         -trans "Ok"
 
