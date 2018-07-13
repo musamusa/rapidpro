@@ -5197,25 +5197,22 @@ class SalesforceExportAction(Action):
     """
     TYPE = 'sf_export'
 
-    def __init__(self, uuid, field, label, value):
+    def __init__(self, uuid, salesforce_fields):
         super(SalesforceExportAction, self).__init__(uuid)
-        self.field = field
-        self.value = value
-        self.label = label
+        self.salesforce_fields = salesforce_fields
 
     @classmethod
     def from_json(cls, org, json_obj):
-        return cls(json_obj.get(cls.UUID),
-                   json_obj.get('field', None),
-                   json_obj.get('label', None),
-                   json_obj.get('value', None))
+        return cls(json_obj.get(cls.UUID), json_obj.get('salesforce_fields', None))
 
     def as_json(self):
-        return dict(type=self.TYPE, uuid=self.uuid, field=self.field, label=self.label, value=self.value)
+        return dict(type=self.TYPE, uuid=self.uuid, salesforce_fields=self.salesforce_fields)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         org = run.flow.org
-        (value, errors) = Msg.evaluate_template(self.value, context, org=org, url_encode=True)
+
+        for field in self.salesforce_fields:
+            (value, errors) = Msg.evaluate_template(field.get(''), context, org=org, url_encode=True)
 
         if errors:
             ActionLog.warn(run, _("Value appears to contain errors: %s") % ", ".join(errors))
@@ -5225,15 +5222,16 @@ class SalesforceExportAction(Action):
         if sf_instance_url:
             sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
             if run.contact.salesforce_id:
-                sf.Contact.update(run.contact.salesforce_id, {self.field: value})
+                sf.Contact.update(run.contact.salesforce_id, self.salesforce_fields)
             else:
                 urn = run.contact.get_urn()
                 last_name = run.contact.name or (urn.path if urn else None)
-                result = sf.Contact.create({
+                create_arguments = {
                     'LastName': last_name,
-                    'Phone': urn.path if urn.scheme == 'tel' else None,
-                    self.field: value
-                })
+                    'Phone': urn.path if urn.scheme == 'tel' else None
+                }
+                create_arguments.update(self.salesforce_fields)
+                result = sf.Contact.create(create_arguments)
                 run.contact.salesforce_id = result.get('id', None)
                 run.contact.save()
 

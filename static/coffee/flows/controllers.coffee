@@ -1894,12 +1894,12 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   if $scope.action.salesforce_fields
     item_counter = 0
     for item in $scope.action.salesforce_fields
-      $scope.action_salesforce_fields[item_counter] = item.name
+      $scope.action_salesforce_fields[item_counter] = item.field
       $scope.action_salesforce_values[item_counter] = item.value
       item_counter++
   else
     $scope.action.salesforce_fields = []
-    $scope.action.salesforce_fields.push({name: '', value: ''})
+    $scope.action.salesforce_fields.push({field: '', value: ''})
 
   formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0
 
@@ -1944,7 +1944,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     if !$scope.action.salesforce_fields
       $scope.action.salesforce_fields = []
 
-    $scope.action.salesforce_fields.push({name: '', value: ''})
+    $scope.action.salesforce_fields.push({field: '', value: ''})
 
   $scope.removeActionSalesforceField = (index) ->
     $scope.action.salesforce_fields.splice(index, 1)
@@ -2155,11 +2155,19 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $modalInstance.close()
 
   # Export contact data to Salesforce
-  $scope.exportContactDataToSalesforce = (field, value) ->
+  $scope.exportContactDataToSalesforce = () ->
     $scope.action.type = 'sf_export'
-    $scope.action.field = field.id
-    $scope.action.label = field.text
-    $scope.action.value = value
+    
+    saved_salesforce_fields = []
+    item_counter = 0
+    for item in $scope.action.salesforce_fields
+      item_name = if $scope.action_salesforce_fields then $scope.action_salesforce_fields[item_counter] else null
+      item_value = if $scope.action_salesforce_values then $scope.action_salesforce_values[item_counter] else null
+      if item_name and item_value
+        saved_salesforce_fields.push({field: item_name, value: item_value})
+      item_counter++
+
+    $scope.action.salesforce_fields = saved_salesforce_fields
 
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
