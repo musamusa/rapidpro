@@ -5209,28 +5209,55 @@ class SalesforceExportAction(Action):
         return dict(type=self.TYPE, uuid=self.uuid, salesforce_fields=self.salesforce_fields)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+
+        def get_parts_of_name(name):
+            name_split = name.split(' ')
+            if len(name_split) == 1:
+                return None, ' '.join(name_split)
+            else:
+                first_name = name_split[0]
+                name_split.pop(0)
+                return first_name, ' '.join(name_split)
+
         org = run.flow.org
 
+        extra_fields = {}
         for field in self.salesforce_fields:
-            (value, errors) = Msg.evaluate_template(field.get(''), context, org=org, url_encode=True)
+            (value, errors) = Msg.evaluate_template(field.get('value'), context, org=org, url_encode=False)
 
-        if errors:
-            ActionLog.warn(run, _("Value appears to contain errors: %s") % ", ".join(errors))
+            salesforce_field_id = field['field']['id']
+
+            # Full name `Name` is blocked, so an INVALID_FIELD_FOR_INSERT_UPDATE error is returned if it's sent to Salesforce API
+            if salesforce_field_id == 'Name':
+                first_name, last_name = get_parts_of_name(value)
+                extra_fields['LastName'] = last_name
+
+                if first_name:
+                    extra_fields['FirstName'] = first_name
+
+            else:
+                extra_fields[salesforce_field_id] = value
+
+            if errors:
+                ActionLog.warn(run, _("Value appears to contain errors: %s") % ", ".join(errors))
 
         (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
         if sf_instance_url:
             sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
             if run.contact.salesforce_id:
-                sf.Contact.update(run.contact.salesforce_id, self.salesforce_fields)
+                sf.Contact.update(run.contact.salesforce_id, extra_fields)
             else:
                 urn = run.contact.get_urn()
-                last_name = run.contact.name or (urn.path if urn else None)
+                full_name = run.contact.name or (urn.path if urn else None)
+                first_name, last_name = get_parts_of_name(full_name)
                 create_arguments = {
                     'LastName': last_name,
                     'Phone': urn.path if urn.scheme == 'tel' else None
                 }
-                create_arguments.update(self.salesforce_fields)
+                if first_name:
+                    create_arguments['FirstName'] = first_name
+                create_arguments.update(extra_fields)
                 result = sf.Contact.create(create_arguments)
                 run.contact.salesforce_id = result.get('id', None)
                 run.contact.save()
