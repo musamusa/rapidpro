@@ -18,83 +18,6 @@
 
         - block import-status
           #import-status
-            #import-message
-              - if task
-                - if task.status == "PENDING" or task.status == "RUNNING" or task.status == "STARTED"
-                  %p
-                    Importing..
-                    %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
-                
-
-                - else 
-                  - if task.status == "SUCCESS" and group.contacts.all
-                    - if results.creates
-                      .import-result
-                        .glyph.icon-checkmark.success
-                        -blocktrans count results.creates as create_count
-                          Created {{ create_count }} new contact
-                          -plural
-                            Created {{ create_count }} new contacts
-
-                    - if results.updates
-                      .import-result
-                        .glyph.icon-checkmark.success
-                        -blocktrans count results.updates as update_count
-                          Updated {{ update_count }} contact with an existing phone number
-                          -plural
-                            Updated {{ update_count }} contacts with existing phone numbers
-
-                    .import-result
-                      .glyph.icon-checkmark.success
-                      -blocktrans with contacts_count=results.records
-                        Added all contacts to the new
-                      %a{href:"{% url 'contacts.contact_filter' group.uuid %}"}= group.name
-                      group
-
-                    - if results.errors
-                      .import-result
-                        .well.well-small
-                          %strong
-                            -blocktrans
-                              Some rows were not imported
-                          %br
-                          %strong
-                            -blocktrans
-                              Errors description
-                          %br
-                            - for error_message in results.error_messages
-                              Row {{ error_message.line }}: {{ error_message.error }}
-                              %br
-
-                  - elif results.errors
-                    .import-result
-                      .glyph.icon-warning.warning
-                      -blocktrans count results.errors as error_count
-                        Failed to import {{ error_count }} contact due to missing or invalid phone number
-                        -plural
-                          Failed to import {{ error_count }} contacts due to missing or invalid phone numbers
-
-                    .import-result
-                      .well.well-small
-                        %strong
-                          -blocktrans
-                            Errors description
-
-                        %br
-                          - for error_message in results.error_messages
-                            Row {{ error_message.line }}: {{ error_message.error }}
-                            %br
-
-                  - elif task.status == "SUCCESS" and not group.contacts.all
-                    %p
-                      Grouping..
-                      %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
-
-                  - elif not group.contacts.all
-                    %p
-                      -blocktrans
-                        No contacts imported, please make sure your have a channel connected.
-
             - if salesforce_connect
               %p
                 %form#import-form.smartmin-form.horizontal-form{method:"post", action:"{% url 'contacts.contact_import_salesforce' %}", enctype:"multipart/form-data"}
@@ -152,13 +75,21 @@
                         .icon.icon-plus-circle2
                     
                   .form-buttons
-                    %input.btn.btn-primary{type:"submit", value:'{% trans "Import" %}'}
+                    %a.btn.btn-primary{onclick:'javascript:confirmSalesforceImport();'}
+                      -trans "Import"
                     %a.btn{onclick:"javascript:history.go(-1)"}
                       -trans "Cancel"
             -else
               %p
                 %b{style: "color: #F00"}
                   -trans "Your Salesforce isn't connected."
+
+            .import-salesforce.hide
+              .title
+                -trans "Import Warning"
+              .body
+                -trans "You have selected to only import names and phone numbers from Salesforce. If you wish to continue, click \"Continue\" below. If you wish to add other fields from Salesforce, click \"Cancel\" and add those fields below and then click \"Import\" again."
+            %a#import-salesforce-form.posterize{onclick:'javascript:submitImportForm()'}
 
 
 {% block extra-style %}
@@ -244,6 +175,17 @@
 
 {% block extra-script %}
   :javascript
+    function submitImportForm() {
+      $('#import-form').submit();
+    }
+
+    function confirmSalesforceImport() {
+      if ($('#id_salesforce_fields').val() == '') {
+        removalConfirmation("import-salesforce", "Continue");
+      } else {
+        submitImportForm();
+      }
+    }
     
     $(document).ready(function() {
       addNewQuery();
