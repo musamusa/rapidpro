@@ -6,6 +6,7 @@ import logging
 import plivo
 import nexmo
 import six
+import requests
 
 from collections import OrderedDict
 from datetime import datetime
@@ -44,6 +45,7 @@ from temba.utils import analytics, languages
 from temba.utils.timezones import TimeZoneFormField
 from temba.utils.email import is_valid_address
 from twilio.rest import TwilioRestClient
+from simple_salesforce import Salesforce
 from .models import Org, OrgCache, OrgEvent, TopUp, Invitation, UserSettings, get_stripe_credentials, ACCOUNT_SID, \
     ACCOUNT_TOKEN
 from .models import MT_SMS_EVENTS, MO_SMS_EVENTS, MT_CALL_EVENTS, MO_CALL_EVENTS, ALARM_EVENTS
@@ -51,6 +53,7 @@ from .models import SUSPENDED, WHITELISTED, RESTORED, NEXMO_UUID, NEXMO_SECRET, 
 from .models import TRANSFERTO_AIRTIME_API_TOKEN, TRANSFERTO_ACCOUNT_LOGIN, SMTP_FROM_EMAIL
 from .models import SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, SMTP_PORT, SMTP_ENCRYPTION
 from .models import CHATBASE_API_KEY, CHATBASE_VERSION, CHATBASE_AGENT_NAME
+from .models import SF_INSTANCE_URL
 
 
 def check_login(request):
@@ -455,7 +458,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'salesforce')
 
     model = Org
 
@@ -2090,6 +2093,101 @@ class OrgCRUDL(SmartCRUDL):
 
             return super(OrgCRUDL.Chatbase, self).form_valid(form)
 
+    class Salesforce(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
+
+        class SalesforceForm(forms.ModelForm):
+            disconnect = forms.CharField(widget=forms.HiddenInput, max_length=6, required=True)
+
+            def clean(self):
+                super(OrgCRUDL.Salesforce.SalesforceForm, self).clean()
+                return self.cleaned_data
+
+            class Meta:
+                model = Org
+                fields = ('disconnect', )
+
+        success_message = ''
+        success_url = '@orgs.org_home'
+        form_class = SalesforceForm
+
+        def derive_initial(self):
+            initial = super(OrgCRUDL.Salesforce, self).derive_initial()
+            org = self.get_object()
+            config = org.config_json()
+            initial['instance_url'] = config.get(SF_INSTANCE_URL, None)
+            initial['disconnect'] = 'false'
+            return initial
+
+        def get(self, request, *args, **kwargs):
+            org = self.get_object()
+
+            redirect_uri = '%s%s' % (settings.BRANDING.get(settings.DEFAULT_BRAND).get('link'), reverse('orgs.org_salesforce'))
+
+            sf_code = self.request.GET.get('code', None)
+
+            if sf_code:
+                data = {
+                    'grant_type': 'authorization_code',
+                    'redirect_uri': redirect_uri,
+                    'code': sf_code,
+                    'client_id': settings.SALESFORCE_CONSUMER_KEY,
+                    'client_secret': settings.SALESFORCE_CONSUMER_SECRET
+                }
+                headers = {'content-type': 'application/x-www-form-urlencoded'}
+                headers.update(settings.OUTGOING_REQUEST_HEADERS)
+                response = requests.post(settings.SALESFORCE_ACCESS_TOKEN_URL, data=data, headers=headers)
+
+                if response.status_code == 200:
+                    response = response.json()
+
+                    try:
+                        sf_instance_url = response.get('instance_url')
+                        sf_access_token = response.get('access_token')
+
+                        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+                        sf.query("SELECT Id, Email FROM Contact LIMIT 1")
+
+                        org.connect_salesforce_account(sf_instance_url, sf_access_token, response.get('refresh_token'), self.request.user)
+                        return HttpResponseRedirect(reverse('orgs.org_home'))
+
+                    except Exception:
+                        messages.error(self.request, _('Your account does not have the required permissions for Import and Export contacts'))
+
+                else:
+                    messages.error(self.request, _('There was an error in the Salesforce auth request'))
+
+            return super(OrgCRUDL.Salesforce, self).get(request, *args, **kwargs)
+
+        def get_context_data(self, **kwargs):
+            context = super(OrgCRUDL.Salesforce, self).get_context_data(**kwargs)
+            (sf_instance_url, sf_access_token, sf_refresh_token) = self.object.get_salesforce_credentials()
+
+            if sf_instance_url:
+                context['sf_instance_url'] = sf_instance_url
+
+            redirect_uri = '%s%s' % (settings.BRANDING.get(settings.DEFAULT_BRAND).get('link'), reverse('orgs.org_salesforce'))
+
+            salesforce_url = settings.SALESFORCE_AUTHORIZE_URL
+            salesforce_url += '?response_type=code'
+            salesforce_url += ('&client_id=' + settings.SALESFORCE_CONSUMER_KEY)
+            salesforce_url += ('&redirect_uri=' + redirect_uri)
+
+            context['salesforce_url'] = salesforce_url
+
+            return context
+
+        def form_valid(self, form):
+            user = self.request.user
+            org = user.get_org()
+
+            disconnect = form.cleaned_data.get('disconnect', 'false') == 'true'
+
+            if disconnect:
+                org.remove_salesforce_account(user)
+                return HttpResponseRedirect(reverse('orgs.org_home'))
+
+            return super(OrgCRUDL.Salesforce, self).form_valid(form)
+
     class Home(FormaxMixin, InferOrgMixin, OrgPermsMixin, SmartReadView):
         title = _("Your Account")
 
@@ -2182,6 +2280,9 @@ class OrgCRUDL(SmartCRUDL):
             # only pro orgs get multiple users
             if self.has_org_perm("orgs.org_manage_accounts") and org.is_multi_user_tier():
                 formax.add_section('accounts', reverse('orgs.org_accounts'), icon='icon-users', action='redirect')
+
+            if self.has_org_perm('orgs.org_salesforce'):
+                formax.add_section('salesforce', reverse('orgs.org_salesforce'), icon='icon-cloud', nobutton=True)
 
     class TransferToAccount(InferOrgMixin, OrgPermsMixin, SmartUpdateView):
 

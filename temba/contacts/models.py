@@ -21,6 +21,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from itertools import chain
 from smartmin.models import SmartModel, SmartImportRowError
 from smartmin.csv_imports.models import ImportTask
+from simple_salesforce import Salesforce
 from temba.assets.models import register_asset_store
 from temba.channels.models import Channel
 from temba.locations.models import AdminBoundary
@@ -30,8 +31,8 @@ from temba.utils.models import SquashableModel, TembaModel
 from temba.utils.export import BaseExportAssetStore, BaseExportTask, TableExporter
 from temba.utils.profiler import time_monitor
 from temba.utils.text import clean_string, truncate
+from temba.utils.email import send_template_email
 from temba.values.models import Value
-from temba_expressions.utils import tokenize
 
 
 logger = logging.getLogger(__name__)
@@ -487,6 +488,9 @@ class Contact(TembaModel):
     language = models.CharField(max_length=3, verbose_name=_("Language"), null=True, blank=True,
                                 help_text=_("The preferred language for this contact"))
 
+    salesforce_id = models.CharField(max_length=255, verbose_name=_("Salesforce ID"), null=True, blank=True,
+                                     help_text=_("Salesforce ID related to this contact"))
+
     simulation = False
 
     NAME = 'name'
@@ -497,6 +501,7 @@ class Contact(TembaModel):
     CONTACT_UUID = 'contact uuid'
     GROUPS = 'groups'
     ID = 'id'
+    SALESFORCE_ID = 'Id'
 
     # reserved contact fields
     RESERVED_FIELDS = [
@@ -831,6 +836,79 @@ class Contact(TembaModel):
             return urn_obj.contact
         else:
             return None
+
+    @classmethod
+    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter):
+        from django.contrib.auth.models import User
+
+        print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
+
+        created_counter = 0
+        updated_counter = 0
+        errors_counter = 0
+        error_messages = []
+        org = Org.objects.get(pk=org_id)
+
+        user = User.objects.filter(id=user_id).first()
+        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+        start = time.time()
+
+        records_query = sf.query_all(sf_query)
+        records = records_query.get('records', [])
+
+        for item in records:
+            field_values = {ContactField.make_key(label=field): item.get(field, None) for field in fields}
+
+            contact_sf_id = field_values.pop('id')
+            contact_sf_name = field_values.get('lastname', None) or field_values.get('name', None)
+
+            phone_number = field_values.get('phone', None)
+
+            if phone_number:
+                country = org.get_country_code()
+                (normalized, is_valid) = URN.normalize_number(phone_number, country)
+                if is_valid:
+                    field_values['phone'] = normalized
+
+            field_values['created_by'] = user
+            field_values['org'] = org
+            field_values['name'] = contact_sf_name
+
+            contact = cls.objects.filter(org=org, salesforce_id=str(contact_sf_id), is_active=True).first()
+            try:
+                if contact:
+                    field_values['contact uuid'] = contact.uuid
+                    cls.create_instance(field_values)
+                    updated_counter += 1
+                else:
+                    contact = cls.create_instance(field_values)
+                    contact.salesforce_id = str(contact_sf_id)
+                    contact.save()
+                    created_counter += 1
+
+            except SmartImportRowError as e:
+                errors_counter += 1
+                error_messages.append(dict(contact=contact_sf_id, error=str(e)))
+
+            except Exception as e:  # pragma: needs cover
+                errors_counter += 1
+                raise Exception("Error on importing salesforce contact %s: %s" % (contact_sf_id, str(e)))
+
+        print('> Salesforce import complete (org: #%s) in %0.2fs' % (org_id, time.time() - start))
+
+        branding = org.get_branding()
+
+        send_template_email(user.username,
+                            'Your Salesforce import is ready',
+                            'contacts/email/contacts_salesforce_import',
+                            {
+                                'errors': error_messages,
+                                'inserted_counter': created_counter,
+                                'updated_counter': updated_counter,
+                                'errors_counter': errors_counter
+                            },
+                            branding)
 
     @classmethod
     def get_or_create(cls, org, user, name=None, urns=None, channel=None, uuid=None, language=None, is_test=False, force_urn_update=False, auth=None):
@@ -2590,6 +2668,158 @@ class ExportContactsTask(BaseExportTask):
                            time.time() - start, predicted))
 
         return exporter.save_file()
+
+    def salesforce_export(self):
+        errors = []
+
+        (sf_instance_url, sf_access_token, sf_refresh_token) = self.org.get_salesforce_credentials()
+        if not sf_instance_url or not sf_access_token:
+            return False, errors
+
+        sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+        metadata = sf.Contact.describe()
+        sf_fields = metadata.get('fields', None)
+
+        salesforce_fields = [f.get('name') for f in sf_fields if f.get('name') is not None]
+
+        fields, scheme_counts = self.get_export_fields_and_schemes()
+
+        fields = [f for f in fields if f['label'] in salesforce_fields]
+        fields.append({'field': None, 'urn_scheme': None, 'id': 0, 'key': 'Id', 'label': 'Id'})
+
+        group = self.group or ContactGroup.all_groups.get(org=self.org, group_type=ContactGroup.TYPE_ALL)
+
+        if self.search:
+            contacts = Contact.search(self.org, self.search, group)
+        else:
+            contacts = group.contacts.all()
+
+        contact_ids = contacts.filter(is_test=False).order_by('name', 'id').values_list('id', flat=True)
+
+        current_contact = 0
+        start = time.time()
+
+        print('> Starting export to Salesforce for %s contact(s)' % len(contact_ids))
+
+        # write out contacts in batches to limit memory usage
+        for batch_ids in chunk_list(contact_ids, 1000):
+            # fetch all the contacts for our batch
+            batch_contacts = Contact.objects.filter(id__in=batch_ids).select_related('org')
+
+            # to maintain our sort, we need to lookup by id, create a map of our id->contact to aid in that
+            contact_by_id = {c.id: c for c in batch_contacts}
+
+            # bulk initialize them
+            Contact.bulk_cache_initialize(self.org, batch_contacts)
+
+            values_add = []
+            values_update = []
+
+            batch_ids_add = []
+            batch_ids_update = []
+
+            for contact_id in batch_ids:
+                contact = contact_by_id[contact_id]
+
+                data_field = {}
+                for col in range(len(fields)):
+                    field = fields[col]
+
+                    if field['key'] == Contact.NAME or field['key'] == 'lastname':
+                        urn = contact.get_urn()
+                        field_value = contact.name or (urn.path if urn else None)
+                    elif field['key'] == Contact.UUID:
+                        field_value = contact.uuid
+                    elif field['key'] == Contact.ID:
+                        field_value = six.text_type(contact.id)
+                    elif field['key'] == Contact.SALESFORCE_ID:
+                        field_value = contact.salesforce_id
+                    elif field['urn_scheme'] is not None:
+                        contact_urns = contact.get_urns()
+                        scheme_urns = []
+                        for urn in contact_urns:
+                            if urn.scheme == field['urn_scheme']:
+                                scheme_urns.append(urn)
+                        position = field['position']
+                        if len(scheme_urns) > position:
+                            urn_obj = scheme_urns[position]
+                            field_value = urn_obj.get_display(org=self.org, formatted=False) if urn_obj else ''
+                        else:
+                            field_value = ''
+                    else:
+                        value = contact.get_field(field['key'])
+                        field_value = Contact.get_field_display_for_value(field['field'], value)
+
+                    if field_value is None:
+                        field_value = ''
+
+                    if field_value:
+                        field_value = six.text_type(clean_string(field_value))
+
+                    if field['label'] == Contact.NAME.capitalize() or field['label'] == 'LastName':
+                        names = field_value.split(' ')
+
+                        if len(names) > 1:
+                            first_name = names[0]
+                            data_field['FirstName'] = first_name
+                            field_value = names[-1]
+
+                        field['label'] = 'LastName'
+
+                    if field_value:
+                        data_field[field['label']] = field_value
+
+                if contact.salesforce_id:
+                    values_update.append(data_field)
+                    batch_ids_update.append(contact.id)
+                else:
+                    if 'Id' in data_field:
+                        del data_field['Id']
+                    values_add.append(data_field)
+                    batch_ids_add.append(contact.id)
+
+                current_contact += 1
+
+                # output some status information every 10,000 contacts
+                if current_contact % 10000 == 0:  # pragma: no cover
+                    elapsed = time.time() - start
+                    predicted = int(elapsed / (current_contact / (len(contact_ids) * 1.0)))
+
+                    print("Export of %s contacts - %d%% (%s/%s) complete in %0.2fs (predicted %0.0fs)" %
+                          (self.org.name, current_contact * 100 / len(contact_ids),
+                           "{:,}".format(current_contact), "{:,}".format(len(contact_ids)),
+                           time.time() - start, predicted))
+
+            if values_add:
+                results = sf.bulk.Contact.insert(values_add)
+
+                for index, contact_id in enumerate(batch_ids_add):
+                    contact = contact_by_id[contact_id]
+                    result_contact = results[index]
+
+                    if not result_contact.get('success', False) and result_contact.get('errors'):
+                        for error in result_contact.get('errors', []):
+                            err = '[%s] %s' % (error.get('statusCode', None), error.get('message', None))
+                            errors.append(dict(contact=contact, error=err))
+
+                    elif not contact.salesforce_id and result_contact.get('success', False) and result_contact.get('id', None):
+                        contact.salesforce_id = result_contact.get('id')
+                        contact.save()
+
+            if values_update:
+                results = sf.bulk.Contact.update(values_update)
+
+                for index, contact_id in enumerate(batch_ids_update):
+                    contact = contact_by_id[contact_id]
+                    result_contact = results[index]
+
+                    if not result_contact.get('success', False) and result_contact.get('errors'):
+                        for error in result_contact.get('errors', []):
+                            err = '[%s] %s' % (error.get('statusCode', None), error.get('message', None))
+                            errors.append(dict(contact=contact, error=err))
+
+        return True, errors
 
 
 @register_asset_store

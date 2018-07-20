@@ -972,6 +972,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   $scope.contactFields = Flow.contactFieldSearch
   $scope.updateContactFields = Flow.updateContactSearch
+  $scope.salesforceContactFieldSearch = Flow.salesforceContactFieldSearch
 
   $scope.actionConfigs = Flow.actions
   $scope.rulesetConfigs = Flow.rulesets
@@ -1861,6 +1862,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.action = utils.clone(action)
   $scope.action_webhook_headers_name = []
   $scope.action_webhook_headers_value = []
+  $scope.action_salesforce_fields = []
+  $scope.action_salesforce_values = []
 
   $scope.showAttachOptions = false
   $scope.showAttachVariable = false
@@ -1887,6 +1890,16 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       item_counter++
   else
     $scope.action.webhook_headers = []
+
+  if $scope.action.salesforce_fields
+    item_counter = 0
+    for item in $scope.action.salesforce_fields
+      $scope.action_salesforce_fields[item_counter] = item.field
+      $scope.action_salesforce_values[item_counter] = item.value
+      item_counter++
+  else
+    $scope.action.salesforce_fields = []
+    $scope.action.salesforce_fields.push({field: '', value: ''})
 
   formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0
 
@@ -1926,6 +1939,20 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     if $scope.quickReplies.length == 0
       $scope.showQuickReplyButton = true
       $scope.action.quick_replies = []
+
+  $scope.addNewActionSalesforceField = () ->
+    if !$scope.action.salesforce_fields
+      $scope.action.salesforce_fields = []
+
+    $scope.action.salesforce_fields.push({field: '', value: ''})
+
+  $scope.removeActionSalesforceField = (index) ->
+    $scope.action.salesforce_fields.splice(index, 1)
+    $scope.action_salesforce_fields.splice(index, 1)
+    $scope.action_salesforce_values.splice(index, 1)
+
+    if $scope.action.salesforce_fields.length == 0
+      $scope.addNewActionSalesforceField()
 
   $scope.actionset = actionset
   $scope.flowId = window.flowId
@@ -2123,6 +2150,24 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.action.field = field.id
     $scope.action.label = field.text
     $scope.action.value = value
+
+    Flow.saveAction(actionset, $scope.action)
+    $modalInstance.close()
+
+  # Export contact data to Salesforce
+  $scope.exportContactDataToSalesforce = () ->
+    $scope.action.type = 'sf_export'
+    
+    saved_salesforce_fields = []
+    item_counter = 0
+    for item in $scope.action.salesforce_fields
+      item_name = if $scope.action_salesforce_fields then $scope.action_salesforce_fields[item_counter] else null
+      item_value = if $scope.action_salesforce_values then $scope.action_salesforce_values[item_counter] else null
+      if item_name and item_value
+        saved_salesforce_fields.push({field: item_name, value: item_value})
+      item_counter++
+
+    $scope.action.salesforce_fields = saved_salesforce_fields
 
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()

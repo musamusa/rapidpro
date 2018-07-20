@@ -53,7 +53,7 @@ class BaseExportTask(TembaModel):
 
     status = models.CharField(max_length=1, default=STATUS_PENDING, choices=STATUS_CHOICES)
 
-    def perform(self):
+    def perform(self, event='contact'):
         """
         Performs the actual export. If export generation throws an exception it's caught here and the task is marked
         as failed.
@@ -63,15 +63,22 @@ class BaseExportTask(TembaModel):
 
             start = time.time()
 
-            temp_file, extension = self.write_export()
-
-            get_asset_store(model=self.__class__).save(self.id, File(temp_file), extension)
-
             branding = self.org.get_branding()
 
-            # notify user who requested this export
-            send_template_email(self.created_by.username, self.email_subject, self.email_template,
-                                self.get_email_context(branding), branding)
+            if event == 'contact':
+                temp_file, extension = self.write_export()
+                get_asset_store(model=self.__class__).save(self.id, File(temp_file), extension)
+
+                # notify user who requested this export
+                send_template_email(self.created_by.username, self.email_subject, self.email_template,
+                                    self.get_email_context(branding), branding)
+            else:
+                (is_exported, errors) = self.salesforce_export()
+
+                # notify user who requested this export
+                send_template_email(self.created_by.username, self.email_subject,
+                                    'contacts/email/contacts_salesforce_export', {'errors': errors}, branding)
+
         except Exception:
             import traceback
             traceback.print_exc()
@@ -84,6 +91,12 @@ class BaseExportTask(TembaModel):
             analytics.track(self.created_by.username, 'temba.%s_latency' % self.analytics_key, properties=dict(value=elapsed))
 
             gc.collect()  # force garbage collection
+
+    def salesforce_export(self):
+        """
+        Should push the contacts to SalesForce API
+        """
+        pass
 
     def write_export(self):  # pragma: no cover
         """

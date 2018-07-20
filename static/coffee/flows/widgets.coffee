@@ -356,6 +356,8 @@ app.directive "selectStatic", ['$timeout', ($timeout) ->
 
     staticData = JSON.parse(attrs.selectStatic)
 
+    nonNewVariable = attrs.nonNewVariable == false or attrs.nonNewVariable == undefined
+
     element.select2
       data: staticData
       minimumInputLength: 0
@@ -374,7 +376,7 @@ app.directive "selectStatic", ['$timeout', ($timeout) ->
 
         # TODO: This should be configurable via the directive, for now only variable selection using this
         # if term is non-empty and hasn't matched an returned item exactly, show option for creating a new item
-        if not exact_match and cleaned_query.length > 0 and cleaned_query.length <= 36 and /^[a-z0-9-][a-z0-9- ]*$/.test(cleaned_query)
+        if not exact_match and cleaned_query.length > 0 and cleaned_query.length <= 36 and /^[a-z0-9-][a-z0-9- ]*$/.test(cleaned_query) and nonNewVariable
           data.results.push({id:'[_NEW_]' + query.term, text: gettext('Add new variable') + ': ' + query.term});
 
         query.callback(data)

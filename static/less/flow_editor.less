@@ -771,6 +771,13 @@
     }
   }
 
+  .sf_export {
+    .title {
+      text-shadow: 0px 1px #109ad7 - #222;
+      .bg-gradient(#109ad7, #109ad7 - #101010);
+    }
+  }
+
   .play {
     .title {
       text-shadow: 0px 1px @color-play - #222;
@@ -1444,19 +1451,22 @@
       margin: 5px 0;
       display: inline-block;
     }
-    .webhook-headers{
-      a.add-header{
+    .salesforce-fields {
+      margin-top: 10px;
+    }
+    .webhook-headers, .salesforce-fields{
+      a.add-header, a.add-salesforce-field{
         margin: 5px 0;
         display: inline-block;
       }
-      .modal-webhook-header-pair{
+      .modal-webhook-header-pair, .modal-salesforce-field-pair{
         margin: 0;
-        .modal-webhook-header{
+        .modal-webhook-header, .modal-salesforce-field{
           width: 46%;
           display: inline-block;
           position: relative;
 
-          &.modal-webhook-header-name {
+          &.modal-webhook-header-name, &.modal-salesforce-field-name {
             margin: 0 1% 0 0;
             input{
               width: 100%;
@@ -1466,21 +1476,34 @@
               padding: 14px 6px;
               margin: 10px 0 0 0;
             }
+            select {
+              margin: 10px 0 0 0;
+              width: 100%;
+              height: 34px;
+            }
           }
 
-          &.modal-webhook-header-value {
+          &.modal-salesforce-field-name {
+            .select2-container {
+              width: 100%;
+              margin: 10px 0 0 0;
+            }
+          }
+
+          &.modal-webhook-header-value, &.modal-salesforce-field-value {
             margin: 0 0 0 1%;
             input{
               width: 100%;
               box-sizing: border-box;
               -moz-box-sizing: border-box;
               -webkit-box-sizing: border-box;
-              padding: 14px 6px;
+              padding: 0 6px;
               margin: 10px 0 0 0;
+              height: 34px;
             }
           }
 
-          &.modal-webhook-header-remove {
+          &.modal-webhook-header-remove, &.modal-salesforce-field-remove {
             width: 1% !important;
             display: inline-block;
             position: relative;
@@ -1494,8 +1517,8 @@
           }
         }
         &:hover{
-          .modal-webhook-header{
-            &.modal-webhook-header-remove {
+          .modal-webhook-header, .modal-salesforce-field{
+            &.modal-webhook-header-remove, &.modal-salesforce-field-remove {
               .icon{
                 display: inline-block;
               }

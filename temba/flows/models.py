@@ -50,6 +50,8 @@ from temba.values.models import Value
 from temba_expressions.utils import tokenize
 from uuid import uuid4
 
+from simple_salesforce import Salesforce
+
 
 logger = logging.getLogger(__name__)
 
@@ -5099,6 +5101,7 @@ class Action(object):
                 PlayAction.TYPE: PlayAction,
                 TriggerFlowAction.TYPE: TriggerFlowAction,
                 EndUssdAction.TYPE: EndUssdAction,
+                SalesforceExportAction.TYPE: SalesforceExportAction,
             }
 
         action_type = json_obj.get(cls.TYPE)
@@ -5185,6 +5188,80 @@ class EmailAction(Action):
             if invalid_addresses:
                 invalid_addresses = ['"%s"' % elt for elt in invalid_addresses]
                 ActionLog.warn(run, _("Some email address appear to be invalid: %s") % ", ".join(invalid_addresses))
+        return []
+
+
+class SalesforceExportAction(Action):
+    """
+    Forwards the steps in this flow to the Salesforce Account (if any)
+    """
+    TYPE = 'sf_export'
+
+    def __init__(self, uuid, salesforce_fields):
+        super(SalesforceExportAction, self).__init__(uuid)
+        self.salesforce_fields = salesforce_fields
+
+    @classmethod
+    def from_json(cls, org, json_obj):
+        return cls(json_obj.get(cls.UUID), json_obj.get('salesforce_fields', None))
+
+    def as_json(self):
+        return dict(type=self.TYPE, uuid=self.uuid, salesforce_fields=self.salesforce_fields)
+
+    def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+
+        def get_parts_of_name(name):
+            name_split = name.split(' ')
+            if len(name_split) == 1:
+                return None, ' '.join(name_split)
+            else:
+                first_name = name_split[0]
+                name_split.pop(0)
+                return first_name, ' '.join(name_split)
+
+        org = run.flow.org
+
+        extra_fields = {}
+        for field in self.salesforce_fields:
+            (value, errors) = Msg.evaluate_template(field.get('value'), context, org=org, url_encode=False)
+
+            salesforce_field_id = field['field']['id']
+
+            # Full name `Name` is blocked, so an INVALID_FIELD_FOR_INSERT_UPDATE error is returned if it's sent to Salesforce API
+            if salesforce_field_id == 'Name':
+                first_name, last_name = get_parts_of_name(value)
+                extra_fields['LastName'] = last_name
+
+                if first_name:
+                    extra_fields['FirstName'] = first_name
+
+            else:
+                extra_fields[salesforce_field_id] = value
+
+            if errors:
+                ActionLog.warn(run, _("Value appears to contain errors: %s") % ", ".join(errors))
+
+        (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+        if sf_instance_url:
+            sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+            if run.contact.salesforce_id:
+                sf.Contact.update(run.contact.salesforce_id, extra_fields)
+            else:
+                urn = run.contact.get_urn()
+                full_name = run.contact.name or (urn.path if urn else None)
+                first_name, last_name = get_parts_of_name(full_name)
+                create_arguments = {
+                    'LastName': last_name,
+                    'Phone': urn.path if urn.scheme == 'tel' else None
+                }
+                if first_name:
+                    create_arguments['FirstName'] = first_name
+                create_arguments.update(extra_fields)
+                result = sf.Contact.create(create_arguments)
+                run.contact.salesforce_id = result.get('id', None)
+                run.contact.save()
+
         return []
 
 

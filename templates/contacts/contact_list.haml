@@ -34,6 +34,10 @@
               %a#id_import_contacts.btn.btn-primary.btn-block{href:"{% url 'contacts.contact_import' %}"}
                 -trans "Import Contacts"
 
+            - if org_perms.contacts.contact_import_salesforce and salesforce_connected
+              %a#id_import_contacts.btn.btn-default.btn-block{href:'{% url "contacts.contact_import_salesforce" %}'}
+                -trans "Import Salesforce Contacts"
+
             - if org_perms.contacts.contact_invite
               %a#id_import_contacts.btn.btn-default.btn-block{href:'{% url "contacts.contact_invite" %}'}
                 -trans "Invite Participants"

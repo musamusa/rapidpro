@@ -33,7 +33,9 @@ from .models import Contact, ContactGroup, ContactGroupCount, ContactField, Cont
 from .models import ExportContactsTask, TEL_SCHEME
 from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
-from .tasks import export_contacts_task
+from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task
+
+from simple_salesforce import Salesforce
 
 
 class RemoveContactForm(forms.Form):
@@ -110,10 +112,10 @@ class ContactListView(OrgPermsMixin, SmartListView):
     def derive_group(self):
         return ContactGroup.all_groups.get(org=self.request.user.get_org(), group_type=self.system_group)
 
-    def derive_export_url(self):
+    def derive_export_url(self, reverse_name='contacts.contact_export'):
         search = urlquote_plus(self.request.GET.get('search', ''))
         redirect = urlquote_plus(self.request.get_full_path())
-        return '%s?g=%s&s=%s&redirect=%s' % (reverse('contacts.contact_export'), self.derive_group().uuid, search, redirect)
+        return '%s?g=%s&s=%s&redirect=%s' % (reverse(reverse_name), self.derive_group().uuid, search, redirect)
 
     def get_queryset(self, **kwargs):
         org = self.request.user.get_org()
@@ -341,9 +343,9 @@ class UpdateContactForm(ContactForm):
 
 class ContactCRUDL(SmartCRUDL):
     model = Contact
-    actions = ('create', 'update', 'stopped', 'list', 'import', 'read', 'filter', 'blocked', 'omnibox',
+    actions = ('create', 'update', 'stopped', 'list', 'import', 'import_salesforce', 'read', 'filter', 'blocked', 'omnibox',
                'customize', 'update_fields', 'update_fields_input', 'export', 'block', 'unblock', 'unstop', 'delete',
-               'history', 'invite', 'invite_filter', 'invite_send')
+               'history', 'invite', 'invite_filter', 'invite_send', 'salesforce_export')
 
     class Export(OrgPermsMixin, SmartTemplateView):
         def render_to_response(self, context, **response_kwargs):
@@ -383,6 +385,40 @@ class ContactCRUDL(SmartCRUDL):
                     messages.info(self.request,
                                   _("Export complete, you can find it here: %s (production users will get an email)")
                                   % dl_url)
+
+            return HttpResponseRedirect(redirect or reverse('contacts.contact_list'))
+
+    class SalesforceExport(OrgPermsMixin, SmartTemplateView):
+        def render_to_response(self, context, **response_kwargs):
+            user = self.request.user
+            org = user.get_org()
+
+            group_uuid = self.request.GET.get('g')
+            search = self.request.GET.get('s')
+            redirect = self.request.GET.get('redirect')
+
+            group = ContactGroup.all_groups.filter(org=org, uuid=group_uuid).first() if group_uuid else None
+
+            # is there already an export taking place?
+            existing = ExportContactsTask.get_recent_unfinished(org)
+            if existing:
+                messages.info(self.request,
+                              _("There is already an export in progress, started by %s. You must wait "
+                                "for that export to complete before starting another." % existing.created_by.username))
+
+            # otherwise, off we go
+            else:
+                previous_export = ExportContactsTask.objects.filter(org=org, created_by=user).order_by('-modified_on').first()
+                if previous_export and previous_export.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
+                    analytics.track(self.request.user.username, 'temba.contact_salesforce_exported')
+
+                export = ExportContactsTask.create(org, user, group, search)
+
+                on_transaction_commit(lambda: export_salesforce_contacts_task.delay(export.pk))
+
+                messages.info(self.request,
+                              _("We are preparing your export. We will e-mail you at %s when it is ready.")
+                              % self.request.user.username)
 
             return HttpResponseRedirect(redirect or reverse('contacts.contact_list'))
 
@@ -671,6 +707,203 @@ class ContactCRUDL(SmartCRUDL):
         def get_success_url(self):
             return reverse("contacts.contact_customize", args=[self.object.pk])
 
+    class ImportSalesforce(OrgPermsMixin, SmartFormView):
+        class ImportSalesforceForm(forms.Form):
+            salesforce_fields = forms.CharField(required=False)
+            query_fields = forms.CharField(required=False)
+
+            def __init__(self, *args, **kwargs):
+                self.org = kwargs['org']
+                del kwargs['org']
+                super(ContactCRUDL.ImportSalesforce.ImportSalesforceForm, self).__init__(*args, **kwargs)
+
+            def clean_salesforce_fields(self):
+                salesforce_fields = self.cleaned_data.get('salesforce_fields', None)
+                if salesforce_fields:
+                    salesforce_fields = salesforce_fields.split(',')
+                else:
+                    salesforce_fields = []
+                return salesforce_fields
+
+            def clean_query_fields(self):
+                idx = 1
+                headers = []
+                field = 'header_%d_field' % idx
+                rule = 'header_%d_rule' % idx
+                value = 'header_%d_value' % idx
+
+                while field in self.data:
+                    if self.data.get(value, ''):
+                        header = dict(field=self.data[field],
+                                      rule=self.data[rule],
+                                      value=self.data[value])
+                        headers.append(header)
+
+                    idx += 1
+                    field = 'header_%d_field' % idx
+                    rule = 'header_%d_rule' % idx
+                    value = 'header_%d_value' % idx
+
+                return headers
+
+            def clean(self):
+                groups_count = ContactGroup.user_groups.filter(org=self.org).count()
+                if groups_count >= ContactGroup.MAX_ORG_CONTACTGROUPS:
+                    raise forms.ValidationError(_("This org has %s groups and the limit is %s. "
+                                                  "You must delete existing ones before you can "
+                                                  "create new ones." % (groups_count,
+                                                                        ContactGroup.MAX_ORG_CONTACTGROUPS)))
+
+                return self.cleaned_data
+
+            class Meta:
+                fields = '__all__'
+
+        form_class = ImportSalesforceForm
+        fields = ('salesforce_fields', 'query_fields',)
+        success_message = ''
+        title = 'Import Salesforce Contacts'
+
+        def get_form_kwargs(self):
+            kwargs = super(ContactCRUDL.ImportSalesforce, self).get_form_kwargs()
+            kwargs['org'] = self.derive_org()
+            return kwargs
+
+        def get_context_data(self, **kwargs):
+            context = super(ContactCRUDL.ImportSalesforce, self).get_context_data(**kwargs)
+
+            org = self.request.user.get_org()
+
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+            if sf_instance_url and sf_access_token:
+                context['salesforce_connect'] = True
+
+                sf_fields = []
+
+                try:
+                    sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+                    metadata = sf.Contact.describe()
+                    fields = metadata.get('fields', None)
+
+                    fields = sorted(fields, key=lambda x: x.get('label')) if fields else []
+
+                    for item in fields:
+                        if item.get('name') is not None:
+                            sf_fields.append(dict(id=item.get('name'), text=item.get('label')))
+
+                except Exception:
+                    messages.warning(self.request, _('Your Salesforce access token is expired. We will renew it, please, try again 10min later.'))
+
+                context['sf_fields'] = sf_fields
+                context['sf_rules'] = [
+                    dict(id='equals', text=_('Equals')),
+                    dict(id='does_not_equal', text=_('Does not equal')),
+                    dict(id='contains', text=_('Contains')),
+                    dict(id='has_a_date_equals', text=_('Has a date equals')),
+                    dict(id='has_a_date_more_than', text=_('Has a date more than')),
+                    dict(id='has_a_date_less_than', text=_('Has a date less than')),
+                ]
+
+            return context
+
+        def derive_success_message(self):
+            return None
+
+        def get_success_url(self):
+            return reverse("contacts.contact_import_salesforce")
+
+        def form_valid(self, form):
+            cleaned_data = form.cleaned_data
+            user = self.request.user
+            org = user.get_org()
+            limit_sf_query = 2000
+            initial_sf_query = "SELECT %s FROM Contact "
+
+            def get_loop_length(counter, limit):
+                counterx = float(counter) / float(limit)
+                result = 1 if counterx <= 1 else int(counterx) + 1
+                return result
+
+            query_fields = cleaned_data.get('query_fields', [])
+            salesforce_fields = cleaned_data.get('salesforce_fields', [])
+
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
+            if sf_instance_url and sf_access_token:
+                salesforce_fields.extend(['Id', 'Name', 'Phone'])
+
+                sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+                sf_fields = ', '.join(salesforce_fields)
+
+                sf_query = initial_sf_query % sf_fields
+                sf_query_counter = initial_sf_query % ('COUNT(Id)')
+
+                sf_query_conditional = ""
+
+                if query_fields:
+                    sf_query_conditional += "WHERE "
+                    counter = 0
+
+                    for query in query_fields:
+                        if counter != 0:
+                            sf_query_conditional += " AND "
+
+                        rule = query.get('rule', 'equals')
+
+                        if rule == 'equals':
+                            sf_query_conditional += "{field}='{value}'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_equals':
+                            sf_query_conditional += "{field}={value}".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'contains':
+                            sf_query_conditional += "{field} LIKE '%{value}%'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'does_not_equal':
+                            sf_query_conditional += "{field}!='{value}'".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_more_than':
+                            sf_query_conditional += "{field}>{value}".format(field=query.get('field'), value=query.get('value'))
+                        elif rule == 'has_a_date_less_than':
+                            sf_query_conditional += "{field}<{value}".format(field=query.get('field'), value=query.get('value'))
+
+                        counter += 1
+
+                sf_query = "{initial_query}{conditional_query}".format(initial_query=sf_query, conditional_query=sf_query_conditional)
+                sf_query_count = "{initial_query}{conditional_query}".format(initial_query=sf_query_counter, conditional_query=sf_query_conditional)
+
+                salesforce_date_fields = ['EmailBouncedDate', 'LastModifiedDate', 'LastCURequestDate', 'LastViewedDate',
+                                          'CreatedDate', 'Birthdate', 'LastCUUpdateDate', 'LastActivityDate', 'LastReferencedDate']
+
+                for field in salesforce_fields:
+                    key = ContactField.make_key(label=field)
+                    is_valid_key = ContactField.is_valid_key(key)
+                    is_valid_label = ContactField.is_valid_label(field)
+                    if is_valid_key and is_valid_label:
+                        field_type = Value.TYPE_DATETIME if field in salesforce_date_fields else Value.TYPE_TEXT
+                        ContactField.get_or_create(org, user, key, label=field, value_type=field_type)
+
+                try:
+                    records = sf.query(sf_query_count)
+                    sf_count_records = records['records']
+
+                    counter_query = 0
+                    for item in sf_count_records:
+                        counter_query = item.get('expr0')
+                        break
+
+                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query, salesforce_fields, user.id, org.id, counter_query))
+
+                    messages.info(self.request,
+                                  _("We are preparing your Salesforce import for %s contact%s. We will e-mail you at %s when it is ready.")
+                                  % (counter_query, 's' if counter_query > 1 else '', self.request.user.username))
+                except Exception:
+                    messages.info(self.request, _("Please, review your advanced query."))
+
+            else:
+                messages.error(self.request, _('Your Salesforce isn\'t connected.'))
+
+            return HttpResponseRedirect(self.get_success_url())
+
     class Omnibox(OrgPermsMixin, SmartListView):
         paginate_by = 75
         fields = ('id', 'text')
@@ -868,6 +1101,9 @@ class ContactCRUDL(SmartCRUDL):
         def get_gear_links(self):
             links = []
 
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
             if self.has_org_perm('contacts.contactgroup_create') and self.request.GET.get('search') and not self.search_error:
                 links.append(dict(title=_('Save as Group'), js_class='add-dynamic-group', href="#"))
 
@@ -876,13 +1112,20 @@ class ContactCRUDL(SmartCRUDL):
 
             if self.has_org_perm('contacts.contact_export'):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
+
+            if self.has_org_perm('contacts.contact_salesforce_export') and sf_instance_url and sf_access_token:
+                links.append(dict(title=_('Export to Salesforce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
+
             return links
 
         def get_context_data(self, *args, **kwargs):
             context = super(ContactCRUDL.List, self).get_context_data(*args, **kwargs)
             org = self.request.user.get_org()
 
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+
             context['actions'] = ('label', 'block')
+            context['salesforce_connected'] = True if sf_instance_url else False
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
             return context
 
@@ -1048,6 +1291,11 @@ class ContactCRUDL(SmartCRUDL):
             context = super(ContactCRUDL.Blocked, self).get_context_data(*args, **kwargs)
             context['actions'] = ('unblock', 'delete') if self.has_org_perm("contacts.contact_delete") else ('unblock',)
             context['reply_disabled'] = True
+
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
     class Stopped(ContactActionMixin, ContactListView):
@@ -1059,6 +1307,11 @@ class ContactCRUDL(SmartCRUDL):
             context = super(ContactCRUDL.Stopped, self).get_context_data(*args, **kwargs)
             context['actions'] = ['block', 'unstop']
             context['reply_disabled'] = True
+
+            org = self.request.user.get_org()
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
     class Filter(ContactActionMixin, ContactListView):
@@ -1080,6 +1333,9 @@ class ContactCRUDL(SmartCRUDL):
             if self.has_org_perm('contacts.contact_export'):
                 links.append(dict(title=_('Export'), href=self.derive_export_url()))
 
+            if self.has_org_perm('contacts.contact_salesforce_export'):
+                links.append(dict(title=_('Export to Salesforce'), href=self.derive_export_url(reverse_name='contacts.contact_salesforce_export')))
+
             if self.has_org_perm('contacts.contactgroup_delete'):
                 links.append(dict(title=_('Delete Group'),
                                   js_class='delete-contactgroup',
@@ -1100,6 +1356,10 @@ class ContactCRUDL(SmartCRUDL):
             context['actions'] = actions
             context['current_group'] = group
             context['contact_fields'] = ContactField.objects.filter(org=org, is_active=True).order_by('pk')
+
+            (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
+            context['salesforce_connected'] = True if sf_instance_url else False
+
             return context
 
         @classmethod
@@ -1112,7 +1372,7 @@ class ContactCRUDL(SmartCRUDL):
     class Create(ModalMixin, OrgPermsMixin, SmartCreateView):
         form_class = ContactForm
         exclude = ('is_active', 'uuid', 'language', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'salesforce_id')
         success_message = ''
         submit_button_name = _("Create")
 
@@ -1141,7 +1401,7 @@ class ContactCRUDL(SmartCRUDL):
     class Update(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = UpdateContactForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'salesforce_id')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")
@@ -1212,7 +1472,7 @@ class ContactCRUDL(SmartCRUDL):
     class UpdateFields(ModalMixin, OrgObjPermsMixin, SmartUpdateView):
         form_class = ContactFieldForm
         exclude = ('is_active', 'uuid', 'org', 'fields', 'is_blocked', 'is_stopped',
-                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language')
+                   'created_by', 'modified_by', 'is_test', 'channel', 'name', 'language', 'salesforce_id')
         success_url = 'uuid@contacts.contact_read'
         success_message = ''
         submit_button_name = _("Save Changes")

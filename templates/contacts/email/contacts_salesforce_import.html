@@ -1,0 +1,26 @@
+{% load tz %}
+{% load i18n %}
+
+<p>{% trans "Hi there!" %}</p>
+
+<p>
+    {% blocktrans %}
+        Your Salesforce contacts import is ready. {{ inserted_counter }} inserted, {{ updated_counter }} updated and {{ errors_counter }} with an error.
+    {% endblocktrans %}
+</p>
+
+{% if errors %}
+<p>{% trans "We got some warnings from Salesforce related to import process:" %}</p>
+
+{% for item in errors %}
+    <p style="margin: 5px 0;">
+        {% trans "Contact: " %}{{ item.contact }}<br>
+        {% trans "Message: " %}{{ item.error }}
+    </p>
+{% endfor %}
+
+{% endif %}
+<br/>
+<p>{% trans "Thanks," %}</p>
+
+<p>{% blocktrans with brand=branding.name %}The {{ brand }} Team {% endblocktrans %}</p>

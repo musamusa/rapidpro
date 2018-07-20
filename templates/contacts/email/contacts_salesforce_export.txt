@@ -1,0 +1,28 @@
+{% load tz %}
+{% load i18n %}
+
+{% blocktrans %}
+Hi there!
+
+Your contacts export to Salesforce is ready.
+
+{% endblocktrans %}
+
+{% if errors %}
+
+{% blocktrans %}
+We got some warnings from Salesforce related to export process:
+{% endblocktrans %}
+
+{% for item in errors %}
+
+{% blocktrans %}Contact: {% endblocktrans %}{% if item.contact.name %}{{ item.contact }}{% else %}{{ item.contact.uuid }}{% endif %}
+{% blocktrans %}Message: {% endblocktrans %}{{ item.error }}
+
+{% endfor %}
+
+{% endif %}
+
+Thanks,
+
+{% blocktrans with brand=branding.name %}The {{ brand }} Team {% endblocktrans %}

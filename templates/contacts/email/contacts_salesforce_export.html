@@ -1,0 +1,22 @@
+{% load tz %}
+{% load i18n %}
+
+<p>{% trans "Hi there!" %}</p>
+
+<p>{% trans "Your contacts export to Salesforce is ready." %}</p>
+
+{% if errors %}
+<p>{% trans "We got some warnings from Salesforce related to export process:" %}</p>
+
+{% for item in errors %}
+    <p style="margin: 5px 0;">
+        {% trans "Contact: " %}{% if item.contact.name %}{{ item.contact }}{% else %}{{ item.contact.uuid }}{% endif %}<br>
+        {% trans "Message: " %}{{ item.error }}
+    </p>
+{% endfor %}
+
+{% endif %}
+<br/>
+<p>{% trans "Thanks," %}</p>
+
+<p>{% blocktrans with brand=branding.name %}The {{ brand }} Team {% endblocktrans %}</p>

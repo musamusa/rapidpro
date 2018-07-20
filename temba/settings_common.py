@@ -354,6 +354,7 @@ PERMISSIONS = {
                          'filter',
                          'history',
                          'import',
+                         'import_salesforce',
                          'omnibox',
                          'unblock',
                          'unstop',
@@ -362,6 +363,7 @@ PERMISSIONS = {
                          'invite',
                          'invite_filter',
                          'invite_send',
+                         'salesforce_export'
                          ),
 
     'contacts.contactfield': ('api',
@@ -404,6 +406,7 @@ PERMISSIONS = {
                  'plivo_connect',
                  'profile',
                  'resthooks',
+                 'salesforce',
                  'service',
                  'signup',
                  'sub_orgs',
@@ -460,6 +463,7 @@ PERMISSIONS = {
                    'results',
                    'revisions',
                    'run_table',
+                   'salesforce_fields',
                    'simulate',
                    'upload_action_recording',
                    'upload_media_action',
@@ -584,6 +588,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_filter',
         'contacts.contact_history',
         'contacts.contact_import',
+        'contacts.contact_import_salesforce',
         'contacts.contact_list',
         'contacts.contact_omnibox',
         'contacts.contact_read',
@@ -596,6 +601,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_invite',
         'contacts.contact_invite_filter',
         'contacts.contact_invite_send',
+        'contacts.contact_salesforce_export',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -631,6 +637,7 @@ GROUP_PERMISSIONS = {
         'orgs.org_plivo_connect',
         'orgs.org_profile',
         'orgs.org_resthooks',
+        'orgs.org_salesforce',
         'orgs.org_sub_orgs',
         'orgs.org_transfer_credits',
         'orgs.org_transfer_to_account',
@@ -724,6 +731,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_filter',
         'contacts.contact_history',
         'contacts.contact_import',
+        'contacts.contact_import_salesforce',
         'contacts.contact_list',
         'contacts.contact_omnibox',
         'contacts.contact_read',
@@ -736,6 +744,7 @@ GROUP_PERMISSIONS = {
         'contacts.contact_invite',
         'contacts.contact_invite_filter',
         'contacts.contact_invite_send',
+        'contacts.contact_salesforce_export',
         'contacts.contactfield.*',
         'contacts.contactgroup.*',
 
@@ -757,6 +766,7 @@ GROUP_PERMISSIONS = {
         'orgs.org_profile',
         'orgs.org_resthooks',
         'orgs.org_webhook',
+        'orgs.org_salesforce',
         'orgs.topup_list',
         'orgs.topup_read',
         'orgs.usersettings_phone',
@@ -1013,7 +1023,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'refresh_jiochat_access_tokens',
         'schedule': timedelta(seconds=3600),
     },
-
+    "refresh-salesforce-access-tokens": {
+        'task': 'refresh_salesforce_access_tokens',
+        'schedule': timedelta(seconds=600),
+    },
 }
 
 # Mapping of task name to task function path, used when CELERY_ALWAYS_EAGER is set to True
@@ -1254,3 +1267,8 @@ CHATBASE_API_URL = 'https://chatbase.com/api/message'
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
 GOOGLE_SHORTEN_URL_API_KEY = '__YOUR_GOOGLE_SHORTEN_URL_API_KEY__'
+
+SALESFORCE_CONSUMER_KEY = '__SALESFORCE_CONSUMER_KEY__'
+SALESFORCE_CONSUMER_SECRET = '__SALESFORCE_CONSUMER_SECRET__'
+SALESFORCE_AUTHORIZE_URL = 'https://login.salesforce.com/services/oauth2/authorize'
+SALESFORCE_ACCESS_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'

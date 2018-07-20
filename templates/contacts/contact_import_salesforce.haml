@@ -1,0 +1,251 @@
+-extends "smartmin/form.html"
+
+-load smartmin
+-load i18n
+
+- block pjax
+  #pjax
+    .row
+      .span3
+        #big-help.glyph.icon-cloud
+
+      .span9
+        %p
+          -trans "You can import your contacts from Salesforce."
+
+        %p
+          -trans "By default, we'll import all your contacts. If you want to import only a subset of contacts, click \"Advanced Options\"."
+
+        - block import-status
+          #import-status
+            - if salesforce_connect
+              %p
+                %form#import-form.smartmin-form.horizontal-form{method:"post", action:"{% url 'contacts.contact_import_salesforce' %}", enctype:"multipart/form-data"}
+                  - if form.non_field_errors
+                    .alert.alert-error.form-errors
+                      {{ form.non_field_errors }}
+                  
+                  -csrf_token
+
+                  -block fields
+                    #salesforce_fields_errors
+                      {{ form.salesforce_fields.errors }}
+                    #salesforce_fields
+                      {{ form.salesforce_fields }}
+                      %p
+                        -trans "The fields 'Id', 'Name' and 'Phone' are imported by default."
+
+                    %p
+                      %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
+                        -trans "Advanced Options"
+
+                    #salesforce_query_fields
+                      %p
+                        -trans "Import a subset of contacts based on specific information.  We will import only contacts that match all of the criteria below. For date fields, ensure your data is in the following format: YYYY-MM-DD"
+
+                      .templates
+                        .salesforce-header-pair.hide
+                          .field.header-field.field-select2
+                            %select{id: 'header_0_field', name: 'header_0_field'}
+                              -for item in sf_fields
+                                %option{value: '{{item.id}}'} {{item.text}}
+                          .field.header-rule
+                            %select{id: 'header_0_rule', name: 'header_0_rule'}
+                              -for item in sf_rules
+                                %option{value: '{{item.id}}'} {{item.text}}
+                          .field.header-value
+                            %input{type: 'text', id: 'header_0_value', name: 'header_0_value'}
+                          .field.header-action{onclick: 'removeQuery($(this))'}
+                            .icon.icon-close
+                  
+                      #real-fields
+                        .salesforce-header-pair
+                          .field.header-field
+                            %label
+                              -trans "Field"
+                          .field.header-rule
+                            %label
+                              -trans "Rule"
+                          .field.header-value
+                            %label
+                              -trans "Value"
+                      %a.add-query{href: 'javascript:;', onclick: 'addNewQuery()'}
+                        .icon.icon-plus-circle2
+                    
+                  .form-buttons
+                    %a.btn.btn-primary{onclick:'javascript:confirmSalesforceImport();'}
+                      -trans "Import"
+                    %a.btn{onclick:"javascript:history.go(-1)"}
+                      -trans "Cancel"
+            -else
+              %p
+                %b{style: "color: #F00"}
+                  -trans "Your Salesforce isn't connected."
+
+            .import-salesforce.hide
+              .title
+                -trans "Import Warning"
+              .body
+                -trans "You have selected to only import names and phone numbers from Salesforce. If you wish to continue, click \"Continue\" below. If you wish to add other fields from Salesforce, click \"Cancel\" and add those fields below and then click \"Import\" again."
+            %a#import-salesforce-form.posterize{onclick:'javascript:submitImportForm()'}
+
+
+{% block extra-style %}
+:css
+  .add-query {
+    margin: 10px 0 0 0;
+    display: table;
+  }
+
+  .select2-temba-field {
+    width: 100%;
+  }
+
+  .select2-container-multi {
+    width: 520px;
+  }
+
+  .form-buttons {
+    margin-top: 30px;
+  }
+
+  #import-message .import-result {
+    padding-bottom: 10px;
+    font-size: 20px;
+  }
+
+  #import-message .import-result .glyph {
+    font-size: 28px;
+    margin: 0px 20px;
+    line-height: 22px;
+  }
+
+  #import-message .import-result .well {
+    font-size: 14px;
+  }
+
+  #import-message .import-result a {
+    text-decoration :none;
+  }
+
+  #salesforce_query_fields {
+    display: none;
+  }
+
+  #salesforce_query_fields.active {
+    display: table;
+  }
+
+  #salesforce_query_fields .templates {
+    display: none;
+  }
+
+  #salesforce_query_fields .salesforce-header-pair {
+    width: 100%;
+    margin: 0 0 4px 0;
+  }
+
+  #salesforce_query_fields .salesforce-header-pair .header-action {
+    width: 25px;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  #salesforce_query_fields .salesforce-header-pair .header-action div {
+    color: #ccc;
+    cursor: pointer;
+  }
+
+  #salesforce_query_fields .field {
+    width: 190px;
+    position: relative;
+    display: inline-block;
+  }
+
+  #salesforce_query_fields .field input, #salesforce_query_fields .field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 35px;
+    margin-bottom: 0;
+  }
+
+{% endblock %}
+
+{% block extra-script %}
+  :javascript
+    function submitImportForm() {
+      $('#import-form').submit();
+    }
+
+    function confirmSalesforceImport() {
+      if ($('#id_salesforce_fields').val() == '') {
+        removalConfirmation("import-salesforce", "Continue");
+      } else {
+        submitImportForm();
+      }
+    }
+    
+    $(document).ready(function() {
+      addNewQuery();
+      $.ajax("{% url 'flows.flow_salesforce_fields' %}").success(function(data) {
+        var results = data.results;
+        var requiredFields = ['Id', 'Name', 'Phone'];
+        for (result in results) {
+          if (requiredFields.indexOf(results[result].id) > -1) {
+            results.splice(result, 1);
+          }
+        }
+        $('#id_salesforce_fields').select2({
+          tags: true,
+          tokenSeparators: [",", " "],
+          minimumResultsForSearch: -1,
+          placeholder: "Salesforce Fields",
+          containerCssClass: "select2-temba-field",
+          data: results
+        });
+      });
+    });
+
+    function removeQuery(ele) {
+      ele.parent().remove();
+      var numPairs = $("#real-fields").children(".salesforce-header-pair").length;
+      if (numPairs == 1) {
+        addNewQuery();
+      }
+    }
+
+    function addNewQuery() {
+      var numPairs = $("#real-fields").children(".salesforce-header-pair").length
+      var ele = $('.templates > .salesforce-header-pair').clone();
+
+      ele.find('select[id^="header_"]').each(function(){
+        var id = $(this).attr('id');
+        $(this).attr('id', id.replace(/0/g, numPairs));
+        var name = $(this).attr('name');
+        $(this).attr('name', name.replace(/0/g, numPairs));
+      });
+
+      ele.find('input[id^="header_"]').each(function(){
+        var id = $(this).attr('id');
+        $(this).attr('id', id.replace(/0/g, numPairs));
+        var name = $(this).attr('name');
+        $(this).attr('name', name.replace(/0/g, numPairs));
+      });
+      
+      $("#real-fields").append(ele);
+      ele.toggleClass('hide');
+    }
+
+    function showAndHideAdvancedOptions() {
+      var btn = $('#advancedOptionsButton');
+      var el = $('#salesforce_query_fields');
+      if (el.hasClass('active')) {
+        el.removeClass('active');
+        btn.html('Advanced Options');
+      } else {
+        el.addClass('active');
+        btn.html('Simple Options');
+      }
+    }
+
+{% endblock %}

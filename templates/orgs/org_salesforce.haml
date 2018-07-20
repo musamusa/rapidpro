@@ -1,0 +1,61 @@
+-extends 'smartmin/form.html'
+
+-load compress temba smartmin i18n
+
+-block form-span
+
+-block title-text
+  .title-text
+    %h1
+      -trans "Salesforce Account"
+
+-block summary
+  -if sf_instance_url
+    -trans "Connected to Salesforce Account"
+    <b>{{sf_instance_url}}</b>.
+  -else
+    -trans "Connect your Salesforce account"
+
+-block pre-form
+  -if not sf_instance_url
+    -trans "Adding a Salesforce account will allow you to import and export data between Salesforce and Community Connect Labs."
+    %hr
+
+    %a.btn.btn-primary{href:'{{ salesforce_url }}'}
+      -trans "Link Salesforce Account"
+
+-block fields
+  -if not sf_instance_url
+    {{ block.super }}
+
+-block form-buttons
+
+-block post-form
+  -if sf_instance_url and request.META.HTTP_X_FORMAX
+    %p
+      -trans "Your Salesforce account is connected: "
+      {{sf_instance_url}}.
+
+    %p
+      -trans "If you no longer want it connected, you can"
+      %a{href:'javascript:confirmSalesforceDisconnect();'}
+        -trans "disconnect"
+      -trans "your Salesforce account. Doing so will will prevent data from being sent to or received by your Salesforce account."
+
+    %p
+      -trans "To learn to import your contacts from Salesforce"
+      %a{href:'https://help.communityconnectlabs.com/support/solutions/articles/8000055005-salesforce-contact-importing', target:'_new'}
+        -trans "click here"
+
+    .disconnect-salesforce.hide
+      .title
+        -trans "Disconnect Salesforce"
+      .body
+        -trans "This will disconnect your Salesforce account. Are you sure you want to proceed?"
+    %a#disconnect-salesforce-form.posterize{href:'{% url "orgs.org_salesforce" %}?disconnect=true'}
+
+-block extra-script
+  :javascript
+    function confirmSalesforceDisconnect() {
+      removalConfirmation("disconnect-salesforce", "Disconnect");
+    }

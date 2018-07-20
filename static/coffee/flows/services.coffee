@@ -432,6 +432,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type:'add_group', name:'Add to Groups', verbose_name:'Add contact to a group', icon: 'icon-users-2', groups:true, filter:ALL }
         { type:'del_group', name:'Remove from Groups', verbose_name:'Remove contact from a group', icon: 'icon-users-2', groups:true, filter:ALL }
         { type:'api', name:'Webhook', verbose_name:'Make a call to an external server', icon: 'icon-cloud-upload', filter:[TEXT,VOICE] }
+        { type:'sf_export', name:'Salesforce Export', verbose_name:'Export data to Salesforce', icon: 'icon-cloud', filter:[TEXT] }
         { type:'email', name:'Send Email', verbose_name: 'Send an email', icon: 'icon-bubble-3', filter:[TEXT,VOICE] }
         { type:'lang', name:'Set Language', verbose_name:'Set language for contact', icon: 'icon-language', filter:ALL }
         { type:'channel', name:'Set Channel', verbose_name:'Set preferred channel', icon: 'icon-phone', filter:[TEXT, VOICE] }
@@ -1098,6 +1099,14 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
 
         $http.get('/label/').success (labels) ->
           Flow.labels = labels
+
+        $http.get('/flow/salesforce_fields/').success (fields) ->
+          salesforceContactFieldSearch = []
+
+          for field in fields.results
+            salesforceContactFieldSearch.push({ id: field.id, text: field.text })
+
+          Flow.salesforceContactFieldSearch = salesforceContactFieldSearch
 
         $timeout ->
           window.loaded = true
