@@ -455,7 +455,7 @@ class OrgCRUDL(SmartCRUDL):
                'chatbase', 'choose', 'manage_accounts', 'manage_accounts_sub_org', 'manage', 'update', 'country',
                'languages', 'clear_cache', 'twilio_connect', 'twilio_account', 'nexmo_configuration', 'nexmo_account',
                'nexmo_connect', 'sub_orgs', 'create_sub_org', 'export', 'import', 'plivo_connect', 'resthooks',
-               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server')
+               'service', 'surveyor', 'transfer_credits', 'transfer_to_account', 'smtp_server', 'resend_invitation')
 
     model = Org
 
@@ -1321,6 +1321,22 @@ class OrgCRUDL(SmartCRUDL):
         def get_success_url(self):  # pragma: needs cover
             org_id = self.request.GET.get('org')
             return '%s?org=%s' % (reverse('orgs.org_manage_accounts_sub_org'), org_id)
+
+    class ResendInvitation(InferOrgMixin, OrgPermsMixin, SmartUpdateView):  # pragma: no cover
+
+        def dispatch(self, *args, **kwargs):
+            return super(OrgCRUDL.ResendInvitation, self).dispatch(*args, **kwargs)
+
+        def get(self, request, *args, **kwargs):
+            invite = Invitation.objects.filter(id=int(request.GET.get('invite')), is_active=True).first()
+
+            if invite:
+                invite.send_invitation()
+                messages.success(request, _('Invitation resent successfully'))
+            else:
+                messages.error(request, _('No invitation found'))
+
+            return HttpResponseRedirect(reverse('orgs.org_manage_accounts'))
 
     class Service(SmartFormView):
         class ServiceForm(forms.Form):

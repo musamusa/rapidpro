@@ -139,7 +139,9 @@
       -for invite in invites
         %tr.invite
           %td
-            {{invite.email}} (Invite Sent)
+            {{invite.email}} - 
+            %a{href:"{% url 'orgs.org_resend_invitation' %}?invite={{invite.id}}"}
+              -trans "Resend Invite"
           %td.permission
             .glyph.level-checkbox{class:'{% if invite.user_group == "A"%}checked{%endif%}'}
           %td.permission
