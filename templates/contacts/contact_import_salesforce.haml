@@ -14,7 +14,7 @@
           -trans "You can import your contacts from Salesforce."
 
         %p
-          -trans "By clicking the button below, your contacts will be imported from Salesforce. Before clicking on import, choose what fields you want to import to Community Connect Labs."
+          -trans "By default, we'll import all your contacts. If you want to import only a subset of contacts, click \"Advanced Options\"."
 
         - block import-status
           #import-status
@@ -37,13 +37,11 @@
 
                     %p
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
-                        -trans "Advanced options"
+                        -trans "Advanced Options"
 
                     #salesforce_query_fields
                       %p
-                        -trans "Select the fields and the query, to import only contacts that match these requirements."
-                        %br
-                        -trans "This query is always doing a \"and\". So we are only importing contacts that match all the criteria. For date fields use the following format YYYY-MM-DD."
+                        -trans "Import a subset of contacts based on specific information.  We will import only contacts that match all of the criteria below. For date fields, ensure your data is in the following format: YYYY-MM-DD"
 
                       .templates
                         .salesforce-header-pair.hide
@@ -243,10 +241,10 @@
       var el = $('#salesforce_query_fields');
       if (el.hasClass('active')) {
         el.removeClass('active');
-        btn.html('Advanced options');
+        btn.html('Advanced Options');
       } else {
         el.addClass('active');
-        btn.html('Simple options');
+        btn.html('Simple Options');
       }
     }
 
