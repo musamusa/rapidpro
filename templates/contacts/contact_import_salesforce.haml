@@ -16,6 +16,9 @@
         %p
           -trans "By default, we'll import all your contacts. If you want to import only a subset of contacts, click \"Advanced Options\"."
 
+        %p
+          -trans "Select the fields below that you want to import from Salesforce."
+
         - block import-status
           #import-status
             - if salesforce_connect
