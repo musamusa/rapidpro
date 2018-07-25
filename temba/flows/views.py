@@ -1533,6 +1533,10 @@ class FlowCRUDL(SmartCRUDL):
                                                     external_id='test',
                                                     org=user.get_org(),
                                                     status=status)
+                    elif new_message == 'timeout':
+                        last_run = FlowRun.objects.filter(contact=test_contact).order_by('-modified_on').first()
+                        print(last_run)
+                        last_run.resume_after_timeout(timezone.now())
                     else:
                         Msg.create_incoming(None,
                                             six.text_type(test_contact.get_urn(TEL_SCHEME)),
@@ -1575,6 +1579,7 @@ class FlowCRUDL(SmartCRUDL):
                 ruleset = RuleSet.objects.filter(uuid=step.step_uuid).first()
                 if ruleset:
                     response['ruleset'] = ruleset.as_json()
+                    response['timeout'] = ruleset.get_timeout()
 
             return JsonResponse(dict(status="success", description="Message sent to Flow", **response))
 
