@@ -38,6 +38,13 @@
                       %p
                         -trans "The fields 'Id', 'Name' and 'Phone' are imported by default."
 
+                    #group_name
+                      {{ form.group_name }}
+                      #group_name_errors
+                        {{ form.group_name.errors }}
+                      %p
+                        -trans "Change this field if you want to customize the import group name."
+
                     %p
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
                         -trans "Advanced Options"
@@ -170,6 +177,16 @@
     box-sizing: border-box;
     height: 35px;
     margin-bottom: 0;
+  }
+
+  input#id_group_name::-webkit-input-placeholder {
+    color: rgb(153, 153, 159);
+    font-weight: 400;
+  }
+
+  input#id_group_name::-moz-placeholder {
+    color: rgb(153, 153, 159);
+    font-weight: 400;
   }
 
 {% endblock %}

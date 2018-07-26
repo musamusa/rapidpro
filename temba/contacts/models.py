@@ -838,7 +838,7 @@ class Contact(TembaModel):
             return None
 
     @classmethod
-    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter):
+    def import_from_salesforce(cls, sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter, contact_group_name):
         from django.contrib.auth.models import User
 
         print('> Starting Salesforce import (org: #%s) for %s contact(s)' % (org_id, counter))
@@ -851,6 +851,9 @@ class Contact(TembaModel):
 
         user = User.objects.filter(id=user_id).first()
         sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
+
+        # Creating contact group
+        contact_group = ContactGroup.create_static(org, user, contact_group_name)
 
         start = time.time()
 
@@ -886,6 +889,8 @@ class Contact(TembaModel):
                     contact.salesforce_id = str(contact_sf_id)
                     contact.save()
                     created_counter += 1
+
+                contact_group.contacts.add(contact)
 
             except SmartImportRowError as e:
                 errors_counter += 1
