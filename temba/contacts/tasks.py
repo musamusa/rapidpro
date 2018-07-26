@@ -30,8 +30,8 @@ def squash_contactgroupcounts():
 
 
 @task(track_started=True, name='import_salesforce_contacts_task')
-def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter):
+def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter, contact_group_name):
     """
     Import contacts from Salesforce and sends an e-mail to the user when it gets the end.
     """
-    Contact.import_from_salesforce(sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter)
+    Contact.import_from_salesforce(sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter, contact_group_name)

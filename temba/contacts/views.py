@@ -25,7 +25,7 @@ from smartmin.views import SmartListView, SmartReadView, SmartUpdateView, SmartT
 from temba.msgs.views import SendMessageForm
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.values.models import Value
-from temba.utils import analytics, languages, datetime_to_ms, ms_to_datetime, on_transaction_commit
+from temba.utils import analytics, languages, datetime_to_ms, ms_to_datetime, on_transaction_commit, datetime_to_str
 from temba.utils.fields import Select2Field
 from temba.utils.text import slugify_with
 from temba.utils.views import BaseActionForm
@@ -710,12 +710,22 @@ class ContactCRUDL(SmartCRUDL):
     class ImportSalesforce(OrgPermsMixin, SmartFormView):
         class ImportSalesforceForm(forms.Form):
             salesforce_fields = forms.CharField(required=False)
+            group_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'placeholder': 'CommunityConnect Labs Group Name'}))
             query_fields = forms.CharField(required=False)
 
             def __init__(self, *args, **kwargs):
                 self.org = kwargs['org']
                 del kwargs['org']
+
                 super(ContactCRUDL.ImportSalesforce.ImportSalesforceForm, self).__init__(*args, **kwargs)
+
+                default_group_name = 'Salesforce Import %s' % datetime_to_str(timezone.now(), format='%m.%d.%Y', ms=False, tz=self.org.timezone)
+                groups_count = ContactGroup.user_groups.filter(org=self.org, name__icontains=default_group_name).only('name').count()
+
+                if groups_count > 0:
+                    default_group_name += ' (%s)' % groups_count
+
+                self.fields['group_name'].initial = default_group_name
 
             def clean_salesforce_fields(self):
                 salesforce_fields = self.cleaned_data.get('salesforce_fields', None)
@@ -760,7 +770,7 @@ class ContactCRUDL(SmartCRUDL):
                 fields = '__all__'
 
         form_class = ImportSalesforceForm
-        fields = ('salesforce_fields', 'query_fields',)
+        fields = ('salesforce_fields', 'query_fields', 'group_name')
         success_message = ''
         title = 'Import Salesforce Contacts'
 
@@ -818,16 +828,11 @@ class ContactCRUDL(SmartCRUDL):
             cleaned_data = form.cleaned_data
             user = self.request.user
             org = user.get_org()
-            limit_sf_query = 2000
             initial_sf_query = "SELECT %s FROM Contact "
-
-            def get_loop_length(counter, limit):
-                counterx = float(counter) / float(limit)
-                result = 1 if counterx <= 1 else int(counterx) + 1
-                return result
 
             query_fields = cleaned_data.get('query_fields', [])
             salesforce_fields = cleaned_data.get('salesforce_fields', [])
+            contact_group_name = cleaned_data.get('group_name')
 
             (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
@@ -891,7 +896,7 @@ class ContactCRUDL(SmartCRUDL):
                         counter_query = item.get('expr0')
                         break
 
-                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query, salesforce_fields, user.id, org.id, counter_query))
+                    on_transaction_commit(lambda: import_salesforce_contacts_task.delay(sf_instance_url, sf_access_token, sf_query, salesforce_fields, user.id, org.id, counter_query, contact_group_name))
 
                     messages.info(self.request,
                                   _("We are preparing your Salesforce import for %s contact%s. We will e-mail you at %s when it is ready.")
