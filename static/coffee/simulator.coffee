@@ -280,7 +280,7 @@ showSimulator = (reset=false) ->
 
 window.nextFlowStepFromTimeout = ->
   clearTimeout(response_timeout)
-  sendMessage('timeout')
+  sendMessage('MSG_TIMEOUT')
 
 window.refreshSimulator = ->
 
