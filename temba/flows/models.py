@@ -5243,24 +5243,27 @@ class SalesforceExportAction(Action):
 
         (sf_instance_url, sf_access_token, sf_refresh_token) = org.get_salesforce_credentials()
 
-        if sf_instance_url:
+        if sf_instance_url and not run.contact.is_test:
             sf = Salesforce(instance_url=sf_instance_url, session_id=sf_access_token)
-            if run.contact.salesforce_id:
-                sf.Contact.update(run.contact.salesforce_id, extra_fields)
-            else:
-                urn = run.contact.get_urn()
-                full_name = run.contact.name or (urn.path if urn else None)
-                first_name, last_name = get_parts_of_name(full_name)
-                create_arguments = {
-                    'LastName': last_name,
-                    'Phone': urn.path if urn.scheme == 'tel' else None
-                }
-                if first_name:
-                    create_arguments['FirstName'] = first_name
-                create_arguments.update(extra_fields)
-                result = sf.Contact.create(create_arguments)
-                run.contact.salesforce_id = result.get('id', None)
-                run.contact.save()
+            try:
+                if run.contact.salesforce_id:
+                    sf.Contact.update(run.contact.salesforce_id, extra_fields)
+                else:
+                    urn = run.contact.get_urn()
+                    full_name = run.contact.name or (urn.path if urn else None)
+                    first_name, last_name = get_parts_of_name(full_name)
+                    create_arguments = {
+                        'LastName': last_name,
+                        'Phone': urn.path if urn.scheme == 'tel' else None
+                    }
+                    if first_name:
+                        create_arguments['FirstName'] = first_name
+                    create_arguments.update(extra_fields)
+                    result = sf.Contact.create(create_arguments)
+                    run.contact.salesforce_id = result.get('id', None)
+                    run.contact.save()
+            except Exception as e:
+                ActionLog.warn(run, e.args)
 
         return []
 
