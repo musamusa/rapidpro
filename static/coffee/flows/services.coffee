@@ -1104,7 +1104,8 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
           salesforceContactFieldSearch = []
 
           for field in fields.results
-            salesforceContactFieldSearch.push({ id: field.id, text: field.text })
+            if field.id not in ['Id', 'IsDeleted', 'CreatedById', 'CreatedDate', 'LastModifiedById', 'LastModifiedDate', 'SystemModstamp']
+              salesforceContactFieldSearch.push({ id: field.id, text: field.text })
 
           Flow.salesforceContactFieldSearch = salesforceContactFieldSearch
 
