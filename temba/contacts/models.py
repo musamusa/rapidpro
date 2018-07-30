@@ -2686,7 +2686,7 @@ class ExportContactsTask(BaseExportTask):
         metadata = sf.Contact.describe()
         sf_fields = metadata.get('fields', None)
 
-        sf_system_fields = ['Id', 'IsDeleted', 'CreatedById', 'CreatedDate', 'LastModifiedById', 'LastModifiedDate', 'SystemModstamp']
+        sf_system_fields = ['Id', 'IsDeleted', 'AccountId', 'OwnerId', 'ReportsToId', 'MasterRecordId', 'OtherAddress', 'MailingAddress', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById', 'SystemModstamp', 'LastActivityDate', 'LastCURequestDate', 'LastCUUpdateDate', 'LastViewedDate', 'LastReferencedDate', 'IsEmailBounced', 'PhotoUrl', 'JigsawContactId']
         salesforce_fields = [f.get('name') for f in sf_fields if f.get('name') is not None and f.get('name') not in sf_system_fields]
 
         fields, scheme_counts = self.get_export_fields_and_schemes()

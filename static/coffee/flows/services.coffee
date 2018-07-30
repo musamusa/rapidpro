@@ -1104,7 +1104,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
           salesforceContactFieldSearch = []
 
           for field in fields.results
-            if field.id not in ['Id', 'IsDeleted', 'CreatedById', 'CreatedDate', 'LastModifiedById', 'LastModifiedDate', 'SystemModstamp']
+            if field.id not in ['Id', 'IsDeleted', 'AccountId', 'OwnerId', 'ReportsToId', 'MasterRecordId', 'OtherAddress', 'MailingAddress', 'CreatedDate', 'CreatedById', 'LastModifiedDate', 'LastModifiedById', 'SystemModstamp', 'LastActivityDate', 'LastCURequestDate', 'LastCUUpdateDate', 'LastViewedDate', 'LastReferencedDate', 'IsEmailBounced', 'PhotoUrl', 'JigsawContactId']
               salesforceContactFieldSearch.push({ id: field.id, text: field.text })
 
           Flow.salesforceContactFieldSearch = salesforceContactFieldSearch
