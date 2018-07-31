@@ -43,7 +43,7 @@
                       #group_name_errors
                         {{ form.group_name.errors }}
                       %p
-                        -trans "Change this field if you want to customize the import group name."
+                        -trans "We'll import your Salesforce contacts to a group. Use the field above to customize the group name."
 
                     %p
                       %a#advancedOptionsButton{href: 'javascript:;', onclick: 'showAndHideAdvancedOptions()'}
@@ -51,7 +51,7 @@
 
                     #salesforce_query_fields
                       %p
-                        -trans "Import a subset of contacts based on specific information.  We will import only contacts that match all of the criteria below. For date fields, ensure your data is in the following format: YYYY-MM-DD"
+                        -trans "Import a subset of contacts based on specific information. We will import only contacts that match all of the criteria below. For date fields, ensure your data is in the following format: YYYY-MM-DD"
 
                       .templates
                         .salesforce-header-pair.hide
