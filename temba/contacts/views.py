@@ -723,7 +723,7 @@ class ContactCRUDL(SmartCRUDL):
                 groups_count = ContactGroup.user_groups.filter(org=self.org, name__icontains=default_group_name).only('name').count()
 
                 if groups_count > 0:
-                    default_group_name += ' (%s)' % groups_count
+                    default_group_name += ' %s' % groups_count
 
                 self.fields['group_name'].initial = default_group_name
 

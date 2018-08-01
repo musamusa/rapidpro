@@ -5263,7 +5263,7 @@ class SalesforceExportAction(Action):
                     run.contact.salesforce_id = result.get('id', None)
                     run.contact.save()
             except Exception as e:
-                ActionLog.warn(run, e.args)
+                ActionLog.error(run, e.args)
 
         return []
 
