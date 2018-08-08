@@ -1065,6 +1065,8 @@ class FlowCRUDL(SmartCRUDL):
             csrftoken = '%s' % request.COOKIES.get('csrftoken')
             sessionid = '%s' % request.session.session_key
 
+            pdf_export_lang = request.POST.get('pdf_export_lang', None)
+
             options = {
                 'page-size': 'A4',
                 'margin-top': '0.1in',
@@ -1086,8 +1088,11 @@ class FlowCRUDL(SmartCRUDL):
             }
 
             slug_flow = slugify(self.object.name)
-
             url = '%s://%s%s' % (protocol, settings.HOSTNAME, reverse('flows.flow_pdf_export', args=[self.object.uuid]))
+
+            if pdf_export_lang:
+                url += '?pdf_export_lang=%s' % pdf_export_lang
+
             output_dir = '%s/flow_pdf' % settings.MEDIA_ROOT
             output_path = '%s/%s.pdf' % (output_dir, slug_flow)
 

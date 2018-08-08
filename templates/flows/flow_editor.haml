@@ -86,6 +86,8 @@
       var txt;
       var r = confirm("{% trans 'Please note that if your flow is very large, this might cause some problems in generating the PDF. Do you want to continue?' %}");
       if (r == true) {
+        var currentLang = $('.languages').find('.active');
+        $('#pdf_export_lang').val(currentLang.data('lang'));
         $('form.pdf_export').submit();
       }
     });
@@ -237,6 +239,7 @@
 
   %form{method:'POST', class:'pdf_export hide'}
     -csrf_token
+    %input{type:'hidden', id:'pdf_export_lang', name:'pdf_export_lang'}
 
   #drag-helper.hide
     .tail
@@ -311,7 +314,7 @@
 
       .languages{ng-show:'languages.length > 1 && flow.base_language && (flow.action_sets.length + flow.rule_sets.length) > 0'}
         <span ng-repeat="lang in languages">
-          <a href="javascript:void(0);" class='language' ng-class='{active:lang.iso_code == language.iso_code}' ng-click="setLanguage(lang)">[[lang.name]]</a>
+          <a href="javascript:void(0);" class='language' data-lang="[[lang.iso_code]]" ng-class='{active:lang.iso_code == language.iso_code}' ng-click="setLanguage(lang)">[[lang.name]]</a>
           <span ng-hide='$last'>|</span>
         </span>
 
