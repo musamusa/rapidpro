@@ -1079,7 +1079,7 @@ class FlowCRUDL(SmartCRUDL):
                 'dpi': '300',
                 'zoom': 0.7,
                 'viewport-size': '1920x900',
-                'javascript-delay': 2000,
+                'javascript-delay': 3000,
                 'cookie': [
                     ('csrftoken', csrftoken),
                     ('sessionid', sessionid),
@@ -1129,6 +1129,9 @@ class FlowCRUDL(SmartCRUDL):
             if flow.flow_type == Flow.VOICE and not flow.org.supports_ivr():  # pragma: needs cover
                 can_start = False
             context['can_start'] = can_start
+
+            context['pdf_export_lang'] = self.request.GET.get('pdf_export_lang', None)
+
             return context
 
         def get_template_names(self):
