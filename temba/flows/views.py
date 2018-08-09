@@ -1079,7 +1079,7 @@ class FlowCRUDL(SmartCRUDL):
                 'dpi': '300',
                 'zoom': 0.7,
                 'viewport-size': '1920x900',
-                'javascript-delay': 3000,
+                'javascript-delay': 2000,
                 'cookie': [
                     ('csrftoken', csrftoken),
                     ('sessionid', sessionid),
