@@ -1953,7 +1953,11 @@ form.smartmin-form ul.errorlist li {
 
     overflow-x: hidden;
     padding: 20px;
-    max-height: 430px;
+    max-height: 350px;
+
+    @media (max-width: 800px) {
+      max-height: 200px;
+    }
 
     .details {
       color: #ccc;
