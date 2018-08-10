@@ -268,13 +268,15 @@ class EventForm(forms.ModelForm):
             obj.flow = Flow.objects.get(org=org, id=self.cleaned_data['flow_to_start'])
 
     def __init__(self, user, *args, **kwargs):
+        from temba.values.models import Value
+
         self.user = user
         super(EventForm, self).__init__(*args, **kwargs)
 
         org = self.user.get_org()
 
         relative_to = self.fields['relative_to']
-        relative_to.queryset = ContactField.objects.filter(org=org, is_active=True).order_by('label')
+        relative_to.queryset = ContactField.objects.filter(org=org, is_active=True, value_type=Value.TYPE_DATETIME).order_by('label')
 
         flow = self.fields['flow_to_start']
         flow.queryset = Flow.objects.filter(org=self.user.get_org(), flow_type__in=[Flow.FLOW, Flow.VOICE],
