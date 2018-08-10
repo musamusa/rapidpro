@@ -1446,6 +1446,7 @@ class FlowCRUDL(SmartCRUDL):
             return HttpResponseRedirect(reverse('flows.flow_editor', args=[self.get_object().uuid]))
 
         def post(self, request, *args, **kwargs):
+            from .models import INCOMING
 
             # try to parse our body
             try:
@@ -1536,6 +1537,13 @@ class FlowCRUDL(SmartCRUDL):
                                                     external_id='test',
                                                     org=user.get_org(),
                                                     status=status)
+                    elif new_message == 'MSG_TIMEOUT':
+                        msg = Msg()
+                        msg.text = ''
+                        msg.direction = INCOMING
+                        msg.org = user.get_org()
+                        msg.contact = test_contact
+                        Flow.find_and_handle(msg, resume_after_timeout=True)
                     else:
                         Msg.create_incoming(None,
                                             six.text_type(test_contact.get_urn(TEL_SCHEME)),
@@ -1578,6 +1586,7 @@ class FlowCRUDL(SmartCRUDL):
                 ruleset = RuleSet.objects.filter(uuid=step.step_uuid).first()
                 if ruleset:
                     response['ruleset'] = ruleset.as_json()
+                    response['timeout'] = ruleset.get_timeout()
 
             return JsonResponse(dict(status="success", description="Message sent to Flow", **response))
 

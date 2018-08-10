@@ -1,6 +1,7 @@
 window.simulation = false
 moving_sim = false
 level_classes = {"I": "iinfo", "W": "iwarn", "E": "ierror"}
+response_timeout = null
 
 window.updateSimulator = (data) ->
   ussd = if window.ussd then "ussd" else ""
@@ -27,6 +28,11 @@ window.updateSimulator = (data) ->
       $('.simulator-footer .audio-button').show()
     else
       $('.simulator-footer .imessage').show()
+
+      for rule in data.ruleset.rules
+        if rule.test.type == 'timeout'
+          response_timeout = setTimeout(nextFlowStepFromTimeout, rule.test.minutes * 1000)
+
   else
     $('.simulator-footer .media-button').hide()
     $('.simulator-footer .imessage').show()
@@ -176,6 +182,8 @@ processForm = (postData) ->
 
 sendMessage = (newMessage) ->
   if checkForm(newMessage)
+    if response_timeout
+      clearTimeout(response_timeout)
     processForm({new_message: newMessage})
 
 sendPhoto = ->
@@ -269,6 +277,10 @@ showSimulator = (reset=false) ->
       $(".simulator-content textarea").focus()
       moving_sim = false
   window.simulation = true
+
+window.nextFlowStepFromTimeout = ->
+  clearTimeout(response_timeout)
+  sendMessage('MSG_TIMEOUT')
 
 window.refreshSimulator = ->
 
