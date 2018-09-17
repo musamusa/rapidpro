@@ -135,7 +135,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                     field_value = row[item]
 
                     if fields_map[item].get('type') == 'Number':
-                        field_value = int(field_value)
+                        field_value = float(field_value)
                     elif fields_map[item].get('type') == 'Date':
                         field_value = field_value.replace('-', '/')
                         try:
