@@ -7,7 +7,6 @@ import pytz
 
 from celery.task import task
 from parse_rest.connection import register
-from parse_rest.connection import ParseBatcher
 from parse_rest.datatypes import Object
 from datetime import timedelta
 from django.utils import timezone
@@ -144,7 +143,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                         except Exception:
                             field_value = None
                     else:
-                        field_value = str(field_value)
+                        field_value = str(field_value).strip()
 
                     payload[fields_map[item].get('name')] = field_value
                 except Exception:
