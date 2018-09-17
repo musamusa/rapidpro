@@ -363,7 +363,7 @@ PERMISSIONS = {
                          'invite',
                          'invite_filter',
                          'invite_send',
-                         'salesforce_export'
+                         'salesforce_export',
                          ),
 
     'contacts.contactfield': ('api',
@@ -393,16 +393,20 @@ PERMISSIONS = {
                  'edit_sub_org',
                  'export',
                  'grant',
+                 'giftcards',
                  'home',
                  'import',
+                 'import_parse_data',
                  'join',
                  'languages',
+                 'lookups',
                  'manage',
                  'manage_accounts',
                  'manage_accounts_sub_org',
                  'nexmo_configuration',
                  'nexmo_account',
                  'nexmo_connect',
+                 'parse_data_view',
                  'plivo_connect',
                  'profile',
                  'resend_invitation',
@@ -469,6 +473,8 @@ PERMISSIONS = {
                    'upload_action_recording',
                    'upload_media_action',
                    'pdf_export',
+                   'lookups_api',
+                   'giftcards_api',
                    ),
 
     'flows.ruleset': ('analytics',
@@ -628,13 +634,17 @@ GROUP_PERMISSIONS = {
         'orgs.org_edit_sub_org',
         'orgs.org_export',
         'orgs.org_home',
+        'orgs.org_giftcards',
         'orgs.org_import',
+        'orgs.org_import_parse_data',
         'orgs.org_languages',
+        'orgs.org_lookups',
         'orgs.org_manage_accounts',
         'orgs.org_manage_accounts_sub_org',
         'orgs.org_nexmo_account',
         'orgs.org_nexmo_connect',
         'orgs.org_nexmo_configuration',
+        'orgs.org_parse_data_view',
         'orgs.org_plivo_connect',
         'orgs.org_profile',
         'orgs.org_resend_invitation',
@@ -764,7 +774,11 @@ GROUP_PERMISSIONS = {
         'orgs.org_download',
         'orgs.org_export',
         'orgs.org_home',
+        'orgs.org_giftcards',
         'orgs.org_import',
+        'orgs.org_import_parse_data',
+        'orgs.org_lookups',
+        'orgs.org_parse_data_view',
         'orgs.org_profile',
         'orgs.org_resthooks',
         'orgs.org_webhook',
@@ -1274,3 +1288,9 @@ SALESFORCE_CONSUMER_KEY = '__SALESFORCE_CONSUMER_KEY__'
 SALESFORCE_CONSUMER_SECRET = '__SALESFORCE_CONSUMER_SECRET__'
 SALESFORCE_AUTHORIZE_URL = 'https://login.salesforce.com/services/oauth2/authorize'
 SALESFORCE_ACCESS_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
+
+PARSE_URL = '__YOUR_PARSE_URL__'
+PARSE_APP_ID = '__YOUR_PARSE_APP_ID__'
+PARSE_REST_KEY = '__YOUR_PARSE_REST_KEY__'
+PARSE_MASTER_KEY = '__YOUR_PARSE_MASTER_KEY__'
+PARSE_SERVER_NAME = '__SERVER_NAME__'

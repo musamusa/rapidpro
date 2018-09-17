@@ -3463,6 +3463,9 @@ class RuleSet(models.Model):
 
     TYPE_SHORTEN_URL = 'shorten_url'
 
+    TYPE_LOOKUP = 'lookup'
+    TYPE_GIFTCARD = 'giftcard'
+
     CONFIG_WEBHOOK = 'webhook'
     CONFIG_WEBHOOK_ACTION = 'webhook_action'
     CONFIG_WEBHOOK_HEADERS = 'webhook_headers'
@@ -3489,7 +3492,9 @@ class RuleSet(models.Model):
                     (TYPE_CONTACT_FIELD, "Split on contact field"),
                     (TYPE_EXPRESSION, "Split by expression"),
                     (TYPE_RANDOM, "Split Randomly"),
-                    (TYPE_SHORTEN_URL, "Shorten Trackable Link"))
+                    (TYPE_SHORTEN_URL, "Shorten Trackable Link"),
+                    (TYPE_LOOKUP, "Lookup"),
+                    (TYPE_GIFTCARD, "Gift Card"))
 
     uuid = models.CharField(max_length=36, unique=True)
 
@@ -3678,16 +3683,59 @@ class RuleSet(models.Model):
 
                 for rule in self.get_rules():
                     (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                    response_json = response.json()
+                    run.update_fields(response_json)
                     if result > 0:
-                        if response.status_code == 200:
-                            response_json = response.json()
-                            short_url = response_json.get('id')
-                        else:
-                            short_url = None
-
+                        short_url = response_json.get('id')
                         return rule, short_url
             else:
-                return rule, None
+                return None, None
+
+        elif self.ruleset_type == RuleSet.TYPE_LOOKUP:
+            lookup_queries = self.config_json()['lookup_queries']
+            lookup_db = self.config_json()['lookup_db']
+
+            for query in lookup_queries:
+                (value, errors) = Msg.evaluate_template(query.get('value'), context, org=run.flow.org)
+                if value:
+                    query['value'] = value
+
+            headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
+
+            day_first = True if run.flow.org.date_format == 'D' else False
+
+            response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True, day_first=day_first), headers=headers)
+
+            for rule in self.get_rules():
+                (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                response_json = json.loads(response.text)
+                run.update_fields(response_json)
+                if result > 0:
+                    return rule, response_json
+
+        elif self.ruleset_type == RuleSet.TYPE_GIFTCARD:
+            giftcard_db = self.config_json()['giftcard_db']
+            urn = run.contact.get_urn()
+
+            headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_GIFTCARD)
+            response = requests.post(url, json=dict(db=giftcard_db.get('id'), urn=urn.path), headers=headers)
+
+            for rule in self.get_rules():
+                (result, value) = rule.matches(run, msg, context, str(response.status_code))
+                response_json = json.loads(response.text)
+                run.update_fields(response_json)
+                if result > 0:
+                    return rule, response_json
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}

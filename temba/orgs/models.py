@@ -29,7 +29,7 @@ from django.core.files.temp import NamedTemporaryFile
 from django.db import models, transaction
 from django.db.models import Sum, F, Q, Prefetch
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.text import slugify
 from django_redis import get_redis_connection
 from enum import Enum
@@ -126,6 +126,37 @@ SF_ACCESS_TOKEN = 'SF_ACCESS_TOKEN'
 SF_REFRESH_TOKEN = 'SF_REFRESH_TOKEN'
 
 FLOW_OPT_IN = 'FLOW_OPT_IN'
+
+GIFTCARDS = 'GIFTCARDS'
+LOOKUPS = 'LOOKUPS'
+
+DEFAULT_FIELDS_PAYLOAD_GIFTCARDS = {
+    "active": {
+        "type": "Boolean"
+    },
+    "egiftnumber": {
+        "type": "String"
+    },
+    "url": {
+        "type": "String"
+    },
+    "challengecode": {
+        "type": "String"
+    },
+    "identifier": {
+        "type": "String"
+    }
+}
+
+DEFAULT_FIELDS_PAYLOAD_LOOKUPS = {}
+
+DEFAULT_INDEXES_FIELDS_PAYLOAD_GIFTCARDS = {
+    "IndexIdentifier": {
+        "identifier": 1
+    }
+}
+
+DEFAULT_INDEXES_FIELDS_PAYLOAD_LOOKUPS = {}
 
 ORG_STATUS = 'STATUS'
 SUSPENDED = 'suspended'
@@ -436,6 +467,51 @@ class Org(SmartModel):
                     triggers=exported_triggers,
                     links=exported_links)
 
+    @classmethod
+    def get_parse_import_file_headers(cls, csv_file, org, needed_check=True):
+        csv_file.open()
+
+        # this file isn't good enough, lets write it to local disk
+        from django.conf import settings
+        from uuid import uuid4
+
+        # make sure our tmp directory is present (throws if already present)
+        try:
+            os.makedirs(os.path.join(settings.MEDIA_ROOT, 'tmp'))
+        except Exception:
+            pass
+
+        # write our file out
+        tmp_file = os.path.join(settings.MEDIA_ROOT, 'tmp/%s' % str(uuid4()))
+
+        out_file = open(tmp_file, 'w')
+        out_file.write(csv_file.read())
+        out_file.close()
+
+        try:
+            headers = SmartModel.get_import_file_headers(open(tmp_file))
+        finally:
+            os.remove(tmp_file)
+
+        if needed_check:
+            Org.validate_parse_import_header(headers, org)
+
+        return [header.strip() for header in headers]
+
+    @classmethod
+    def validate_parse_import_header(cls, headers, org):
+        PARSE_GIFTCARDS_IMPORT_HEADERS = ['egiftnumber', 'url', 'challengecode']
+
+        not_found_headers = [h for h in PARSE_GIFTCARDS_IMPORT_HEADERS if h not in headers]
+        string_possible_headers = '", "'.join([h for h in PARSE_GIFTCARDS_IMPORT_HEADERS])
+
+        if ('Identifier' in headers or 'identifier' in headers) or ('Active' in headers or 'active' in headers):
+            raise Exception(ugettext('Please remove the "identifier" and/or "active" column from your file.'))
+
+        if not_found_headers:
+            raise Exception(ugettext('The file you provided is missing a required header. All these fields: "%s" '
+                                     'should be included.' % string_possible_headers))
+
     def config_json(self):
         if self.config:
             try:
@@ -624,6 +700,45 @@ class Org(SmartModel):
             urns = ContactURN.objects.filter(org=self, scheme=TEL_SCHEME).exclude(path__startswith="+")
             for urn in urns:
                 urn.ensure_number_normalization(country_code)
+
+    def get_collections(self, collection_type=GIFTCARDS):
+        """
+        Returns the collections (gift cards or lookup) configured on this Org
+        """
+        config = self.config_json()
+        return config.get(collection_type, [])
+
+    def remove_collection_from_org(self, user, index, collection_type=GIFTCARDS):
+        """
+        Remove collections (gift cards or lookup) configured on this Org
+        """
+        collections = self.get_collections(collection_type=collection_type)
+        config = self.config_json()
+
+        if collections:
+            collections.pop(index)
+
+        config.update({collection_type: collections})
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
+
+    def add_collection_to_org(self, user, name, collection_type=GIFTCARDS):
+        """
+        Add a collection (gift cards or lookup) to this Org
+        """
+        collections = self.get_collections(collection_type=collection_type)
+        config = self.config_json()
+
+        if collections:
+            collections.append(name)
+        else:
+            collections = [name]
+
+        config.update({collection_type: collections})
+        self.config = json.dumps(config)
+        self.modified_by = user
+        self.save()
 
     def get_resthooks(self):
         """

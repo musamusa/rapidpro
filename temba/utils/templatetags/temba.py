@@ -1,3 +1,6 @@
+import pytz
+
+from datetime import datetime
 from django import template
 from django.template import TemplateSyntaxError
 from django.template.defaultfilters import register
@@ -150,3 +153,24 @@ class LessBlockNode(template.Node):
 
 # register our tag
 lessblock = register.tag(lessblock)
+
+
+def format_datetime(time, tz):
+    user_time_zone = pytz.timezone(tz.zone)
+
+    if time.tzinfo is None:
+        time = time.replace(tzinfo=user_time_zone)
+
+    time = time.astimezone(user_time_zone)
+    return time.strftime("%b %d, %Y %H:%M")
+
+
+@register.simple_tag(takes_context=True)
+def temba_get_value(context, obj, field):
+    view = context['view']
+    org = context['user_org']
+    value = view.lookup_field_value(context, obj, field)
+    if type(value) == datetime:
+        return format_datetime(value, org.timezone)
+
+    return value

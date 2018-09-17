@@ -379,7 +379,7 @@ class FlowCRUDL(SmartCRUDL):
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
                'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule',
-               'salesforce_fields')
+               'lookups_api', 'giftcards_api', 'salesforce_fields')
 
     model = Flow
 
@@ -1999,6 +1999,51 @@ class FlowCRUDL(SmartCRUDL):
                 on_transaction_commit(lambda: check_schedule_task.delay(obj.schedule.pk))
 
             return obj
+
+    class LookupsApi(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            import requests
+            from temba.orgs.models import LOOKUPS
+
+            db = self.request.GET.get('db', None)
+            collections = []
+
+            if db:
+                headers = {
+                    'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                    'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                    'Content-Type': 'application/json'
+                }
+                url = '%s/schemas/%s' % (settings.PARSE_URL, db)
+                response = requests.get(url, headers=headers)
+                response_json = response.json()
+                if response.status_code == 200 and 'fields' in response_json:
+                    fields = response_json['fields']
+                    for key in sorted(fields.keys()):
+                        default_fields = ['ACL', 'createdAt', 'updatedAt']
+                        if key not in default_fields:
+                            collections.append(dict(id=key, text=key))
+            else:
+                org = self.request.user.get_org()
+                for collection in org.get_collections(collection_type=LOOKUPS):
+                    slug_collection = slugify(collection)
+                    collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(LOOKUPS).lower(), slug_collection)
+                    collection_full_name = collection_full_name.replace('-', '')
+                    collections.append(dict(id=collection_full_name, text=collection))
+            return JsonResponse(dict(results=collections))
+
+    class GiftcardsApi(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            from temba.orgs.models import GIFTCARDS
+
+            collections = []
+            org = self.request.user.get_org()
+            for collection in org.get_collections(collection_type=GIFTCARDS):
+                slug_collection = slugify(collection)
+                collection_full_name = '{}_{}_{}_{}_{}'.format(settings.PARSE_SERVER_NAME, org.slug, org.id, str(GIFTCARDS).lower(), slug_collection)
+                collection_full_name = collection_full_name.replace('-', '')
+                collections.append(dict(id=collection_full_name, text=collection))
+            return JsonResponse(dict(results=collections))
 
     class SalesforceFields(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         def get(self, request, *args, **kwargs):
