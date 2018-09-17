@@ -7,7 +7,6 @@ import pytz
 
 from celery.task import task
 from parse_rest.connection import register
-from parse_rest.connection import ParseBatcher
 from parse_rest.datatypes import Object
 from datetime import timedelta
 from django.utils import timezone
@@ -61,8 +60,11 @@ def squash_topupcredits():
 @task(track_started=True, name='import_data_to_parse')
 def import_data_to_parse(branding, user_email, iterator, parse_url, parse_headers, collection, collection_type, collection_real_name, filename, needed_create_header, tz, dayfirst):  # pragma: needs cover
     start = time.time()
-    print("Started task to import %s row(s) to Parse" % str(len(iterator) - 1))
+    load_len = len(iterator) - 1
 
+    print("Started task to import %s row(s) to Parse" % str(load_len))
+
+    parse_batch_url = '%s/batch' % settings.PARSE_URL
     register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
 
     tz = pytz.timezone(tz)
@@ -73,9 +75,9 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
     failures = []
     success = 0
 
-    batch_size = 50
+    batch_size = 1000
     batch_package = []
-    batcher = ParseBatcher()
+    batch_counter = 0
 
     for i, row in enumerate(iterator):
         if i == 0:
@@ -117,7 +119,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                         except Exception:
                             field_value = None
                     else:
-                        field_value = str(field_value)
+                        field_value = str(field_value).strip()
 
                     payload[fields_map[item].get('name')] = field_value
                 except Exception:
@@ -127,11 +129,36 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
             real_collection = Object.factory(collection)
             new_item = real_collection(**payload)
             batch_package.append(new_item)
-            success += 1
+            batch_counter += 1
 
-        if i >= batch_size:
-            batcher.batch_save(batch_package)
+        if batch_counter >= batch_size:
+            methods = list([m.save for m in batch_package])
+            if not methods:
+                return
+            queries, callbacks = list(zip(*[m(batch=True) for m in methods]))
+            response = requests.post(parse_batch_url, data=json.dumps(dict(requests=queries)), headers=parse_headers)
+            if response.status_code == 200:
+                for item in response.json():
+                    if "success" in item:
+                        success += 1
+                    else:
+                        failures.append(item.get('error'))
             batch_package = []
+            batch_counter = 0
+
+    # commit any remaining objects
+    if batch_package:
+        methods = list([m.save for m in batch_package])
+        if not methods:
+            return
+        queries, callbacks = list(zip(*[m(batch=True) for m in methods]))
+        response = requests.post(parse_batch_url, data=json.dumps(dict(requests=queries)), headers=parse_headers)
+        if response.status_code == 200:
+            for item in response.json():
+                if "success" in item:
+                    success += 1
+                else:
+                    failures.append(item.get('error'))
 
     print(" -- Importation task ran in %0.2f seconds" % (time.time() - start))
 
