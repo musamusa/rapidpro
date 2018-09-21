@@ -580,6 +580,9 @@ class OrgCRUDL(SmartCRUDL):
                 self.fields['collection'].choices = collections
 
             def clean_import_file(self):
+                # Max file size something around 150MB
+                max_file_size = 157286400
+
                 if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', self.cleaned_data['import_file'].name, regex.V0):
                     raise forms.ValidationError('Please make sure the file name only contains '
                                                 'alphanumeric characters [0-9a-zA-Z] and '
@@ -589,6 +592,9 @@ class OrgCRUDL(SmartCRUDL):
 
                 if not self.cleaned_data['import_file'].name.endswith(('.csv', '.xls', '.xlsx')):
                     raise forms.ValidationError(_('The file must be a CSV or XLS.'))
+
+                if self.cleaned_data['import_file'].size > max_file_size:
+                    raise forms.ValidationError(_('Your file exceeds the 150MB file limit. Please submit a support request if you need to upload a file 150MB or larger.'))
 
                 try:
                     needed_check = True if collection_type == 'giftcard' else False
