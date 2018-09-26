@@ -579,6 +579,12 @@ class OrgCRUDL(SmartCRUDL):
                     collections.append((full_name, item))
                 self.fields['collection'].choices = collections
 
+            def clean_collection(self):
+                if not self.cleaned_data['collection']:
+                    raise forms.ValidationError(_('This field is required.'))
+
+                return self.cleaned_data['collection']
+
             def clean_import_file(self):
                 # Max file size something around 150MB
                 max_file_size = 157286400
