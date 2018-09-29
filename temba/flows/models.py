@@ -3707,6 +3707,17 @@ class RuleSet(models.Model):
 
             day_first = True if run.flow.org.date_format == 'D' else False
 
+            for query in lookup_queries:
+                rule = query.get('rule', {})
+                if rule.get('type') == 'date_equal':
+                    rule_value = query.get('value')
+                    try:
+                        (date_format, time_format) = get_datetime_format(run.org.get_dayfirst())
+                        rule_value = str_to_datetime(rule_value, tz=run.flow.org.timezone, dayfirst=day_first, fill_time=False)
+                        query['value'] = datetime_to_str(rule_value, tz=run.org.timezone, format=time_format, ms=False)
+                    except Exception:
+                        pass
+
             response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True, day_first=day_first), headers=headers)
 
             for rule in self.get_rules():
