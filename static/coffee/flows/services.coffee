@@ -550,12 +550,20 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'interrupted_status', name:'Interrupted', verbose_name:'interrupted status', operands:0, filter: NONE }
       ]
 
-      @lookup_operators = [
+      @lookup_date_operators = [
+        { type: 'date_equal', verbose_name:'has a date equal to' }
+      ]
+
+      @lookup_number_operators = [
         { type: 'equals', verbose_name:'equals' }
-        { type: 'contains', verbose_name:'contains' }
         { type: 'lt', verbose_name:'has a number less than' }
         { type: 'gt', verbose_name:'has a number more than' }
-        { type: 'date_equal', verbose_name:'has a date equal to' }
+        { type: 'regex', verbose_name:'matches regex' }
+      ]
+
+      @lookup_string_operators = [
+        { type: 'equals', verbose_name:'equals' }
+        { type: 'contains', verbose_name:'contains' }
         { type: 'regex', verbose_name:'matches regex' }
       ]
 

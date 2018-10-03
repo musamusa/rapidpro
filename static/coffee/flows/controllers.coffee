@@ -976,7 +976,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.actionConfigs = Flow.actions
   $scope.rulesetConfigs = Flow.rulesets
   $scope.operatorConfigs = Flow.operators
-  $scope.operatorLookupConfigs = Flow.lookup_operators
+  $scope.operatorLookupConfigs = []
   $scope.lookupDbs = Flow.lookup_dbs
 
   # all org languages except default
@@ -1175,6 +1175,19 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     if formData.webhook_headers.length == 0
       $scope.addNewWebhookHeader()
 
+  $scope.updateOperator = (option, i, reset=false) ->
+    typesDict = {
+      'Date': Flow.lookup_date_operators,
+      'Number': Flow.lookup_number_operators,
+      'String': Flow.lookup_string_operators
+    }
+
+    try $scope.operatorLookupConfigs[i] = typesDict[option.type]
+    catch e
+
+    if reset
+      $scope.lookup_queries_rule[i] = null
+
   $scope.addNewLookupQuery = () ->
     if formData.lookup_queries == undefined
       formData.lookup_queries = []
@@ -1186,6 +1199,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.lookup_queries_field.splice(index, 1)
     $scope.lookup_queries_rule.splice(index, 1)
     $scope.lookup_queries_value.splice(index, 1)
+
+    $scope.operatorLookupConfigs.splice(index, 1)
 
     if formData.lookup_queries.length == 0
       $scope.addNewLookupQuery()
