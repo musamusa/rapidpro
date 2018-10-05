@@ -3693,22 +3693,15 @@ class RuleSet(models.Model):
             lookup_queries = self.config_json()['lookup_queries']
             lookup_db = self.config_json()['lookup_db']
 
-            for query in lookup_queries:
-                (value, errors) = Msg.evaluate_template(query.get('value'), context, org=run.flow.org)
-                if value:
-                    query['value'] = value
-
-            headers = {
-                'X-Parse-Application-Id': settings.PARSE_APP_ID,
-                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
-                'Content-Type': 'application/json'
-            }
-            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
-
             day_first = True if run.flow.org.date_format == 'D' else False
 
             for query in lookup_queries:
+                (value, errors) = Msg.evaluate_template(query.get('value'), context, org=run.flow.org)
                 rule = query.get('rule', {})
+
+                if value:
+                    query['value'] = value.strip() if type(value) is str or type(value) is unicode else value
+
                 if rule.get('type') == 'date_equal':
                     rule_value = query.get('value')
                     try:
@@ -3717,6 +3710,13 @@ class RuleSet(models.Model):
                         query['value'] = datetime_to_str(rule_value, tz=run.org.timezone, format=time_format, ms=False)
                     except Exception:
                         pass
+
+            headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
+            url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
 
             response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True, day_first=day_first), headers=headers)
 
