@@ -121,7 +121,7 @@ class WebHookSimulatorView(SmartTemplateView):
         fields.append(dict(name="relayer_phone", help="The phone number of the channel which received an SMS", default="+250788123123"))
         fields.append(dict(name="sms", help="The id of the incoming SMS message", default=1))
         fields.append(dict(name="phone", help="The phone number of the sender in E164 format", default="+250788123123"))
-        fields.append(dict(name="text", help="The text of the SMS message", default="That gucci is hella tight"))
+        fields.append(dict(name="text", help="The text of the SMS message", default="I would like to set an appointment"))
         fields.append(dict(name="status", help="The status of this SMS message, one of P,H,S,D,E,F", default="D"))
         fields.append(dict(name="direction", help="The direction of the SMS, either I for incoming or O for outgoing", default="I"))
         fields.append(dict(name="time", help="When this event occurred in ECMA-162 format", default="2013-01-21T22:34:00.123"))
