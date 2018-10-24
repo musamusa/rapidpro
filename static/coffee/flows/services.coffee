@@ -558,7 +558,6 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'equals', verbose_name:'equals' }
         { type: 'lt', verbose_name:'has a number less than' }
         { type: 'gt', verbose_name:'has a number more than' }
-        { type: 'regex', verbose_name:'matches regex' }
       ]
 
       @lookup_string_operators = [
