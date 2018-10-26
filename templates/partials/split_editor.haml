@@ -67,9 +67,9 @@
                 -trans "Value"
           .modal-lookup-query-rules{ng-repeat:"query in formData.lookup_queries"}
             .modal-lookup-query.modal-lookup-query-field
-              %select{ng-model:"lookup_queries_field[$index]", required:"required", name:"query-field", ng-options:"field.text for field in parseFields track by field.id", style:"height:34px"}
+              %select{ng-model:"lookup_queries_field[$index]", required:"required", name:"query-field", ng-options:"field.text for field in parseFields track by field.id", style:"height:34px", ng-init:"updateOperator(lookup_queries_field[$index], $index)", ng-change:"updateOperator(lookup_queries_field[$index], $index, true)"}
             .modal-lookup-query.modal-lookup-query-rule
-              %select{ng-model:"lookup_queries_rule[$index]", required:"required", name:"query-rule", ng-options:"operator.verbose_name for operator in operatorLookupConfigs track by operator.type", style:"height:34px"}
+              %select{ng-model:"lookup_queries_rule[$index]", required:"required", name:"query-rule", ng-options:"operator.verbose_name for operator in operatorLookupConfigs[$index] track by operator.type", style:"height:34px"}
             .modal-lookup-query.modal-lookup-query-value
               %input{type:"text", name:"query-value", required:"required", ng-model:"lookup_queries_value[$index]", auto-complete}
             .modal-lookup-query.modal-lookup-query-remove

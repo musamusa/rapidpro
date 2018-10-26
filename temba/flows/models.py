@@ -3695,10 +3695,22 @@ class RuleSet(models.Model):
             lookup_queries = self.config_json()['lookup_queries']
             lookup_db = self.config_json()['lookup_db']
 
+            day_first = True if run.flow.org.date_format == 'D' else False
+
             for query in lookup_queries:
                 (value, errors) = Msg.evaluate_template(query.get('value'), context, org=run.flow.org)
+                rule = query.get('rule', {})
+
                 if value:
-                    query['value'] = value
+                    query['value'] = value.strip() if type(value) is str or type(value) is unicode else value
+
+                if rule.get('type') == 'date_equal':
+                    rule_value = query.get('value')
+                    try:
+                        rule_value = str_to_datetime(rule_value, tz=run.flow.org.timezone, dayfirst=day_first, fill_time=False)
+                        query['value'] = datetime_to_str(rule_value, tz=run.org.timezone, format="%d-%m-%Y %H:%M", ms=False)
+                    except Exception:
+                        pass
 
             headers = {
                 'X-Parse-Application-Id': settings.PARSE_APP_ID,
@@ -3706,8 +3718,6 @@ class RuleSet(models.Model):
                 'Content-Type': 'application/json'
             }
             url = '%s/functions/%s' % (settings.PARSE_URL, RuleSet.TYPE_LOOKUP)
-
-            day_first = True if run.flow.org.date_format == 'D' else False
 
             response = requests.post(url, json=dict(db=lookup_db.get('id'), queries=lookup_queries, flow_step=True, day_first=day_first), headers=headers)
 
@@ -7174,8 +7184,8 @@ class DateTest(Test):
 
         test, errors = Msg.evaluate_template(self.test, context, org=org)
         if not errors:
-            date_message = str_to_datetime(text, tz=tz, dayfirst=day_first)
-            date_test = str_to_datetime(test, tz=tz, dayfirst=day_first)
+            date_message = str_to_datetime(text, tz=tz, dayfirst=day_first, fill_time=False)
+            date_test = str_to_datetime(test, tz=tz, dayfirst=day_first, fill_time=False)
 
             if self.evaluate_date_test(date_message, date_test):
                 return 1, date_message.astimezone(tz)

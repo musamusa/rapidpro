@@ -2022,7 +2022,8 @@ class FlowCRUDL(SmartCRUDL):
                     for key in sorted(fields.keys()):
                         default_fields = ['ACL', 'createdAt', 'updatedAt']
                         if key not in default_fields:
-                            collections.append(dict(id=key, text=key))
+                            field_type = fields[key]['type'] if 'type' in fields[key] else None
+                            collections.append(dict(id=key, text=key, type=field_type))
             else:
                 org = self.request.user.get_org()
                 for collection in org.get_collections(collection_type=LOOKUPS):
