@@ -3705,9 +3705,8 @@ class RuleSet(models.Model):
                 if rule.get('type') == 'date_equal':
                     rule_value = query.get('value')
                     try:
-                        (date_format, time_format) = get_datetime_format(run.org.get_dayfirst())
                         rule_value = str_to_datetime(rule_value, tz=run.flow.org.timezone, dayfirst=day_first, fill_time=False)
-                        query['value'] = datetime_to_str(rule_value, tz=run.org.timezone, format=time_format, ms=False)
+                        query['value'] = datetime_to_str(rule_value, tz=run.org.timezone, format="%d-%m-%Y %H:%M", ms=False)
                     except Exception:
                         pass
 
