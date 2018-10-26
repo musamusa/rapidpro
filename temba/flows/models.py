@@ -7105,8 +7105,8 @@ class DateTest(Test):
 
         test, errors = Msg.evaluate_template(self.test, context, org=org)
         if not errors:
-            date_message = str_to_datetime(text, tz=tz, dayfirst=day_first)
-            date_test = str_to_datetime(test, tz=tz, dayfirst=day_first)
+            date_message = str_to_datetime(text, tz=tz, dayfirst=day_first, fill_time=False)
+            date_test = str_to_datetime(test, tz=tz, dayfirst=day_first, fill_time=False)
 
             if self.evaluate_date_test(date_message, date_test):
                 return 1, date_message.astimezone(tz)
