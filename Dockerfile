@@ -1,6 +1,6 @@
 FROM ubuntu:trusty
 
-RUN apt-get update && apt-get install -qyy \
+RUN apt-get update && apt-get install -qyy --fix-missing \
     -o APT::Install-Recommends=false -o APT::Install-Suggests=false \
     build-essential python-imaging git python-setuptools  ncurses-dev python-virtualenv  python-pip postgresql-client-9.3 libpq-dev \
     libpython-dev lib32ncurses5-dev pypy libffi6 openssl libgeos-dev \
@@ -20,6 +20,10 @@ RUN virtualenv env
 RUN . env/bin/activate
 ADD pip-freeze.txt /rapidpro/pip-freeze.txt
 RUN pip install --upgrade pip
+
+# required to get pip-freeze items to install
+RUN apt-get remove python-urllib3 python-chardet python-six python-colorama -y
+
 RUN pip install -r pip-freeze.txt --upgrade
 RUN pip install -U requests[security]
 ADD . /rapidpro

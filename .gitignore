@@ -123,3 +123,5 @@ ansible/site.retry
 # Docker
 .env
 docker.settings.prod
+docker.settings.aptible-stage
+docker.settings.aptible-prod
