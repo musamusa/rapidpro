@@ -447,7 +447,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'wait_ussd', name:'Wait for USSD Response', verbose_name: 'Wait for USSD response', split:'USSD response', filter:USSD },
 
         # survey media types
-        { type: 'wait_photo', name:'Wait for a photo', verbose_name: 'Wait for photo', filter:[SURVEY] },
+        { type: 'wait_photo', name:'Wait for a photo', verbose_name: 'Wait for photo', filter:[SURVEY, TEXT] },
         { type: 'wait_audio', name:'Wait for an audio recording', verbose_name: 'Wait for audio', filter:[SURVEY] },
         { type: 'wait_video', name:'Wait for a video', verbose_name: 'Wait for video', filter:[SURVEY] },
         { type: 'wait_gps', name:'Wait for GPS coordinates', verbose_name: 'Wait for GPS', filter:[SURVEY] },

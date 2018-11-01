@@ -3666,6 +3666,9 @@ class RuleSet(models.Model):
                     if result > 0:
                         return rule, value
 
+        elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
+            print('Image')
+
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             resthook = None
             url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
