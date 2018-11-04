@@ -34,7 +34,7 @@ RUN apt-get install -y libxrender1 libxext6 fontconfig xfonts-base xfonts-75dpi
 
 RUN dpkg -i wkhtmltox-0.12.2.1_linux-trusty-amd64.deb
 
-RUN wget -qO- https://deb.nodesource.com/setup_6.x | bash -
+RUN wget -qO- https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get install -y nodejs
 RUN npm install -g bower
 RUN npm install -g less
