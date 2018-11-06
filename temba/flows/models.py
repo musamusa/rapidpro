@@ -10,6 +10,7 @@ import six
 import time
 import urllib2
 import requests
+import subprocess
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
@@ -51,6 +52,7 @@ from temba_expressions.utils import tokenize
 from uuid import uuid4
 
 from simple_salesforce import Salesforce
+from PIL import Image, ExifTags
 
 
 logger = logging.getLogger(__name__)
@@ -3667,7 +3669,24 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
-            print('Image')
+            try:
+                image = msg.attachments[0].split(':', 1)[1]
+                image_path = image.split('media', 1)[1]
+                image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
+            except Exception:
+                image_path = None
+
+            if image_path:
+                img = Image.open(image_path)
+                exif_data = img._getexif()
+                exif = {
+                    ExifTags.TAGS[k]: v
+                    for k, v in exif_data.items()
+                    if k in ExifTags.TAGS
+                }
+                command_line = "magick {source} -auto-orient -resize 1080x1080> -define deskew:auto-crop=true {destination}".format(source=image_path, destination='/Users/teehamaral/Desktop/image_test.png')
+
+                subprocess.call(command_line.split(' '))
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             resthook = None
