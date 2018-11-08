@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
+import os
 import json
 import logging
 import numbers
@@ -24,6 +25,7 @@ from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
 from django.utils import timezone
+from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
 from django_redis import get_redis_connection
@@ -2702,6 +2704,29 @@ class Flow(TembaModel):
         ordering = ('-modified_on',)
 
 
+class FlowImage(TembaModel):
+    uuid = models.UUIDField(unique=True, default=uuid4)
+
+    org = models.ForeignKey(Org, related_name='flow_images', db_index=False)
+
+    flow = models.ForeignKey(Flow, related_name='flow_images')
+
+    contact = models.ForeignKey(Contact, related_name='flow_images')
+
+    name = models.CharField(help_text='Image name', max_length=255)
+
+    url = models.CharField(help_text='Image URL', max_length=255)
+
+    exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
+
+    def get_exif(self):
+        return json.loads(self.exif) if self.exif else dict()
+
+    def set_deleted(self):
+        self.is_active = False
+        self.save(update_fields=('is_active'))
+
+
 class FlowRun(models.Model):
     STATE_ACTIVE = 'A'
 
@@ -3670,13 +3695,15 @@ class RuleSet(models.Model):
 
         elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
             try:
-                image = msg.attachments[0].split(':', 1)[1]
+                text_split = msg.attachments[0].split(':', 1)
+                image = text_split[1]
+                is_image = True if 'image' in text_split[0] else False
                 image_path = image.split('media', 1)[1]
                 image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
             except Exception:
                 image_path = None
 
-            if image_path:
+            if image_path and is_image:
                 img = Image.open(image_path)
                 exif_data = img._getexif()
                 exif = {
@@ -3684,9 +3711,32 @@ class RuleSet(models.Model):
                     for k, v in exif_data.items()
                     if k in ExifTags.TAGS
                 }
-                command_line = "magick {source} -auto-orient -resize 1080x1080> -define deskew:auto-crop=true {destination}".format(source=image_path, destination='/Users/teehamaral/Desktop/image_test.png')
+                flow_name_slugified = slugify(run.flow.name)
+                output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
+                media_url = 'flows_pictures/%s/%s' % (flow_name_slugified, output_name)
+                directory = '%s/flows_pictures/%s' % (settings.MEDIA_ROOT, flow_name_slugified)
 
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+
+                image_destination = '%s/%s' % (directory, output_name)
+                command_line = "magick {source} -auto-orient -resize 1080x1080> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
                 subprocess.call(command_line.split(' '))
+
+                protocol = 'https' if settings.IS_PROD else 'http'
+                image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, media_url)
+
+                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, url=image_url,
+                                  exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
+                                  modified_by=run.flow.created_by)
+                FlowImage.objects.create(**image_args)
+
+                for rule in self.get_rules():
+                    (result, value) = rule.matches(run, msg, context, str(200))
+                    if result > 0 and is_image:
+                        return rule, image_url
+            else:
+                return None, None
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             resthook = None
