@@ -875,8 +875,9 @@ class Flow(TembaModel):
             run.update_expiration(timezone.now())
 
         if ruleset.ruleset_type in RuleSet.TYPE_MEDIA and msg.attachments:
-            # store the media path as the value
-            value = msg.attachments[0].split(':', 1)[1]
+            if not (ruleset.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and flow.flow_type == Flow.FLOW):
+                # store the media path as the value if it isn't a "wait for a photo" in a message flow
+                value = msg.attachments[0].split(':', 1)[1]
 
         step.save_rule_match(rule, value)
         ruleset.save_run_value(run, rule, value, msg.text)
@@ -2722,6 +2723,15 @@ class FlowImage(TembaModel):
     def get_exif(self):
         return json.loads(self.exif) if self.exif else dict()
 
+    def get_url(self):
+        protocol = 'https' if settings.IS_PROD else 'http'
+        image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.url)
+        return image_url
+
+    def get_permalink(self):
+        protocol = 'https' if settings.IS_PROD else 'http'
+        return '%s://%s%s' % (protocol, settings.HOSTNAME, reverse('flows.flowimage_read', args=[self.uuid]))
+
     def set_deleted(self):
         self.is_active = False
         self.save(update_fields=('is_active'))
@@ -3713,28 +3723,26 @@ class RuleSet(models.Model):
                 }
                 flow_name_slugified = slugify(run.flow.name)
                 output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
-                media_url = 'flows_pictures/%s/%s' % (flow_name_slugified, output_name)
-                directory = '%s/flows_pictures/%s' % (settings.MEDIA_ROOT, flow_name_slugified)
+                main_directory = 'flows_images/orgs/%d' % run.flow.org.id
+                media_url = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
+                full_directory = '%s/%s/%s' % (settings.MEDIA_ROOT, main_directory, flow_name_slugified)
 
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
+                if not os.path.exists(full_directory):
+                    os.makedirs(full_directory)
 
-                image_destination = '%s/%s' % (directory, output_name)
-                command_line = "magick {source} -auto-orient -resize 1080x1080> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
+                image_destination = '%s/%s' % (full_directory, output_name)
+                command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
                 subprocess.call(command_line.split(' '))
 
-                protocol = 'https' if settings.IS_PROD else 'http'
-                image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, media_url)
-
-                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, url=image_url,
+                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, url=media_url,
                                   exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
                                   modified_by=run.flow.created_by)
-                FlowImage.objects.create(**image_args)
+                flow_image = FlowImage.objects.create(**image_args)
 
                 for rule in self.get_rules():
-                    (result, value) = rule.matches(run, msg, context, str(200))
-                    if result > 0 and is_image:
-                        return rule, image_url
+                    (result, value) = rule.matches(run, msg, context, flow_image.get_url())
+                    if result > 0:
+                        return rule, value
             else:
                 return None, None
 
