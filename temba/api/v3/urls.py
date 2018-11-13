@@ -4,7 +4,7 @@ from django.conf.urls import url
 from django.views.generic.base import RedirectView
 from rest_framework.urlpatterns import format_suffix_patterns
 
-from .views import AuthenticateEndpoint
+from .views import AuthenticateView, UserOrgsEndpoint
 
 
 urlpatterns = [
@@ -13,8 +13,8 @@ urlpatterns = [
 
     # these endpoints are retained for Android Surveyor clients
     url(r'^$', RedirectView.as_view(pattern_name='api.v2.explorer', permanent=True)),
-    url(r'^authenticate$', AuthenticateEndpoint.as_view(), name='api.v3.authenticate'),
-    # url(r'^boundaries$', BoundaryEndpoint.as_view(), name='api.v1.boundaries'),
+    url(r'^authenticate/?$', AuthenticateView.as_view(), name='api.v3.authenticate'),
+    url(r'^user/orgs/?$', UserOrgsEndpoint.as_view(), name='api.v3.user_orgs'),
 ]
 
-urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json'])
+urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'api'])
