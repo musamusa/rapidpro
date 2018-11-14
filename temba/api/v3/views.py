@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
 from temba.api.models import APIToken, api_token
+from temba.api.v1.views import ContactEndpoint as ContactEndpointV1, FlowStepEndpoint as FlowStepEndpointV1
 from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2, BaseAPIView, ListAPIMixin
 from temba.orgs.models import get_user_orgs
 
@@ -52,3 +53,11 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
             return HttpResponse(status=403)
 
         return JsonResponse({'orgs': orgs})
+
+
+class ContactEndpoint(ContactEndpointV1):
+    permission = 'contacts.contact_api'
+
+
+class FlowStepEndpoint(FlowStepEndpointV1):
+    permission = 'flows.flow_api'
