@@ -4,7 +4,7 @@ from django.conf.urls import url
 from django.views.generic.base import RedirectView
 from rest_framework.urlpatterns import format_suffix_patterns
 
-from .views import AuthenticateView, UserOrgsEndpoint, ContactEndpoint, FlowStepEndpoint
+from .views import AuthenticateView, UserOrgsEndpoint, ContactEndpoint, FlowStepEndpoint, RunsEndpoint
 from ..v2.views import BoundariesEndpoint, DefinitionsEndpoint, FieldsEndpoint, FlowsEndpoint, MediaEndpoint, OrgEndpoint
 
 
@@ -26,6 +26,7 @@ urlpatterns = [
     url(r'^media$', MediaEndpoint.as_view(), name='api.v3.media'),
     url(r'^org$', OrgEndpoint.as_view(), name='api.v3.org'),
     url(r'^steps$', FlowStepEndpoint.as_view(), name='api.v3.steps'),
+    url(r'^runs$', RunsEndpoint.as_view(), name='api.v3.runs'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'api'])
