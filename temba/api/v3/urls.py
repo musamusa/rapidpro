@@ -4,7 +4,7 @@ from django.conf.urls import url
 from django.views.generic.base import RedirectView
 from rest_framework.urlpatterns import format_suffix_patterns
 
-from .views import AuthenticateView, UserOrgsEndpoint, ContactEndpoint, FlowStepEndpoint, RunsEndpoint
+from .views import AuthenticateView, UserOrgsEndpoint, ContactEndpoint, FlowStepEndpoint, RunsEndpoint, CreateAccountView, CheckSurvayorPasswordView
 from ..v2.views import BoundariesEndpoint, DefinitionsEndpoint, FieldsEndpoint, FlowsEndpoint, MediaEndpoint, OrgEndpoint
 
 
@@ -15,6 +15,8 @@ urlpatterns = [
     # these endpoints are retained for Android Surveyor clients
     url(r'^$', RedirectView.as_view(pattern_name='api.v2.explorer', permanent=True)),
     url(r'^authenticate$', AuthenticateView.as_view(), name='api.v3.authenticate'),
+    url(r'^check-surveyor-password$', CheckSurvayorPasswordView.as_view(), name='api.v3.check_survayor_password'),
+    url(r'^create-account$', CreateAccountView.as_view(), name='api.v3.create_account'),
     url(r'^user/orgs$', UserOrgsEndpoint.as_view(), name='api.v3.user_orgs'),
 
     # Redirect views to v1 and v2

@@ -1,15 +1,21 @@
 from __future__ import absolute_import, unicode_literals
 
+from django import forms
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
+from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.models import User, Group
+from django.views.decorators.csrf import csrf_exempt
+
+from smartmin.views import SmartFormView
 
 from temba.api.models import APIToken, api_token
 from temba.api.v1.views import ContactEndpoint as ContactEndpointV1, FlowStepEndpoint as FlowStepEndpointV1
 from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2, BaseAPIView, ListAPIMixin, RunsEndpoint as RunsEndpointV2
 from temba.contacts.models import Contact
 from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
-from temba.orgs.models import get_user_orgs
+from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
 from .serializers import FlowRunReadSerializer
@@ -190,3 +196,123 @@ class RunsEndpoint(RunsEndpointV2):
         )
 
         return self.filter_before_after(queryset, 'modified_on')
+
+
+class CheckSurvayorPasswordView(SmartFormView):
+    class PasswordForm(forms.Form):
+        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
+
+        def clean_surveyor_password(self):
+            password = self.cleaned_data['surveyor_password']
+            org = Org.objects.filter(surveyor_password=password).first()
+            if not org:
+                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
+                self.cleaned_data['password_error'] = password_error
+                raise forms.ValidationError(password_error)
+            self.cleaned_data['org'] = org
+            return password
+
+    permission = None
+    form_class = PasswordForm
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(CheckSurvayorPasswordView, self).dispatch(*args, **kwargs)
+
+    def form_invalid(self, form):
+        errors = []
+        errors.append(form.cleaned_data.get('password_error'))
+        return JsonResponse(dict(result=False, errors=errors), safe=False)
+
+    def form_valid(self, form):
+        org = self.form.cleaned_data.get('org', None)
+        if org:
+            return JsonResponse(dict(result=True, org=dict(id=org.id, name=org.name)), safe=False)
+        else:
+            return JsonResponse(dict(result=False, errors=[_("Org not found")]), safe=False)
+
+
+class CreateAccountView(SmartFormView):
+
+    class RegisterForm(forms.Form):
+        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Surveyor Password'}))
+        first_name = forms.CharField(help_text=_("Your first name"), widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
+        last_name = forms.CharField(help_text=_("Your last name"), widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
+        email = forms.EmailField(help_text=_("Your email address"), widget=forms.TextInput(attrs={'placeholder': 'Email'}))
+        password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}),
+                                   help_text=_("Your password, at least eight letters please"))
+
+        def __init__(self, *args, **kwargs):
+            super(CreateAccountView.RegisterForm, self).__init__(*args, **kwargs)
+
+        def clean_surveyor_password(self):
+            password = self.cleaned_data['surveyor_password']
+            org = Org.objects.filter(surveyor_password=password).first()
+            if not org:
+                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
+                self.cleaned_data['password_error'] = password_error
+                raise forms.ValidationError(password_error)
+            self.cleaned_data['org'] = org
+            return password
+
+        def clean_email(self):
+            email = self.cleaned_data.get('email')
+            if email:
+                if User.objects.filter(username__iexact=email):
+                    email_error = _("That email address is already used")
+                    self.cleaned_data['register_email_error'] = email_error
+                    raise forms.ValidationError(email_error)
+
+            return email.lower()
+
+        def clean_password(self):
+            password = self.cleaned_data.get('password')
+            if password:
+                if not len(password) >= 8:
+                    password_error = _("Passwords must contain at least 8 letters.")
+                    self.cleaned_data['register_password_error'] = password_error
+                    raise forms.ValidationError(password_error)
+            return password
+
+    permission = None
+    form_class = RegisterForm
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(CreateAccountView, self).dispatch(*args, **kwargs)
+
+    def form_invalid(self, form):
+        errors = []
+        register_email_error = form.cleaned_data.get('register_email_error', None)
+        register_password_error = form.cleaned_data.get('register_password_error', None)
+        password_error = form.cleaned_data.get('password_error', None)
+
+        if password_error:
+            errors.append(password_error)
+        if register_email_error:
+            errors.append(register_email_error)
+        if register_password_error:
+            errors.append(register_password_error)
+
+        return JsonResponse(dict(result=False, errors=errors), safe=False)
+
+    def form_valid(self, form):
+        # create our user
+        username = self.form.cleaned_data['email']
+        user = Org.create_user(username, self.form.cleaned_data['password'])
+
+        user.first_name = self.form.cleaned_data['first_name']
+        user.last_name = self.form.cleaned_data['last_name']
+        user.save()
+
+        # log the user in
+        user = authenticate(username=user.username, password=self.form.cleaned_data['password'])
+        login(self.request, user)
+
+        org = self.form.cleaned_data['org']
+        org.surveyors.add(user)
+
+        surveyors_group = Group.objects.get(name="Surveyors")
+        token = APIToken.get_or_create(org, user, role=surveyors_group)
+        return JsonResponse(dict(result=True, token=token.key, user=dict(first_name=user.first_name,
+                                 last_name=user.last_name), org=dict(id=org.id, name=org.name)), safe=False)
