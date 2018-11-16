@@ -303,7 +303,10 @@ class CreateAccountView(SmartFormView):
 
         user.first_name = self.form.cleaned_data['first_name']
         user.last_name = self.form.cleaned_data['last_name']
+        user.is_active = False
         user.save()
+
+        # TODO Here would be the push notification to Admin
 
         # log the user in
         user = authenticate(username=user.username, password=self.form.cleaned_data['password'])
