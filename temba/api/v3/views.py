@@ -65,7 +65,7 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
         else:  # pragma: needs cover
             return HttpResponse(status=403)
 
-        return JsonResponse({'orgs': orgs})
+        return JsonResponse(orgs, safe=False)
 
 
 class ManageAccountsEndpoint(BaseAPIView, ListAPIMixin):
@@ -293,7 +293,7 @@ class CreateAccountView(SmartFormView):
         if register_password_error:
             errors.append(register_password_error)
 
-        return JsonResponse(dict(result=False, errors=errors), safe=False)
+        return JsonResponse(dict(errors=errors), safe=False)
 
     def form_valid(self, form):
         # create our user
@@ -316,5 +316,5 @@ class CreateAccountView(SmartFormView):
 
         surveyors_group = Group.objects.get(name="Surveyors")
         token = APIToken.get_or_create(org, user, role=surveyors_group)
-        return JsonResponse(dict(result=True, token=token.key, user=dict(first_name=user.first_name,
+        return JsonResponse(dict(token=token.key, user=dict(first_name=user.first_name,
                                  last_name=user.last_name), org=dict(id=org.id, name=org.name)), safe=False)
