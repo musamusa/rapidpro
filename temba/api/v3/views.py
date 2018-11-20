@@ -68,6 +68,39 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
         return JsonResponse({'orgs': orgs})
 
 
+class ManageAccountsEndpoint(BaseAPIView, ListAPIMixin):
+    """
+    Provides the users that are pending of approbation
+    """
+
+    permission = 'orgs.org_manage_accounts'
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        authorization_key = request.META.get('HTTP_AUTHORIZATION')
+        token = authorization_key.split(' ')[-1]
+
+        api_token = APIToken.objects.filter(key=token, user=user).only('org').first()
+        org = api_token.org
+
+        if not org:
+            return HttpResponse(status=404)
+
+        surveryors = org.surveyors.filter(is_active=False).order_by('username')
+        users = []
+
+        role = APIToken.get_role_from_code('S')
+
+        if role:
+            for user in surveryors:
+                users.append({'username': user.username, 'id': user.id})
+
+        else:  # pragma: needs cover
+            return HttpResponse(status=403)
+
+        return JsonResponse(users, safe=False)
+
+
 class ContactEndpoint(ContactEndpointV1):
     permission = 'contacts.contact_api'
 
@@ -196,40 +229,6 @@ class RunsEndpoint(RunsEndpointV2):
         )
 
         return self.filter_before_after(queryset, 'modified_on')
-
-
-class CheckSurvayorPasswordView(SmartFormView):
-    class PasswordForm(forms.Form):
-        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
-
-        def clean_surveyor_password(self):
-            password = self.cleaned_data['surveyor_password']
-            org = Org.objects.filter(surveyor_password=password).first()
-            if not org:
-                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
-                self.cleaned_data['password_error'] = password_error
-                raise forms.ValidationError(password_error)
-            self.cleaned_data['org'] = org
-            return password
-
-    permission = None
-    form_class = PasswordForm
-
-    @csrf_exempt
-    def dispatch(self, *args, **kwargs):
-        return super(CheckSurvayorPasswordView, self).dispatch(*args, **kwargs)
-
-    def form_invalid(self, form):
-        errors = []
-        errors.append(form.cleaned_data.get('password_error'))
-        return JsonResponse(dict(result=False, errors=errors), safe=False)
-
-    def form_valid(self, form):
-        org = self.form.cleaned_data.get('org', None)
-        if org:
-            return JsonResponse(dict(result=True, org=dict(id=org.id, name=org.name)), safe=False)
-        else:
-            return JsonResponse(dict(result=False, errors=[_("Org not found")]), safe=False)
 
 
 class CreateAccountView(SmartFormView):
