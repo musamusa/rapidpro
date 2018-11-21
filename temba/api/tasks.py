@@ -5,10 +5,13 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth.models import User
+from django.utils.translation import ugettext_lazy as _
 from django_redis import get_redis_connection
 
 from temba.utils import chunk_list
 from temba.utils.queues import nonoverlapping_task
+from temba.utils.email import send_template_email
 from .models import WebHookEvent, WebHookResult
 
 
@@ -78,3 +81,21 @@ def trim_webhook_event_task():
         event_ids = event_ids.values_list('id', flat=True)
         for batch in chunk_list(event_ids, 1000):
             WebHookEvent.objects.filter(id__in=batch).delete()
+
+
+@task(track_started=True, name='send_account_manage_email_task')
+def send_account_manage_email_task(user_id, message):
+    user = User.objects.filter(id=user_id).first()
+    branding = settings.BRANDING.get(settings.DEFAULT_BRAND)
+
+    if not user or not branding:  # pragma: needs cover
+        return
+
+    subject = _("%(name)s Notice") % branding
+    template = "orgs/email/manage_account_email"
+    to_email = user.email
+
+    context = dict(message=message)
+    context['subject'] = subject
+
+    send_template_email(to_email, subject, template, context, branding)

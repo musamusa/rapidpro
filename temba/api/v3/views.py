@@ -1,5 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
+import json
+
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
@@ -12,13 +14,24 @@ from smartmin.views import SmartFormView
 
 from temba.api.models import APIToken, api_token
 from temba.api.v1.views import ContactEndpoint as ContactEndpointV1, FlowStepEndpoint as FlowStepEndpointV1
-from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2, BaseAPIView, ListAPIMixin, RunsEndpoint as RunsEndpointV2
+from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2, RunsEndpoint as RunsEndpointV2
+from temba.api.v2.views import WriteAPIMixin, BaseAPIView, ListAPIMixin
 from temba.contacts.models import Contact
 from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
 from .serializers import FlowRunReadSerializer
+from ..tasks import send_account_manage_email_task
+
+
+def get_org_from_auth(auth, user):
+    token = auth.split(' ')[-1]
+    api_token = APIToken.objects.filter(key=token, user=user).only('org').first()
+    if api_token:
+        return api_token.org
+    else:
+        return None
 
 
 class AuthenticateView(AuthenticateEndpointV2):
@@ -68,7 +81,7 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
         return JsonResponse(orgs, safe=False)
 
 
-class ManageAccountsEndpoint(BaseAPIView, ListAPIMixin):
+class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
     """
     Provides the users that are pending of approbation
     """
@@ -78,10 +91,8 @@ class ManageAccountsEndpoint(BaseAPIView, ListAPIMixin):
     def list(self, request, *args, **kwargs):
         user = request.user
         authorization_key = request.META.get('HTTP_AUTHORIZATION')
-        token = authorization_key.split(' ')[-1]
 
-        api_token = APIToken.objects.filter(key=token, user=user).only('org').first()
-        org = api_token.org
+        org = get_org_from_auth(authorization_key, user)
 
         if not org:
             return HttpResponse(status=404)
@@ -99,6 +110,40 @@ class ManageAccountsEndpoint(BaseAPIView, ListAPIMixin):
             return HttpResponse(status=403)
 
         return JsonResponse(users, safe=False)
+
+
+class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
+    """
+    Action to approve or disapprove users
+    """
+
+    permission = 'orgs.org_manage_accounts'
+
+    def post(self, request, *args, **kwargs):
+        body = json.loads(request.body)
+        action = kwargs.get('action')
+
+        errors = []
+
+        for item in body:
+            user = User.objects.filter(id=int(item.get('id'))).first()
+            if user and not user.is_active:
+                if action == 'approve':
+                    user.is_active = True
+                    user.save(update_fields=['is_active'])
+                    message = _('Message here')
+                else:
+                    user.delete()
+                    message = _('Message here')
+
+                send_account_manage_email_task.delay(user.id, message)
+            else:
+                errors.append(_('User ID %s not found or already is active' % item.get('id')))
+
+        if errors:
+            return JsonResponse({'errors': errors}, safe=False)
+        else:
+            return HttpResponse(status=202)
 
 
 class ContactEndpoint(ContactEndpointV1):

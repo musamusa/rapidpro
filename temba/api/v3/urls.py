@@ -5,7 +5,7 @@ from django.views.generic.base import RedirectView
 from rest_framework.urlpatterns import format_suffix_patterns
 
 from .views import AuthenticateView, UserOrgsEndpoint, ContactEndpoint, FlowStepEndpoint, RunsEndpoint, CreateAccountView
-from .views import ManageAccountsEndpoint
+from .views import ManageAccountsListEndpoint, ManageAccountsActionEndpoint
 from ..v2.views import BoundariesEndpoint, DefinitionsEndpoint, FieldsEndpoint, FlowsEndpoint, MediaEndpoint, OrgEndpoint
 
 
@@ -18,7 +18,8 @@ urlpatterns = [
     url(r'^authenticate$', AuthenticateView.as_view(), name='api.v3.authenticate'),
     url(r'^create-account$', CreateAccountView.as_view(), name='api.v3.create_account'),
     url(r'^user/orgs$', UserOrgsEndpoint.as_view(), name='api.v3.user_orgs'),
-    url(r'^manage-accounts$', ManageAccountsEndpoint.as_view(), name='api.v3.manage_accounts'),
+    url(r'^manage-accounts/list$', ManageAccountsListEndpoint.as_view(), name='api.v3.manage_accounts_list'),
+    url(r'^manage-accounts/action/(?P<action>approve|disapprove)$', ManageAccountsActionEndpoint.as_view(), name='api.v3.manage_accounts_action'),
 
     # Redirect views to v1 and v2
     url(r'^boundaries$', BoundariesEndpoint.as_view(), name='api.v3.boundaries'),
