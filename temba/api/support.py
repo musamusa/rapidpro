@@ -86,7 +86,12 @@ class DocumentationRenderer(BrowsableAPIRenderer):
             raise ValueError("Can't render without context")
 
         request_path = renderer_context['request'].path
-        api_version = 1 if request_path.startswith('/api/v1') else 2
+        if request_path.startswith('/api/v1'):
+            api_version = 1
+        elif request_path.startswith('/api/v2'):
+            api_version = 2
+        else:
+            api_version = 3
 
         self.template = 'api/v%d/api_root.html' % api_version
 
