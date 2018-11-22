@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from smartmin.views import SmartFormView
 
-from temba.api.models import APIToken, api_token
+from temba.api.models import APIToken, api_token, DeviceToken
 from temba.api.v1.views import ContactEndpoint as ContactEndpointV1, FlowStepEndpoint as FlowStepEndpointV1
 from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2, RunsEndpoint as RunsEndpointV2
 from temba.api.v2.views import WriteAPIMixin, BaseAPIView, ListAPIMixin
@@ -25,13 +25,10 @@ from .serializers import FlowRunReadSerializer
 from ..tasks import send_account_manage_email_task
 
 
-def get_org_from_auth(auth, user):
+def get_apitoken_from_auth(auth, user):
     token = auth.split(' ')[-1]
     api_token = APIToken.objects.filter(key=token, user=user).only('org').first()
-    if api_token:
-        return api_token.org
-    else:
-        return None
+    return api_token if api_token else None
 
 
 class AuthenticateView(AuthenticateEndpointV2):
@@ -92,7 +89,8 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
         user = request.user
         authorization_key = request.META.get('HTTP_AUTHORIZATION')
 
-        org = get_org_from_auth(authorization_key, user)
+        api_token = get_apitoken_from_auth(authorization_key, user)
+        org = api_token.org if api_token else None
 
         if not org:
             return HttpResponse(status=404)
@@ -142,7 +140,37 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
                 errors.append(_('User ID %s not found or already is active' % item.get('id')))
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False)
+            return JsonResponse({'errors': errors}, safe=False, status=400)
+        else:
+            return HttpResponse(status=202)
+
+
+class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
+    """
+    Action to add device tokens to user
+    """
+
+    permission = 'orgs.org_api'
+
+    def post(self, request, *args, **kwargs):
+        body = json.loads(request.body)
+        device_token = body.get('device_token', None)
+        user = request.user
+
+        if not device_token:
+            return JsonResponse({'errors': [_('device_token field is required')]}, safe=False, status=400)
+
+        errors = []
+
+        try:
+            device_token_args = dict(device_token=device_token,
+                                     user=user)
+            DeviceToken.get_or_create(**device_token_args)
+        except Exception as e:
+            errors.append(e.args)
+
+        if errors:
+            return JsonResponse({'errors': errors}, safe=False, status=400)
         else:
             return HttpResponse(status=202)
 

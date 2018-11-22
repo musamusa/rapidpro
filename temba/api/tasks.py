@@ -89,7 +89,7 @@ def send_account_manage_email_task(user_email, message):
     if not user_email or not branding:  # pragma: needs cover
         return
 
-    subject = _("%(name)s Notice") % branding
+    subject = _("%(name)s Request Info") % branding
     template = "orgs/email/manage_account_email"
 
     context = dict(message=message)
