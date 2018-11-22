@@ -5,7 +5,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
-from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django_redis import get_redis_connection
 
@@ -84,18 +83,16 @@ def trim_webhook_event_task():
 
 
 @task(track_started=True, name='send_account_manage_email_task')
-def send_account_manage_email_task(user_id, message):
-    user = User.objects.filter(id=user_id).first()
+def send_account_manage_email_task(user_email, message):
     branding = settings.BRANDING.get(settings.DEFAULT_BRAND)
 
-    if not user or not branding:  # pragma: needs cover
+    if not user_email or not branding:  # pragma: needs cover
         return
 
     subject = _("%(name)s Notice") % branding
     template = "orgs/email/manage_account_email"
-    to_email = user.email
 
     context = dict(message=message)
     context['subject'] = subject
 
-    send_template_email(to_email, subject, template, context, branding)
+    send_template_email(user_email, subject, template, context, branding)

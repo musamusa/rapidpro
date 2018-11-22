@@ -128,15 +128,16 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
         for item in body:
             user = User.objects.filter(id=int(item.get('id'))).first()
             if user and not user.is_active:
+                user_email = user.email
                 if action == 'approve':
                     user.is_active = True
                     user.save(update_fields=['is_active'])
-                    message = _('Message here')
+                    message = _('Congrats! Your account is approved. Please log in to access your surveys.')
                 else:
                     user.delete()
-                    message = _('Message here')
+                    message = _('Sorry. Your account was not approved. If you think this was a mistake, please contact %s.' % request.user.email)
 
-                send_account_manage_email_task.delay(user.id, message)
+                send_account_manage_email_task.delay(user_email, message)
             else:
                 errors.append(_('User ID %s not found or already is active' % item.get('id')))
 
