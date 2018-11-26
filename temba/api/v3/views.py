@@ -50,9 +50,9 @@ from .serializers import FlowRunReadSerializer
 from ..tasks import send_account_manage_email_task
 
 
-def get_apitoken_from_auth(auth, user):
+def get_apitoken_from_auth(auth):
     token = auth.split(' ')[-1]
-    api_token = APIToken.objects.filter(key=token, user=user).only('org').first()
+    api_token = APIToken.objects.filter(key=token).only('org').first()
     return api_token if api_token else None
 
 
@@ -160,27 +160,28 @@ class RootView(views.APIView):
 
     def get(self, request, *args, **kwargs):
         return Response({
-            'boundaries': reverse('api.v2.boundaries', request=request),
-            'broadcasts': reverse('api.v2.broadcasts', request=request),
-            'campaigns': reverse('api.v2.campaigns', request=request),
-            'campaign_events': reverse('api.v2.campaign_events', request=request),
-            'channels': reverse('api.v2.channels', request=request),
-            'channel_events': reverse('api.v2.channel_events', request=request),
-            'contacts': reverse('api.v2.contacts', request=request),
-            'contact_actions': reverse('api.v2.contact_actions', request=request),
-            'definitions': reverse('api.v2.definitions', request=request),
-            'fields': reverse('api.v2.fields', request=request),
-            'flow_starts': reverse('api.v2.flow_starts', request=request),
-            'flows': reverse('api.v2.flows', request=request),
-            'groups': reverse('api.v2.groups', request=request),
-            'labels': reverse('api.v2.labels', request=request),
-            'messages': reverse('api.v2.messages', request=request),
-            'message_actions': reverse('api.v2.message_actions', request=request),
-            'org': reverse('api.v2.org', request=request),
-            'resthooks': reverse('api.v2.resthooks', request=request),
-            'resthook_events': reverse('api.v2.resthook_events', request=request),
-            'resthook_subscribers': reverse('api.v2.resthook_subscribers', request=request),
-            'runs': reverse('api.v2.runs', request=request),
+            'boundaries': reverse('api.v3.boundaries', request=request),
+            'broadcasts': reverse('api.v3.broadcasts', request=request),
+            'campaigns': reverse('api.v3.campaigns', request=request),
+            'campaign_events': reverse('api.v3.campaign_events', request=request),
+            'channels': reverse('api.v3.channels', request=request),
+            'channel_events': reverse('api.v3.channel_events', request=request),
+            'contacts': reverse('api.v3.contacts', request=request),
+            'contact_actions': reverse('api.v3.contact_actions', request=request),
+            'definitions': reverse('api.v3.definitions', request=request),
+            'fields': reverse('api.v3.fields', request=request),
+            'flow_starts': reverse('api.v3.flow_starts', request=request),
+            'flows': reverse('api.v3.flows', request=request),
+            'groups': reverse('api.v3.groups', request=request),
+            'labels': reverse('api.v3.labels', request=request),
+            'messages': reverse('api.v3.messages', request=request),
+            'message_actions': reverse('api.v3.message_actions', request=request),
+            'org': reverse('api.v3.org', request=request),
+            'resthooks': reverse('api.v3.resthooks', request=request),
+            'resthook_events': reverse('api.v3.resthook_events', request=request),
+            'resthook_subscribers': reverse('api.v3.resthook_subscribers', request=request),
+            'runs': reverse('api.v3.runs', request=request),
+            'steps': reverse('api.v3.steps', request=request),
         })
 
 
@@ -249,7 +250,10 @@ class ExplorerView(ExplorerViewV2):
             ResthookSubscribersEndpoint.get_read_explorer(),
             ResthookSubscribersEndpoint.get_write_explorer(),
             ResthookSubscribersEndpoint.get_delete_explorer(),
-            RunsEndpoint.get_read_explorer()
+            RunsEndpoint.get_read_explorer(),
+            FlowStepEndpoint.get_write_explorer(),
+            UserOrgsEndpoint.get_read_explorer(),
+            ManageAccountsListEndpoint.get_read_explorer(),
         ]
         return context
 
@@ -305,6 +309,11 @@ class BoundariesEndpoint(BoundariesEndpointV2):
         }
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = BoundariesEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.boundaries')
+        return source_object
 
 
 class BroadcastsEndpoint(BroadcastsEndpointV2):
@@ -372,6 +381,17 @@ class BroadcastsEndpoint(BroadcastsEndpointV2):
             "created_on": "2013-03-02T17:28:12.123456Z"
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = BroadcastsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.broadcasts')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = BroadcastsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.broadcasts')
+        return source_object
 
 
 class CampaignsEndpoint(CampaignsEndpointV2):
@@ -447,6 +467,17 @@ class CampaignsEndpoint(CampaignsEndpointV2):
         }
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = CampaignsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.campaigns')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = CampaignsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.campaigns')
+        return source_object
 
 
 class CampaignEventsEndpoint(CampaignEventsEndpointV2):
@@ -557,6 +588,24 @@ class CampaignEventsEndpoint(CampaignEventsEndpointV2):
 
     """
 
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = CampaignEventsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.campaign_events')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = CampaignEventsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.campaign_events')
+        return source_object
+
+    @classmethod
+    def get_delete_explorer(cls):
+        source_object = CampaignEventsEndpointV2.get_delete_explorer()
+        source_object['url'] = reverse('api.v3.campaign_events')
+        return source_object
+
 
 class ChannelsEndpoint(ChannelsEndpointV2):
     """
@@ -608,6 +657,11 @@ class ChannelsEndpoint(ChannelsEndpointV2):
         }
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = ChannelsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.channels')
+        return source_object
 
 
 class ChannelEventsEndpoint(ChannelEventsEndpointV2):
@@ -648,6 +702,11 @@ class ChannelEventsEndpoint(ChannelEventsEndpointV2):
             ...
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = ChannelEventsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.channel_events')
+        return source_object
 
 
 class ContactsEndpoint(ContactEndpointV1):
@@ -832,6 +891,11 @@ class ContactActionsEndpoint(ContactActionsEndpointV2):
 
     You will receive an empty response with status code 204 if successful.
     """
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = ContactActionsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.contact_actions')
+        return source_object
 
 
 class DefinitionsEndpoint(DefinitionsEndpointV2):
@@ -920,6 +984,11 @@ class DefinitionsEndpoint(DefinitionsEndpointV2):
           }]
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = DefinitionsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.definitions')
+        return source_object
 
 
 class FieldsEndpoint(FieldsEndpointV2):
@@ -996,6 +1065,17 @@ class FieldsEndpoint(FieldsEndpointV2):
             "value_type": "text"
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = FieldsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.fields')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = FieldsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.fields')
+        return source_object
 
 
 class FlowsEndpoint(FlowsEndpointV2):
@@ -1044,6 +1124,11 @@ class FlowsEndpoint(FlowsEndpointV2):
             ]
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = FlowsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.flows')
+        return source_object
 
 
 class FlowStartsEndpoint(FlowStartsEndpointV2):
@@ -1143,6 +1228,76 @@ class FlowStartsEndpoint(FlowStartsEndpointV2):
         }
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = FlowStartsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.flow_starts')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = FlowStartsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.flow_starts')
+        return source_object
+
+
+class FlowStepEndpoint(FlowStepEndpointV1):
+    """
+    This endpoint allows you to create flow runs and steps.
+
+    ## Creating flow steps
+
+    By making a ```POST``` request to the endpoint you can add a new steps to a flow run.
+
+    * **flow** - the UUID of the flow (string)
+    * **revision** - the revision of the flow that was executed (integer)
+    * **contact** - the UUID of the contact (string)
+    * **steps** - the new step objects (array of objects)
+    * **started** - the datetime when the run was started
+    * **completed** - whether the run is complete
+
+    Example:
+
+        POST /api/v3/steps.json
+        {
+            "flow": "f5901b62-ba76-4003-9c62-72fdacc1b7b7",
+            "revision": 2,
+            "contact": "cf85cb74-a4e4-455b-9544-99e5d9125cfd",
+            "completed": true,
+            "started": "2015-09-23T17:59:47.572Z"
+            "steps": [
+                {
+                    "node": "32cf414b-35e3-4c75-8a78-d5f4de925e13",
+                    "arrived_on": "2015-08-25T11:59:30.088Z",
+                    "actions": [{"msg":"Hi Joe","type":"reply"}],
+                    "errors": []
+                }
+            ]
+        }
+
+    Response is the updated or created flow run.
+    """
+    permission = 'flows.flow_api'
+
+    @classmethod
+    def get_write_explorer(cls):
+        return {
+            'method': "POST",
+            'title': "Create or update a flow run with new steps",
+            'url': reverse('api.v3.steps'),
+            'slug': 'step-post',
+            'fields': [dict(name='contact', required=True,
+                            help="The UUID of the contact"),
+                       dict(name='flow', required=True,
+                            help="The UUID of the flow"),
+                       dict(name='started', required=True,
+                            help='Datetime when the flow started'),
+                       dict(name='completed', required=True,
+                            help='Boolean whether the run is complete or not'),
+                       dict(name='steps', required=True,
+                            help="A JSON array of one or objects, each a flow step")],
+            'example': {'body': '{ "contact": "cf85cb74-a4e4-455b-9544-99e5d9125cfd", "flow": "f5901b62-ba76-4003-9c62-72fdacc1b7b7", "steps": [{"node": "32cf414b-35e3-4c75-8a78-d5f4de925e13", "arrived_on": "2015-08-25T11:59:30.088Z", "actions": [{"msg":"Hi Joe","type":"reply"}], "errors": []}] }'},
+        }
 
 
 class GroupsEndpoint(GroupsEndpointV2):
@@ -1229,6 +1384,23 @@ class GroupsEndpoint(GroupsEndpointV2):
 
     You will receive either a 204 response if a group was deleted, or a 404 response if no matching group was found.
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = GroupsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.groups')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = GroupsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.groups')
+        return source_object
+
+    @classmethod
+    def get_delete_explorer(cls):
+        source_object = GroupsEndpointV2.get_delete_explorer()
+        source_object['url'] = reverse('api.v3.groups')
+        return source_object
 
 
 class LabelsEndpoint(LabelsEndpointV2):
@@ -1312,6 +1484,23 @@ class LabelsEndpoint(LabelsEndpointV2):
 
     You will receive either a 204 response if a label was deleted, or a 404 response if no matching label was found.
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = LabelsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.labels')
+        return source_object
+
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = LabelsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.labels')
+        return source_object
+
+    @classmethod
+    def get_delete_explorer(cls):
+        source_object = LabelsEndpointV2.get_delete_explorer()
+        source_object['url'] = reverse('api.v3.labels')
+        return source_object
 
 
 class MediaEndpoint(MediaEndpointV2):
@@ -1384,6 +1573,11 @@ class MessagesEndpoint(MessagesEndpointV2):
             ...
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = MessagesEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.messages')
+        return source_object
 
 
 class MessageActionsEndpoint(MessageActionsEndpointV2):
@@ -1419,6 +1613,11 @@ class MessageActionsEndpoint(MessageActionsEndpointV2):
 
     You will receive an empty response with status code 204 if successful.
     """
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = MessageActionsEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.message_actions')
+        return source_object
 
 
 class OrgEndpoint(OrgEndpointV2):
@@ -1446,6 +1645,11 @@ class OrgEndpoint(OrgEndpointV2):
             "anon": false
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = OrgEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.org')
+        return source_object
 
 
 class ResthooksEndpoint(ResthooksEndpointV2):
@@ -1478,6 +1682,88 @@ class ResthooksEndpoint(ResthooksEndpointV2):
             ...
         }
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = ResthooksEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.resthooks')
+        return source_object
+
+
+class ResthookEventsEndpoint(ResthookEventsEndpointV2):
+    """
+    This endpoint lists recent events for the passed in Resthook.
+
+    ## Listing Resthook Events
+
+    A `GET` returns the recent resthook events on your organization. Each event has the following attributes:
+
+     * **resthook** - the slug for the resthook (filterable)
+     * **data** - the data for the resthook
+     * **created_on** - the datetime when this resthook was created (datetime)
+
+    Example:
+
+        GET /api/v3/resthook_events.json
+
+    Response is the list of recent resthook events on your organization, most recently created first:
+
+        {
+            "next": "http://example.com/api/v3/resthook_events.json?cursor=cD0yMDE1LTExLTExKzExJTNBM40NjQlMkIwMCUzRv",
+            "previous": null,
+            "results": [
+            {
+                "resthook": "new-report",
+                "data": {
+                    "channel": 105,
+                    "flow": 50505,
+                    "flow_base_language": "eng",
+                    "run": 50040405,
+                    "text": "Incoming text",
+                    "step: "d33e9ad5-5c35-414c-abd4-e7451c69ff1d",
+                    "contact": "d33e9ad5-5c35-414c-abd4-e7451casdf",
+                    "urn": "tel:+12067781234",
+                    "values": [
+                        {
+                            "category": {
+                                "eng": "All Responses"
+                            },
+                            "node": "c33724d7-1064-4dd6-9aa3-efd29252cb88",
+                            "text": "Ryan Lewis",
+                            "rule_value": "Ryan Lewis",
+                            "value": "Ryan Lewis",
+                            "label": "Name",
+                            "time": "2016-08-10T21:18:51.186826Z"
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "node": "2d4f8c9a-cf12-4f6c-ad55-a6cc633954f6",
+                            "left_on": "2016-08-10T21:18:45.391114Z",
+                            "text": "What is your name?",
+                            "value": null,
+                            "arrived_on": "2016-08-10T21:18:45.378598Z",
+                            "type": "A"
+                        },
+                        {
+                            "node": "c33724d7-1064-4dd6-9aa3-efd29252cb88",
+                            "left_on": "2016-08-10T21:18:51.186826Z",
+                            "text": "Eric Newcomer",
+                            "value": "Eric Newcomer",
+                            "arrived_on": "2016-08-10T21:18:45.391114Z",
+                            "type": "R"
+                        }
+                    ],
+                },
+                "created_on": "2015-11-11T13:05:57.457742Z",
+            },
+            ...
+        }
+    """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = ResthookEventsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.resthook_events')
+        return source_object
 
 
 class ResthookSubscribersEndpoint(ResthookSubscribersEndpointV2):
@@ -1554,239 +1840,23 @@ class ResthookSubscribersEndpoint(ResthookSubscribersEndpointV2):
     You will receive either a 204 response if a subscriber was deleted, or a 404 response if no matching subscriber was found.
 
     """
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = ResthookSubscribersEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.resthook_subscribers')
+        return source_object
 
+    @classmethod
+    def get_write_explorer(cls):
+        source_object = ResthookSubscribersEndpointV2.get_write_explorer()
+        source_object['url'] = reverse('api.v3.resthook_subscribers')
+        return source_object
 
-class ResthookEventsEndpoint(ResthookEventsEndpointV2):
-    """
-    This endpoint lists recent events for the passed in Resthook.
-
-    ## Listing Resthook Events
-
-    A `GET` returns the recent resthook events on your organization. Each event has the following attributes:
-
-     * **resthook** - the slug for the resthook (filterable)
-     * **data** - the data for the resthook
-     * **created_on** - the datetime when this resthook was created (datetime)
-
-    Example:
-
-        GET /api/v3/resthook_events.json
-
-    Response is the list of recent resthook events on your organization, most recently created first:
-
-        {
-            "next": "http://example.com/api/v3/resthook_events.json?cursor=cD0yMDE1LTExLTExKzExJTNBM40NjQlMkIwMCUzRv",
-            "previous": null,
-            "results": [
-            {
-                "resthook": "new-report",
-                "data": {
-                    "channel": 105,
-                    "flow": 50505,
-                    "flow_base_language": "eng",
-                    "run": 50040405,
-                    "text": "Incoming text",
-                    "step: "d33e9ad5-5c35-414c-abd4-e7451c69ff1d",
-                    "contact": "d33e9ad5-5c35-414c-abd4-e7451casdf",
-                    "urn": "tel:+12067781234",
-                    "values": [
-                        {
-                            "category": {
-                                "eng": "All Responses"
-                            },
-                            "node": "c33724d7-1064-4dd6-9aa3-efd29252cb88",
-                            "text": "Ryan Lewis",
-                            "rule_value": "Ryan Lewis",
-                            "value": "Ryan Lewis",
-                            "label": "Name",
-                            "time": "2016-08-10T21:18:51.186826Z"
-                        }
-                    ],
-                    "steps": [
-                        {
-                            "node": "2d4f8c9a-cf12-4f6c-ad55-a6cc633954f6",
-                            "left_on": "2016-08-10T21:18:45.391114Z",
-                            "text": "What is your name?",
-                            "value": null,
-                            "arrived_on": "2016-08-10T21:18:45.378598Z",
-                            "type": "A"
-                        },
-                        {
-                            "node": "c33724d7-1064-4dd6-9aa3-efd29252cb88",
-                            "left_on": "2016-08-10T21:18:51.186826Z",
-                            "text": "Eric Newcomer",
-                            "value": "Eric Newcomer",
-                            "arrived_on": "2016-08-10T21:18:45.391114Z",
-                            "type": "R"
-                        }
-                    ],
-                },
-                "created_on": "2015-11-11T13:05:57.457742Z",
-            },
-            ...
-        }
-    """
-
-
-class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
-    """
-    Provides the user's organizations and API tokens to use on Surveyor App
-    """
-
-    permission = 'orgs.org_api'
-
-    def list(self, request, *args, **kwargs):
-        user = request.user
-        user_orgs = get_user_orgs(user)
-        orgs = []
-
-        role = APIToken.get_role_from_code('S')
-
-        if role:
-            for org in user_orgs:
-                token = APIToken.get_or_create(org, user, role)
-                orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
-
-        else:  # pragma: needs cover
-            return HttpResponse(status=403)
-
-        return JsonResponse(orgs, safe=False)
-
-
-class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
-    """
-    Provides the users that are pending of approbation
-    """
-
-    permission = 'orgs.org_manage_accounts'
-
-    def list(self, request, *args, **kwargs):
-        user = request.user
-        authorization_key = request.META.get('HTTP_AUTHORIZATION')
-
-        api_token = get_apitoken_from_auth(authorization_key, user)
-        org = api_token.org if api_token else None
-
-        if not org:
-            return HttpResponse(status=404)
-
-        surveryors = org.surveyors.filter(is_active=False).order_by('username')
-        users = []
-
-        role = APIToken.get_role_from_code('S')
-
-        if role:
-            for user in surveryors:
-                users.append({'username': user.username, 'id': user.id})
-
-        else:  # pragma: needs cover
-            return HttpResponse(status=403)
-
-        return JsonResponse(users, safe=False)
-
-
-class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
-    """
-    Action to approve or disapprove users
-    """
-
-    permission = 'orgs.org_manage_accounts'
-
-    def post(self, request, *args, **kwargs):
-        body = json.loads(request.body)
-        action = kwargs.get('action')
-
-        errors = []
-
-        for item in body:
-            user = User.objects.filter(id=int(item.get('id'))).first()
-            if user and not user.is_active:
-                user_email = user.email
-                if action == 'approve':
-                    user.is_active = True
-                    user.save(update_fields=['is_active'])
-                    message = _('Congrats! Your account is approved. Please log in to access your surveys.')
-                else:
-                    user.delete()
-                    message = _('Sorry. Your account was not approved. If you think this was a mistake, please contact %s.' % request.user.email)
-
-                send_account_manage_email_task.delay(user_email, message)
-            else:
-                errors.append(_('User ID %s not found or already is active' % item.get('id')))
-
-        if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=400)
-        else:
-            return HttpResponse(status=202)
-
-
-class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
-    """
-    Action to add device tokens to user
-    """
-
-    permission = 'orgs.org_api'
-
-    def post(self, request, *args, **kwargs):
-        body = json.loads(request.body)
-        device_token = body.get('device_token', None)
-        user = request.user
-
-        if not device_token:
-            return JsonResponse({'errors': [_('device_token field is required')]}, safe=False, status=400)
-
-        errors = []
-
-        try:
-            device_token_args = dict(device_token=device_token,
-                                     user=user)
-            DeviceToken.get_or_create(**device_token_args)
-        except Exception as e:
-            errors.append(e.args)
-
-        if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=400)
-        else:
-            return HttpResponse(status=202)
-
-
-class FlowStepEndpoint(FlowStepEndpointV1):
-    """
-    This endpoint allows you to create flow runs and steps.
-
-    ## Creating flow steps
-
-    By making a ```POST``` request to the endpoint you can add a new steps to a flow run.
-
-    * **flow** - the UUID of the flow (string)
-    * **revision** - the revision of the flow that was executed (integer)
-    * **contact** - the UUID of the contact (string)
-    * **steps** - the new step objects (array of objects)
-    * **started** - the datetime when the run was started
-    * **completed** - whether the run is complete
-
-    Example:
-
-        POST /api/v3/steps.json
-        {
-            "flow": "f5901b62-ba76-4003-9c62-72fdacc1b7b7",
-            "revision": 2,
-            "contact": "cf85cb74-a4e4-455b-9544-99e5d9125cfd",
-            "completed": true,
-            "started": "2015-09-23T17:59:47.572Z"
-            "steps": [
-                {
-                    "node": "32cf414b-35e3-4c75-8a78-d5f4de925e13",
-                    "arrived_on": "2015-08-25T11:59:30.088Z",
-                    "actions": [{"msg":"Hi Joe","type":"reply"}],
-                    "errors": []
-                }
-            ]
-        }
-
-    Response is the updated or created flow run.
-    """
-    permission = 'flows.flow_api'
+    @classmethod
+    def get_delete_explorer(cls):
+        source_object = ResthookSubscribersEndpointV2.get_delete_explorer()
+        source_object['url'] = reverse('api.v3.resthook_subscribers')
+        return source_object
 
 
 class RunsEndpoint(RunsEndpointV2):
@@ -1909,6 +1979,153 @@ class RunsEndpoint(RunsEndpointV2):
         )
 
         return self.filter_before_after(queryset, 'modified_on')
+
+    @classmethod
+    def get_read_explorer(cls):
+        source_object = RunsEndpointV2.get_read_explorer()
+        source_object['url'] = reverse('api.v3.runs')
+        return source_object
+
+
+# Surveyor views
+
+class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
+    """
+    Provides the user's organizations and API tokens to use on Surveyor App
+    """
+
+    permission = 'orgs.org_api'
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        user_orgs = get_user_orgs(user)
+        orgs = []
+
+        role = APIToken.get_role_from_code('S')
+
+        if role:
+            for org in user_orgs:
+                token = APIToken.get_or_create(org, user, role)
+                orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
+
+        else:  # pragma: needs cover
+            return HttpResponse(status=403)
+
+        return JsonResponse(orgs, safe=False, json_dumps_params=dict(indent=4))
+
+    @classmethod
+    def get_read_explorer(cls):
+        return {
+            'method': "GET",
+            'title': "Provides the user's organizations and API tokens to use on Surveyor App",
+            'url': reverse('api.v3.user_orgs'),
+            'slug': 'user-orgs'
+        }
+
+
+class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
+    """
+    Provides the users that are pending of approbation
+    """
+
+    permission = 'orgs.org_manage_accounts'
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+
+        api_token = get_apitoken_from_auth(user.api_token)
+        org = api_token.org if api_token else None
+
+        if not org:
+            return HttpResponse(status=404)
+
+        surveryors = org.surveyors.filter(is_active=False).order_by('username')
+        users = []
+
+        role = APIToken.get_role_from_code('S')
+
+        if role:
+            for user in surveryors:
+                users.append({'username': user.username, 'id': user.id})
+
+        else:  # pragma: needs cover
+            return HttpResponse(status=403)
+
+        return JsonResponse(users, safe=False, json_dumps_params=dict(indent=4))
+
+    @classmethod
+    def get_read_explorer(cls):
+        return {
+            'method': "GET",
+            'title': "Provides the users that are pending of approbation",
+            'url': reverse('api.v3.manage_accounts_list'),
+            'slug': 'manage-accounts-list'
+        }
+
+
+class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
+    """
+    Action to approve or disapprove users
+    """
+
+    permission = 'orgs.org_manage_accounts'
+
+    def post(self, request, *args, **kwargs):
+        body = json.loads(request.body)
+        action = kwargs.get('action')
+
+        errors = []
+
+        for item in body:
+            user = User.objects.filter(id=int(item.get('id'))).first()
+            if user and not user.is_active:
+                user_email = user.email
+                if action == 'approve':
+                    user.is_active = True
+                    user.save(update_fields=['is_active'])
+                    message = _('Congrats! Your account is approved. Please log in to access your surveys.')
+                else:
+                    user.delete()
+                    message = _('Sorry. Your account was not approved. If you think this was a mistake, please contact %s.' % request.user.email)
+
+                send_account_manage_email_task.delay(user_email, message)
+            else:
+                errors.append(_('User ID %s not found or already is active' % item.get('id')))
+
+        if errors:
+            return JsonResponse({'errors': errors}, safe=False, status=400, json_dumps_params=dict(indent=4))
+        else:
+            return HttpResponse(status=202)
+
+
+class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
+    """
+    Action to add device tokens to user
+    """
+
+    permission = 'orgs.org_api'
+
+    def post(self, request, *args, **kwargs):
+        body = json.loads(request.body)
+        device_token = body.get('device_token', None)
+        user = request.user
+
+        if not device_token:
+            return JsonResponse({'errors': [_('device_token field is required')]}, safe=False, status=400)
+
+        errors = []
+
+        try:
+            device_token_args = dict(device_token=device_token,
+                                     user=user)
+            DeviceToken.get_or_create(**device_token_args)
+        except Exception as e:
+            errors.append(e.args)
+
+        if errors:
+            return JsonResponse({'errors': errors}, safe=False, status=400)
+        else:
+            return HttpResponse(status=202)
 
 
 class CreateAccountView(SmartFormView):
