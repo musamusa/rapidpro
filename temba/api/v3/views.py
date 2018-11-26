@@ -69,14 +69,17 @@ class RootView(views.APIView):
      * [/api/v3/channel_events](/api/v3/channel_events) - to list channel events
      * [/api/v3/contacts](/api/v3/contacts) - to list, create, update or delete contacts
      * [/api/v3/contact_actions](/api/v3/contact_actions) - to perform bulk contact actions
+     * [/api/v3/create_account](/api/v3/custom_endpoints#create-account) - to create an account through multipart form request
      * [/api/v3/definitions](/api/v3/definitions) - to export flow definitions, campaigns, and triggers
      * [/api/v3/fields](/api/v3/fields) - to list, create or update contact fields
      * [/api/v3/flow_starts](/api/v3/flow_starts) - to list flow starts and start contacts in flows
      * [/api/v3/flows](/api/v3/flows) - to list flows
      * [/api/v3/groups](/api/v3/groups) - to list, create, update or delete contact groups
      * [/api/v3/labels](/api/v3/labels) - to list, create, update or delete message labels
+     * [/api/v3/media](/api/v3/media) - to upload medias to org
      * [/api/v3/messages](/api/v3/messages) - to list messages
      * [/api/v3/message_actions](/api/v3/message_actions) - to perform bulk message actions
+     * [/api/v3/manage_accounts/list](/api/v3/custom_endpoints#manage-accounts) - to list accounts pending of approbation
      * [/api/v3/manage_accounts/action/approve](/api/v3/manage_accounts/action/approve) - to perform bulk approve actions
      * [/api/v3/manage_accounts/action/deny](/api/v3/manage_accounts/action/deny) - to perform bulk deny actions
      * [/api/v3/org](/api/v3/org) - to view your org
@@ -86,7 +89,7 @@ class RootView(views.APIView):
      * [/api/v3/resthook_subscribers](/api/v3/resthook_subscribers) - to list, create or delete subscribers on your resthooks
      * [/api/v3/steps](/api/v3/steps) - to create runs on Surveyor app
      * [/api/v3/user/device_token](/api/v3/user/device_token) - to add device token to user
-     * [/api/v3/custom_endpoints](/api/v3/custom_endpoints) - to access the custom endpoints documentation like create account e users pending of approbation
+     * [/api/v3/user/orgs](/api/v3/custom_endpoints#user-orgs) - to list orgs of the user
 
     To use the endpoint simply append _.json_ to the URL. For example [/api/v3/flows](/api/v3/flows) will return the
     documentation for that endpoint but a request to [/api/v3/flows.json](/api/v3/flows.json) will return a JSON list of
@@ -1519,6 +1522,17 @@ class MediaEndpoint(MediaEndpointV2):
     ## Creating Media
 
     By making a `POST` request to the endpoint you can add a new media files
+
+    * **media_file** - the file to upload
+    * **extension** - the extension of the file
+
+    Example:
+
+        curl --request POST \\
+             --url http://example.com/api/v3/media.json \\
+             --header 'authorization: Token your-token-here' \\
+             --form media_file=file.png \\
+             --form extension=png
     """
 
 
@@ -2306,7 +2320,7 @@ class CreateAccountView(SmartFormView):
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
     """
     ## Create Account
-    /api/v3/create_account - to create account thought multipart form request
+    /api/v3/create_account - to create account through multipart form request
 
     A **POST** can be used to perform an action to create accounts
 
@@ -2353,5 +2367,4 @@ class CustomEndpoints(ListAPIMixin, BaseAPIView):
         curl --request GET \\
              --url http://example.com/api/v3/user/orgs.json \\
              --header 'authorization: Token your-token-here'
-
     """
