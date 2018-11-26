@@ -10,7 +10,7 @@ from .views import RootView, ExplorerView, AuthenticateView, BroadcastsEndpoint,
 from .views import CampaignsEndpoint, CampaignEventsEndpoint, ContactsEndpoint, DefinitionsEndpoint, FlowsEndpoint
 from .views import FieldsEndpoint, FlowStartsEndpoint, GroupsEndpoint, LabelsEndpoint, MediaEndpoint, MessagesEndpoint
 from .views import OrgEndpoint, ResthooksEndpoint, ResthookEventsEndpoint, ResthookSubscribersEndpoint, RunsEndpoint
-from .views import BoundariesEndpoint, ContactActionsEndpoint, MessageActionsEndpoint
+from .views import BoundariesEndpoint, ContactActionsEndpoint, MessageActionsEndpoint, CustomEndpoints
 
 
 urlpatterns = [
@@ -19,11 +19,12 @@ urlpatterns = [
 
     # these endpoints are retained for Android Surveyor clients
     url(r'^authenticate$', AuthenticateView.as_view(), name='api.v3.authenticate'),
-    url(r'^create-account$', CreateAccountView.as_view(), name='api.v3.create_account'),
+    url(r'^create_account$', CreateAccountView.as_view(), name='api.v3.create_account'),
     url(r'^user/orgs$', UserOrgsEndpoint.as_view(), name='api.v3.user_orgs'),
-    url(r'^user/device-token$', DeviceTokenEndpoint.as_view(), name='api.v3.device_token'),
-    url(r'^manage-accounts/list$', ManageAccountsListEndpoint.as_view(), name='api.v3.manage_accounts_list'),
-    url(r'^manage-accounts/action/(?P<action>approve|deny)$', ManageAccountsActionEndpoint.as_view(), name='api.v3.manage_accounts_action'),
+    url(r'^user/device_token$', DeviceTokenEndpoint.as_view(), name='api.v3.device_token'),
+    url(r'^manage_accounts/list$', ManageAccountsListEndpoint.as_view(), name='api.v3.manage_accounts_list'),
+    url(r'^manage_accounts/action/(?P<action>approve|deny)$', ManageAccountsActionEndpoint.as_view(), name='api.v3.manage_accounts_action'),
+    url(r'^custom_endpoints$', CustomEndpoints.as_view(), name='api.v3.custom_endpoints'),
 
     # ========== endpoints A-Z ===========
     url(r'^boundaries$', BoundariesEndpoint.as_view(), name='api.v3.boundaries'),

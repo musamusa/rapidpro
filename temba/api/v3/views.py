@@ -77,12 +77,16 @@ class RootView(views.APIView):
      * [/api/v3/labels](/api/v3/labels) - to list, create, update or delete message labels
      * [/api/v3/messages](/api/v3/messages) - to list messages
      * [/api/v3/message_actions](/api/v3/message_actions) - to perform bulk message actions
+     * [/api/v3/manage_accounts/action/approve](/api/v3/manage_accounts/action/approve) - to perform bulk approve actions
+     * [/api/v3/manage_accounts/action/deny](/api/v3/manage_accounts/action/deny) - to perform bulk deny actions
      * [/api/v3/org](/api/v3/org) - to view your org
      * [/api/v3/runs](/api/v3/runs) - to list flow runs
      * [/api/v3/resthooks](/api/v3/resthooks) - to list resthooks
      * [/api/v3/resthook_events](/api/v3/resthook_events) - to list resthook events
      * [/api/v3/resthook_subscribers](/api/v3/resthook_subscribers) - to list, create or delete subscribers on your resthooks
      * [/api/v3/steps](/api/v3/steps) - to create runs on Surveyor app
+     * [/api/v3/user/device_token](/api/v3/user/device_token) - to add device token to user
+     * [/api/v3/custom_endpoints](/api/v3/custom_endpoints) - to access the custom endpoints documentation like create account e users pending of approbation
 
     To use the endpoint simply append _.json_ to the URL. For example [/api/v3/flows](/api/v3/flows) will return the
     documentation for that endpoint but a request to [/api/v3/flows.json](/api/v3/flows.json) will return a JSON list of
@@ -169,6 +173,7 @@ class RootView(views.APIView):
             'contacts': reverse('api.v3.contacts', request=request),
             'contact_actions': reverse('api.v3.contact_actions', request=request),
             'definitions': reverse('api.v3.definitions', request=request),
+            'device_token': reverse('api.v3.device_token', request=request),
             'fields': reverse('api.v3.fields', request=request),
             'flow_starts': reverse('api.v3.flow_starts', request=request),
             'flows': reverse('api.v3.flows', request=request),
@@ -176,6 +181,7 @@ class RootView(views.APIView):
             'labels': reverse('api.v3.labels', request=request),
             'messages': reverse('api.v3.messages', request=request),
             'message_actions': reverse('api.v3.message_actions', request=request),
+            'manage_accounts_action': reverse('api.v3.manage_accounts_action', args=['approve'], request=request),
             'org': reverse('api.v3.org', request=request),
             'resthooks': reverse('api.v3.resthooks', request=request),
             'resthook_events': reverse('api.v3.resthook_events', request=request),
@@ -242,6 +248,9 @@ class ExplorerView(ExplorerViewV2):
             LabelsEndpoint.get_read_explorer(),
             LabelsEndpoint.get_write_explorer(),
             LabelsEndpoint.get_delete_explorer(),
+            ManageAccountsListEndpoint.get_read_explorer(),
+            ManageAccountsActionEndpoint.get_approve_write_explorer(),
+            ManageAccountsActionEndpoint.get_deny_write_explorer(),
             MessagesEndpoint.get_read_explorer(),
             MessageActionsEndpoint.get_write_explorer(),
             OrgEndpoint.get_read_explorer(),
@@ -253,7 +262,7 @@ class ExplorerView(ExplorerViewV2):
             RunsEndpoint.get_read_explorer(),
             FlowStepEndpoint.get_write_explorer(),
             UserOrgsEndpoint.get_read_explorer(),
-            ManageAccountsListEndpoint.get_read_explorer(),
+            DeviceTokenEndpoint.get_write_explorer(),
         ]
         return context
 
@@ -2019,7 +2028,8 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
             'method': "GET",
             'title': "Provides the user's organizations and API tokens to use on Surveyor App",
             'url': reverse('api.v3.user_orgs'),
-            'slug': 'user-orgs'
+            'slug': 'user-orgs',
+            'custom_docs': '%s#user-orgs' % reverse('api.v3.custom_endpoints')
         }
 
 
@@ -2059,19 +2069,43 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
             'method': "GET",
             'title': "Provides the users that are pending of approbation",
             'url': reverse('api.v3.manage_accounts_list'),
-            'slug': 'manage-accounts-list'
+            'slug': 'manage-accounts-list',
+            'custom_docs': '%s#manage-accounts' % reverse('api.v3.custom_endpoints')
         }
 
 
 class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
     """
-    Action to approve or disapprove users
+    ## Action to approve or deny users
+
+    A **POST** can be used to perform an action to approve or deny users.
+
+    * **id** - the user id
+
+    Example:
+
+        POST /api/v3/manage-accounts/action/(approve|deny).json
+
+        [
+            {
+                "id": 1
+            },
+            {
+                "id": 2
+            },
+            {
+                "id": 3
+            }
+        ]
+
+    You will receive an empty response with status code 204 if successful.
+
     """
 
     permission = 'orgs.org_manage_accounts'
 
     def post(self, request, *args, **kwargs):
-        body = json.loads(request.body)
+        body = request.data
         action = kwargs.get('action')
 
         errors = []
@@ -2095,18 +2129,55 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
         if errors:
             return JsonResponse({'errors': errors}, safe=False, status=400, json_dumps_params=dict(indent=4))
         else:
-            return HttpResponse(status=202)
+            return HttpResponse(status=204)
+
+    @classmethod
+    def get_approve_write_explorer(cls):
+        return {
+            'method': "POST",
+            'title': "Action to approve users",
+            'url': reverse('api.v3.manage_accounts_action', args=['approve']),
+            'slug': 'manage-accounts-action-approve',
+            'fields': [dict(name='id', required=True,
+                            help="The ID of the user")],
+            'example': {'body': '[{"id": 1}]'},
+        }
+
+    @classmethod
+    def get_deny_write_explorer(cls):
+        return {
+            'method': "POST",
+            'title': "Action to deny users",
+            'url': reverse('api.v3.manage_accounts_action', args=['deny']),
+            'slug': 'manage-accounts-action-deny',
+            'fields': [dict(name='id', required=True,
+                            help="The ID of the user")],
+            'example': {'body': '[{"id": 1}]'},
+        }
 
 
 class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
     """
-    Action to add device tokens to user
+    ## Action to add device token to user
+
+    A **POST** can be used to perform an action to add device token users.
+
+    * **device_token** - the user device token
+
+    Example:
+
+        POST /api/v3/user/device_token.json
+        {
+            "device_token": "15MsMdEICogXSLB8-MrdkRuRQFwNI5u8Dh0cI90ABD3BOKnxkEla8cGdisbDHl5cVIkZah5QUhSAxzx4Roa7b4xy9tvx9iNSYw"
+        }
+
+    You will receive an empty response with status code 204 if successful.
     """
 
     permission = 'orgs.org_api'
 
     def post(self, request, *args, **kwargs):
-        body = json.loads(request.body)
+        body = request.data
         device_token = body.get('device_token', None)
         user = request.user
 
@@ -2125,10 +2196,25 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
         if errors:
             return JsonResponse({'errors': errors}, safe=False, status=400)
         else:
-            return HttpResponse(status=202)
+            return HttpResponse(status=204)
+
+    @classmethod
+    def get_write_explorer(cls):
+        return {
+            'method': "POST",
+            'title': "Action to add device token to user",
+            'url': reverse('api.v3.device_token'),
+            'slug': 'device-token',
+            'fields': [dict(name='device_token', required=True,
+                            help="The user device token")],
+            'example': {'body': '{"device_token": "123456789987654321"}'},
+        }
 
 
 class CreateAccountView(SmartFormView):
+    """
+    Action to add device tokens to user
+    """
 
     class RegisterForm(forms.Form):
         surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Surveyor Password'}))
@@ -2215,3 +2301,57 @@ class CreateAccountView(SmartFormView):
         token = APIToken.get_or_create(org, user, role=surveyors_group)
         return JsonResponse(dict(token=token.key, user=dict(first_name=user.first_name,
                                  last_name=user.last_name), org=dict(id=org.id, name=org.name)), safe=False)
+
+
+class CustomEndpoints(ListAPIMixin, BaseAPIView):
+    """
+    ## Create Account
+    /api/v3/create_account - to create account thought multipart form request
+
+    A **POST** can be used to perform an action to create accounts
+
+    * **surveyor_password** - the org surveyor password
+    * **first_name** - the first name of the user
+    * **last_name** - the last name of the user
+    * **email** - the email of the user
+    * **password** - the user password
+
+    Example:
+
+        curl --request POST \\
+             --url http://example.com/api/v3/create_account.json \\
+             --form surveyor_password=12345 \\
+             --form first_name=John \\
+             --form 'last_name=Bolton' \\
+             --form email=johnbolton@example.com \\
+             --form password=12345
+
+    ## Manage Accounts
+    /api/v3/manage_accounts/list - to list accounts pending of approbation
+
+    A **GET** can be used to list the accounts pending of approbation
+
+    * **id** - the ID of the user
+    * **username** - the username of the account
+
+    Example:
+
+        curl --request GET \\
+             --url http://example.com/api/v3/manage_accounts/list.json \\
+             --header 'authorization: Token your-token-here'
+
+    ## User Orgs
+    /api/v3/user/orgs - to list orgs of the user
+
+    A **GET** can be used to list the orgs of the user
+
+    * **id** - the org object
+    * **token** - the token that this user could access that org's APIs
+
+    Example:
+
+        curl --request GET \\
+             --url http://example.com/api/v3/user/orgs.json \\
+             --header 'authorization: Token your-token-here'
+
+    """

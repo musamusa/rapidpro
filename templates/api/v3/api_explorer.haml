@@ -87,7 +87,7 @@
 
       .request-buttons
         .pull-left
-          %a{ href: '{{ endpoint.url }}' }
+          %a{ href: '{% if endpoint.custom_docs %}{{ endpoint.custom_docs }}{% else %}{{ endpoint.url }}{% endif %}' }
             -trans "View Full Documentation"
 
         -if user.api_token
