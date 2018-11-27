@@ -384,7 +384,8 @@ class FlowImageCRUDL(SmartCRUDL):
 
         def get(self, request, *args, **kwargs):
             flow_image = self.get_object()
-            return HttpResponseRedirect(flow_image.get_url())
+            with open(flow_image.get_full_path(), 'r') as image:
+                return HttpResponse(image.read(), content_type='image/png')
 
 
 class FlowCRUDL(SmartCRUDL):

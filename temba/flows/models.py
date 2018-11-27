@@ -2716,7 +2716,7 @@ class FlowImage(TembaModel):
 
     name = models.CharField(help_text='Image name', max_length=255)
 
-    url = models.CharField(help_text='Image URL', max_length=255)
+    path = models.CharField(help_text='Image URL', max_length=255)
 
     exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
 
@@ -2725,8 +2725,11 @@ class FlowImage(TembaModel):
 
     def get_url(self):
         protocol = 'https' if settings.IS_PROD else 'http'
-        image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.url)
+        image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.path)
         return image_url
+
+    def get_full_path(self):
+        return '%s/%s' % (settings.MEDIA_ROOT, self.path)
 
     def get_permalink(self):
         protocol = 'https' if settings.IS_PROD else 'http'
@@ -3724,7 +3727,7 @@ class RuleSet(models.Model):
                 flow_name_slugified = slugify(run.flow.name)
                 output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
                 main_directory = 'flows_images/orgs/%d' % run.flow.org.id
-                media_url = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
+                media_path = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
                 full_directory = '%s/%s/%s' % (settings.MEDIA_ROOT, main_directory, flow_name_slugified)
 
                 if not os.path.exists(full_directory):
@@ -3734,7 +3737,7 @@ class RuleSet(models.Model):
                 command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
                 subprocess.call(command_line.split(' '))
 
-                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, url=media_url,
+                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
                                   exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
                                   modified_by=run.flow.created_by)
                 flow_image = FlowImage.objects.create(**image_args)
