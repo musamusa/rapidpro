@@ -2285,7 +2285,9 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
 
-  $scope.saveEmail = (addresses) ->
+  $scope.saveEmail = (addresses, hasAttachURL=false) ->
+
+    # TODO Put here the code to handle media files
 
     if $scope.hasInvalidFields([$scope.action.subject, $scope.action.msg])
       return
