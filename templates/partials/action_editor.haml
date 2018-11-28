@@ -273,7 +273,7 @@
           .remove
             %a{href:'javascript:void(0);', ng-click:'removeAttachment(); $event.stopPropagation();'}
               .icon-close
-      %button{ng-click:"saveEmail(action_editor.to.selected)",class:"submit hide"}
+      %button{ng-click:"saveEmail(action_editor.to.selected, showAttachVariable)",class:"submit hide"}
         -trans "Ok"
 
     %div{ng-if:'config.type == "trigger-flow"'}

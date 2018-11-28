@@ -2287,10 +2287,26 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   $scope.saveEmail = (addresses, hasAttachURL=false) ->
 
-    # TODO Put here the code to handle media files
-
-    if $scope.hasInvalidFields([$scope.action.subject, $scope.action.msg])
+    inputs = [$scope.action.subject, $scope.action.msg]
+    if hasAttachURL
+      inputs.push($scope.action._attachURL)
+    if $scope.hasInvalidFields(inputs)
       return
+
+    if hasAttachURL and $scope.action._attachURL
+      if not $scope.action.media
+        $scope.action.media = {}
+
+      $scope.action.media[$scope.base_language] = $scope.action._attachType + ':' + $scope.action._attachURL
+
+      # make sure our localizations all have the same type
+      for key in Object.keys($scope.action.media)
+        if key != $scope.base_language
+          translation = $scope.action.media[key]
+          $scope.action.media[key] = $scope.action._attachType + ':' + translation.split(':')[1]
+
+    else if not $scope.action._media
+      $scope.action.media = null
 
     to = []
     for address in addresses
