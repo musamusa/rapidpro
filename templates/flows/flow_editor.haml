@@ -527,9 +527,10 @@
                   -trans "Update Salesforce fields"
 
                 // sending emails
-                %span{ng-show:'action.type == "email"'}
+                %span.email{ng-show:'action.type == "email"'}
                   .subject
                     [[action.subject]]
+                  .node-attachment.icon-attachment{ng-show:'action._attachURL'}
 
                 // starting flows
                 %span{ng-show:'action.type == "flow" || action.type == "trigger-flow"'}

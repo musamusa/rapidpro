@@ -221,7 +221,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           lastIndex = subjectString.indexOf(searchString, position)
           return lastIndex != -1 && lastIndex == position
 
-    if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
+    if action.type in ['reply', 'send', 'email'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
       return
 
@@ -235,7 +235,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
       return
 
     # if we have an attachment already, confirm they want to replace it
-    if action.type in ['reply', 'send'] and action._media
+    if action.type in ['reply', 'send', 'email'] and action._media
       modal = showDialog('Overwrite Attachment', 'This step already has an attachment, would you like to replace this attachment with ' + file.name + '?', 'Overwrite Attachemnt', false)
       modal.result.then (value) ->
         if value == 'ok'
@@ -252,7 +252,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
     if action.type == 'say'
       uploadURL = window.uploadURL
 
-    if action.type in ['reply', 'send']
+    if action.type in ['reply', 'send', 'email']
       uploadURL = window.uploadMediaURL
 
     if not uploadURL
@@ -273,7 +273,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           action.recording = {}
         action.recording[Flow.language.iso_code] = data['path']
 
-      if action.type in ['reply', 'send']
+      if action.type in ['reply', 'send', 'email']
         if not action.media
           action.media = {}
         action.media[Flow.language.iso_code] = file.type + ':' + data['path']

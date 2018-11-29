@@ -241,7 +241,7 @@
         -trans "Message"
       %textarea{ng-model:"action.msg",auto-complete:"",flow:"[[flowId]]",name:"body",ng-required:"true",id:"email-text"}
       .media{ng-hide:'action.uploading',id:"attach-email"}
-        .attachments{ng-class: '{active:showAttachOptions}', ng-show: '!action._media && !quickReplies.length'}
+        .attachments{ng-class: '{active:showAttachOptions}', ng-show: '!action._media'}
           .attach-button{ng-show:'!showAttachOptions'}
             .icon-attachment.add-attachment{ng-click:'showAttachOptions = !showAttachOptions; showAttachVariable=false' }
 

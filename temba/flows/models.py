@@ -5272,8 +5272,9 @@ class EmailAction(Action):
     EMAILS = 'emails'
     SUBJECT = 'subject'
     MESSAGE = 'msg'
+    MEDIA = 'media'
 
-    def __init__(self, uuid, emails, subject, message):
+    def __init__(self, uuid, emails, subject, message, media=None):
         super(EmailAction, self).__init__(uuid)
 
         if not emails:
@@ -5282,16 +5283,19 @@ class EmailAction(Action):
         self.emails = emails
         self.subject = subject
         self.message = message
+        self.media = media if media else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
         emails = json_obj.get(EmailAction.EMAILS)
         message = json_obj.get(EmailAction.MESSAGE)
         subject = json_obj.get(EmailAction.SUBJECT)
-        return cls(json_obj.get(cls.UUID), emails, subject, message)
+        media = json_obj.get(EmailAction.MEDIA, None)
+        return cls(json_obj.get(cls.UUID), emails, subject, message, media)
 
     def as_json(self):
-        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message)
+        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message,
+                    media=self.media)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         from .tasks import send_email_action_task

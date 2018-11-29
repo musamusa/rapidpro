@@ -153,7 +153,7 @@ app.directive "action", [ "Plumb", "Flow", "$log", (Plumb, Flow, $log) ->
       if currentLanguage
         iso_code = currentLanguage.iso_code
 
-      if action.type in ['send', 'reply', 'say', 'end_ussd']
+      if action.type in ['send', 'reply', 'say', 'end_ussd', 'email']
         action._translation = action.msg[iso_code]
 
         # translated recording for IVR
@@ -180,7 +180,10 @@ app.directive "action", [ "Plumb", "Flow", "$log", (Plumb, Flow, $log) ->
               action._attachURL = parts[1]
               action._attachType = mime_parts[0]
 
-        if action._translation is undefined
+        if action.type == 'email'
+          action._translation = null
+          action._missingTranslation = false
+        else if action._translation is undefined
           action._translation = action.msg[baseLanguage]
           action._missingTranslation = true
         else
