@@ -1936,6 +1936,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       action: -> action
       type: -> "attachment-viewer"
 
+    if action._media.type not in ['image', 'video', 'audio']
+      win = window.open(action._media.url, '_blank');
+      win.focus();
+      return
+
     $scope.dialog = utils.openModal("/partials/attachment_viewer", AttachmentViewerController , resolveObj)
 
   $scope.onFileSelect = ($files, actionset, action) ->
