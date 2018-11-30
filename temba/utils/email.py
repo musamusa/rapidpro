@@ -2,9 +2,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import six
+import magic
+import os
 
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives, send_mail, get_connection as get_smtp_connection
+from django.core.mail import EmailMultiAlternatives, get_connection as get_smtp_connection, EmailMessage
 from django.core.validators import EmailValidator
 from django.template import loader
 from django.conf import settings
@@ -48,7 +50,7 @@ def link_components(request=None, user=None):
     return {'protocol': protocol, 'hostname': hostname}
 
 
-def send_simple_email(recipients, subject, body, from_email=None):
+def send_simple_email(recipients, subject, body, from_email=None, attachments=None):
     """
     Sends a simple text email to the given recipients
 
@@ -61,10 +63,10 @@ def send_simple_email(recipients, subject, body, from_email=None):
 
     recipient_list = [recipients] if isinstance(recipients, six.string_types) else recipients
 
-    send_temba_email(subject, body, None, from_email, recipient_list)
+    send_temba_email(subject, body, None, from_email, recipient_list, attachments=attachments)
 
 
-def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smtp_port, smtp_username, smtp_password, use_tls):
+def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smtp_port, smtp_username, smtp_password, use_tls, attachments=None):
     """
     Sends a text email to the given recipients using the SMTP configuration
 
@@ -86,7 +88,7 @@ def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smt
     connection = get_smtp_connection(None, fail_silently=False, host=smtp_host, port=smtp_port, username=smtp_username,
                                      password=smtp_password, use_tls=use_tls)
 
-    send_temba_email(subject, body, None, from_email, recipient_list, connection=connection)
+    send_temba_email(subject, body, None, from_email, recipient_list, connection=connection, attachments=attachments)
 
 
 def send_template_email(recipients, subject, template, context, branding):
@@ -114,7 +116,7 @@ def send_template_email(recipients, subject, template, context, branding):
     send_temba_email(subject, text, html, from_email, recipient_list)
 
 
-def send_temba_email(subject, text, html, from_email, recipient_list, connection=None):
+def send_temba_email(subject, text, html, from_email, recipient_list, connection=None, attachments=None):
     """
     Actually sends the email. Having this as separate function makes testing multi-part emails easier
     """
@@ -124,7 +126,16 @@ def send_temba_email(subject, text, html, from_email, recipient_list, connection
             message.attach_alternative(html, "text/html")
             message.send()
         else:
-            send_mail(subject, text, from_email, recipient_list, connection=connection)
+            message = EmailMessage(subject, text, from_email, recipient_list, connection=connection)
+            if attachments:
+                mime = magic.Magic(mime=True)
+                mimetype = mime.from_file(attachments[0])
+                attached_file = open(attachments[0], 'rb')
+                message.attach(filename=os.path.basename(attached_file.name), content=attached_file.read(),
+                               mimetype=mimetype)
+                attached_file.close()
+            message.send()
+
     else:
         # just print to console if we aren't meant to send emails
         print("----------- Skipping sending email, SEND_EMAILS to set False -----------")

@@ -3715,6 +3715,7 @@ class RuleSet(models.Model):
                 image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
             except Exception:
                 image_path = None
+                is_image = None
 
             if image_path and is_image:
                 img = Image.open(image_path)
@@ -5323,9 +5324,24 @@ class EmailAction(Action):
             else:
                 invalid_addresses.append(address)
 
+        attachments = None
+        if self.media:
+            # localize our media attachment
+            media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
+            (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
+
+            if real_media_url:
+                media_ = settings.MEDIA_URL.replace('/', '')
+                if media_ in real_media_url:
+                    file_path = real_media_url.split(media_)[1]
+                else:
+                    file_path = '/%s' % real_media_url
+                media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+                attachments = [media_path]
+
         if not run.contact.is_test:
             if valid_addresses:
-                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message))
+                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message, attachments))
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
