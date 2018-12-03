@@ -3720,11 +3720,13 @@ class RuleSet(models.Model):
             if image_path and is_image:
                 img = Image.open(image_path)
                 exif_data = img._getexif()
+
                 exif = {
                     ExifTags.TAGS[k]: v
                     for k, v in exif_data.items()
                     if k in ExifTags.TAGS
-                }
+                } if exif_data else None
+
                 flow_name_slugified = slugify(run.flow.name)
                 output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
                 main_directory = 'flows_images/orgs/%d' % run.flow.org.id
