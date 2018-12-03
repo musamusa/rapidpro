@@ -33,7 +33,7 @@ from temba.ivr.models import IVRCall
 from temba.ussd.models import USSDSession
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.reports.models import Report
-from temba.flows.models import Flow, FlowRun, FlowRevision, FlowRunCount
+from temba.flows.models import Flow, FlowRun, FlowRevision, FlowRunCount, FlowImage
 from temba.flows.tasks import export_flow_results_task
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, PENDING
@@ -372,6 +372,20 @@ class FlowRunCRUDL(SmartCRUDL):
         def post(self, request, *args, **kwargs):
             self.get_object().release()
             return HttpResponse()
+
+
+class FlowImageCRUDL(SmartCRUDL):
+    actions = ('read',)
+
+    model = FlowImage
+
+    class Read(OrgObjPermsMixin, SmartReadView):
+        slug_url_kwarg = 'uuid'
+
+        def get(self, request, *args, **kwargs):
+            flow_image = self.get_object()
+            with open(flow_image.get_full_path(), 'r') as image:
+                return HttpResponse(image.read(), content_type='image/png')
 
 
 class FlowCRUDL(SmartCRUDL):

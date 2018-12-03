@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
+import os
 import json
 import logging
 import numbers
@@ -10,6 +11,7 @@ import six
 import time
 import urllib2
 import requests
+import subprocess
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
@@ -23,6 +25,7 @@ from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
 from django.utils import timezone
+from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
 from django_redis import get_redis_connection
@@ -51,6 +54,7 @@ from temba_expressions.utils import tokenize
 from uuid import uuid4
 
 from simple_salesforce import Salesforce
+from PIL import Image, ExifTags
 
 
 logger = logging.getLogger(__name__)
@@ -871,8 +875,9 @@ class Flow(TembaModel):
             run.update_expiration(timezone.now())
 
         if ruleset.ruleset_type in RuleSet.TYPE_MEDIA and msg.attachments:
-            # store the media path as the value
-            value = msg.attachments[0].split(':', 1)[1]
+            if not (ruleset.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and flow.flow_type == Flow.FLOW):
+                # store the media path as the value if it isn't a "wait for a photo" in a message flow
+                value = msg.attachments[0].split(':', 1)[1]
 
         step.save_rule_match(rule, value)
         ruleset.save_run_value(run, rule, value, msg.text)
@@ -2700,6 +2705,41 @@ class Flow(TembaModel):
         ordering = ('-modified_on',)
 
 
+class FlowImage(TembaModel):
+    uuid = models.UUIDField(unique=True, default=uuid4)
+
+    org = models.ForeignKey(Org, related_name='flow_images', db_index=False)
+
+    flow = models.ForeignKey(Flow, related_name='flow_images')
+
+    contact = models.ForeignKey(Contact, related_name='flow_images')
+
+    name = models.CharField(help_text='Image name', max_length=255)
+
+    path = models.CharField(help_text='Image URL', max_length=255)
+
+    exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
+
+    def get_exif(self):
+        return json.loads(self.exif) if self.exif else dict()
+
+    def get_url(self):
+        protocol = 'https' if settings.IS_PROD else 'http'
+        image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.path)
+        return image_url
+
+    def get_full_path(self):
+        return '%s/%s' % (settings.MEDIA_ROOT, self.path)
+
+    def get_permalink(self):
+        protocol = 'https' if settings.IS_PROD else 'http'
+        return '%s://%s%s' % (protocol, settings.HOSTNAME, reverse('flows.flowimage_read', args=[self.uuid]))
+
+    def set_deleted(self):
+        self.is_active = False
+        self.save(update_fields=('is_active'))
+
+
 class FlowRun(models.Model):
     STATE_ACTIVE = 'A'
 
@@ -3665,6 +3705,50 @@ class RuleSet(models.Model):
                     (result, value) = rule.matches(run, msg, context, orig_text)
                     if result > 0:
                         return rule, value
+
+        elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
+            try:
+                text_split = msg.attachments[0].split(':', 1)
+                image = text_split[1]
+                is_image = True if 'image' in text_split[0] else False
+                image_path = image.split('media', 1)[1]
+                image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
+            except Exception:
+                image_path = None
+                is_image = None
+
+            if image_path and is_image:
+                img = Image.open(image_path)
+                exif_data = img._getexif()
+                exif = {
+                    ExifTags.TAGS[k]: v
+                    for k, v in exif_data.items()
+                    if k in ExifTags.TAGS
+                }
+                flow_name_slugified = slugify(run.flow.name)
+                output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
+                main_directory = 'flows_images/orgs/%d' % run.flow.org.id
+                media_path = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
+                full_directory = '%s/%s/%s' % (settings.MEDIA_ROOT, main_directory, flow_name_slugified)
+
+                if not os.path.exists(full_directory):
+                    os.makedirs(full_directory)
+
+                image_destination = '%s/%s' % (full_directory, output_name)
+                command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
+                subprocess.call(command_line.split(' '))
+
+                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
+                                  exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
+                                  modified_by=run.flow.created_by)
+                flow_image = FlowImage.objects.create(**image_args)
+
+                for rule in self.get_rules():
+                    (result, value) = rule.matches(run, msg, context, flow_image.get_url())
+                    if result > 0:
+                        return rule, value
+            else:
+                return None, None
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             resthook = None
@@ -5189,8 +5273,9 @@ class EmailAction(Action):
     EMAILS = 'emails'
     SUBJECT = 'subject'
     MESSAGE = 'msg'
+    MEDIA = 'media'
 
-    def __init__(self, uuid, emails, subject, message):
+    def __init__(self, uuid, emails, subject, message, media=None):
         super(EmailAction, self).__init__(uuid)
 
         if not emails:
@@ -5199,16 +5284,19 @@ class EmailAction(Action):
         self.emails = emails
         self.subject = subject
         self.message = message
+        self.media = media if media else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
         emails = json_obj.get(EmailAction.EMAILS)
         message = json_obj.get(EmailAction.MESSAGE)
         subject = json_obj.get(EmailAction.SUBJECT)
-        return cls(json_obj.get(cls.UUID), emails, subject, message)
+        media = json_obj.get(EmailAction.MEDIA, None)
+        return cls(json_obj.get(cls.UUID), emails, subject, message, media)
 
     def as_json(self):
-        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message)
+        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message,
+                    media=self.media)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         from .tasks import send_email_action_task
@@ -5236,9 +5324,24 @@ class EmailAction(Action):
             else:
                 invalid_addresses.append(address)
 
+        attachments = None
+        if self.media:
+            # localize our media attachment
+            media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
+            (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
+
+            if real_media_url:
+                media_ = settings.MEDIA_URL.replace('/', '')
+                if media_ in real_media_url:
+                    file_path = real_media_url.split(media_)[1]
+                else:
+                    file_path = '/%s' % real_media_url
+                media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+                attachments = [media_path]
+
         if not run.contact.is_test:
             if valid_addresses:
-                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message))
+                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message, attachments))
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]

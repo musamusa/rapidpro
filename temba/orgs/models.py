@@ -860,7 +860,7 @@ class Org(SmartModel):
         else:
             return False
 
-    def email_action_send(self, recipients, subject, body):
+    def email_action_send(self, recipients, subject, body, attachments=None):
         if self.has_smtp_config():
             config = self.config_json()
             smtp_from_email = config.get(SMTP_FROM_EMAIL, None)
@@ -872,9 +872,9 @@ class Org(SmartModel):
 
             send_custom_smtp_email(recipients, subject, body, smtp_from_email,
                                    smtp_host, smtp_port, smtp_username, smtp_password,
-                                   use_tls)
+                                   use_tls, attachments)
         else:
-            send_simple_email(recipients, subject, body, from_email=settings.FLOW_FROM_EMAIL)
+            send_simple_email(recipients, subject, body, from_email=settings.FLOW_FROM_EMAIL, attachments=attachments)
 
     def has_airtime_transfers(self):
         from temba.airtime.models import AirtimeTransfer
