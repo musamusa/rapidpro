@@ -3718,14 +3718,17 @@ class RuleSet(models.Model):
                 is_image = None
 
             if image_path and is_image:
-                img = Image.open(image_path)
-                exif_data = img._getexif()
 
-                exif = {
-                    ExifTags.TAGS[k]: v
-                    for k, v in exif_data.items()
-                    if k in ExifTags.TAGS
-                } if exif_data else None
+                try:
+                    img = Image.open(image_path)
+                    exif_data = img._getexif()
+                    exif = {
+                        ExifTags.TAGS[k]: v
+                        for k, v in exif_data.items()
+                        if k in ExifTags.TAGS
+                    } if exif_data else dict()
+                except Exception:
+                    exif = {}
 
                 flow_name_slugified = slugify(run.flow.name)
                 output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
@@ -3737,7 +3740,7 @@ class RuleSet(models.Model):
                     os.makedirs(full_directory)
 
                 image_destination = '%s/%s' % (full_directory, output_name)
-                command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
+                command_line = "magick {source} -auto-orient -resize 1024x1024> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
                 subprocess.call(command_line.split(' '))
 
                 image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
