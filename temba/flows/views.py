@@ -1030,6 +1030,11 @@ class FlowCRUDL(SmartCRUDL):
                                   href='javascript:;',
                                   js_class='pdf_export_submit'))
 
+            if self.has_org_perm('flows.flow_results'):
+                links.append(dict(title=_("Download Images"),
+                                  style='btn-primary',
+                                  href=reverse('flows.flow_results', args=[flow.id])))
+
             if self.has_org_perm('flows.flow_revisions'):
                 links.append(dict(divider=True)),
                 links.append(dict(title=_("Revision History"),
