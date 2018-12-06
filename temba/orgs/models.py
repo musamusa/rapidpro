@@ -2089,6 +2089,9 @@ class Org(SmartModel):
         random_file = str(uuid4())
         random_dir = random_file[0:4]
 
+        if extension in ['jpg', 'jpeg']:
+            extension = 'png'
+
         filename = '%s/%s' % (random_dir, random_file)
         if extension:
             filename = '%s.%s' % (filename, extension)
