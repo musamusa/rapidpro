@@ -2225,6 +2225,36 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
         }
 
 
+class ValidateSurvayorPasswordView(SmartFormView):
+    class PasswordForm(forms.Form):
+        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
+
+        def clean_surveyor_password(self):
+            password = self.cleaned_data['surveyor_password']
+            org = Org.objects.filter(surveyor_password=password).first()
+            if not org:
+                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
+                self.cleaned_data['password_error'] = password_error
+                raise forms.ValidationError(password_error)
+            self.cleaned_data['org'] = org
+            return password
+
+    permission = None
+    form_class = PasswordForm
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(ValidateSurvayorPasswordView, self).dispatch(*args, **kwargs)
+
+    def form_invalid(self, form):
+        errors = [form.cleaned_data.get('password_error')]
+        return JsonResponse(dict(errors=errors), safe=False, status=400)
+
+    def form_valid(self, form):
+        org = self.form.cleaned_data.get('org')
+        return JsonResponse(dict(org=dict(id=org.id, name=org.name)), safe=False)
+
+
 class CreateAccountView(SmartFormView):
     """
     Action to add device tokens to user
