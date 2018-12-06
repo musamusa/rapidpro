@@ -3706,57 +3706,7 @@ class RuleSet(models.Model):
                     if result > 0:
                         return rule, value
 
-        elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
-            try:
-                text_split = msg.attachments[0].split(':', 1)
-                image = text_split[1]
-                is_image = True if 'image' in text_split[0] else False
-                image_path = image.split('media', 1)[1]
-                image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
-            except Exception:
-                image_path = None
-                is_image = None
-
-            if image_path and is_image:
-
-                try:
-                    img = Image.open(image_path)
-                    exif_data = img._getexif()
-                    exif = {
-                        ExifTags.TAGS[k]: v
-                        for k, v in exif_data.items()
-                        if k in ExifTags.TAGS
-                    } if exif_data else dict()
-                except Exception:
-                    exif = {}
-
-                flow_name_slugified = slugify(run.flow.name)
-                output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
-                main_directory = 'flows_images/orgs/%d' % run.flow.org.id
-                media_path = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
-                full_directory = '%s/%s/%s' % (settings.MEDIA_ROOT, main_directory, flow_name_slugified)
-
-                if not os.path.exists(full_directory):
-                    os.makedirs(full_directory)
-
-                image_destination = '%s/%s' % (full_directory, output_name)
-                command_line = "magick {source} -auto-orient -resize 1024x1024> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
-                subprocess.call(command_line.split(' '))
-
-                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
-                                  exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
-                                  modified_by=run.flow.created_by)
-                flow_image = FlowImage.objects.create(**image_args)
-
-                for rule in self.get_rules():
-                    (result, value) = rule.matches(run, msg, context, flow_image.get_url())
-                    if result > 0:
-                        return rule, value
-            else:
-                return None, None
-
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            resthook = None
             url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
@@ -6610,6 +6560,7 @@ class Test(object):
                 NumberTest.TYPE: NumberTest,
                 OrTest.TYPE: OrTest,
                 PhoneTest.TYPE: PhoneTest,
+                PhotoTest.TYPE: PhotoTest,
                 RegexTest.TYPE: RegexTest,
                 StartsWithTest.TYPE: StartsWithTest,
                 SubflowTest.TYPE: SubflowTest,
@@ -6642,6 +6593,36 @@ class Test(object):
         side effects.
         """
         raise FlowException("Subclasses must implement evaluate, returning a tuple containing 1 or 0 and the value tested")
+
+
+class PhotoTest(Test):
+    """
+    Test for whether a response contains a photo
+    """
+    TYPE = 'photo'
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_json(cls, org, json):
+        return cls()
+
+    def as_json(self):  # pragma: needs cover
+        return dict(type=self.TYPE)
+
+    def evaluate(self, run, sms, context, text):
+        try:
+            text_split = sms.attachments[0].split(':', 1)
+            image = text_split[1]
+            is_image = 1 if 'image' in text_split[0] else 0
+            image_path = image.split('media', 1)[1]
+            image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
+        except Exception:
+            image_path = None
+            is_image = 0
+
+        return is_image, image_path
 
 
 class WebhookStatusTest(Test):
