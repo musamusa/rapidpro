@@ -2290,7 +2290,7 @@ class CreateAccountView(SmartFormView):
         if register_password_error:
             errors.append(register_password_error)
 
-        return JsonResponse(dict(errors=errors), safe=False)
+        return JsonResponse(dict(errors=errors), safe=False, status=400)
 
     def form_valid(self, form):
         # create our user
