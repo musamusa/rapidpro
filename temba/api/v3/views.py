@@ -1,7 +1,5 @@
 from __future__ import absolute_import, unicode_literals
 
-import json
-
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
@@ -11,7 +9,7 @@ from django.contrib.auth.models import User, Group
 from django.views.decorators.csrf import csrf_exempt
 
 from smartmin.views import SmartFormView
-from rest_framework import views
+from rest_framework import views, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
@@ -76,6 +74,7 @@ class RootView(views.APIView):
      * [/api/v3/flows](/api/v3/flows) - to list flows
      * [/api/v3/groups](/api/v3/groups) - to list, create, update or delete contact groups
      * [/api/v3/labels](/api/v3/labels) - to list, create, update or delete message labels
+     * [/api/v3/me](/api/v3/me) - to view data about the user logged
      * [/api/v3/media](/api/v3/media) - to upload medias to org
      * [/api/v3/messages](/api/v3/messages) - to list messages
      * [/api/v3/message_actions](/api/v3/message_actions) - to perform bulk message actions
@@ -254,6 +253,7 @@ class ExplorerView(ExplorerViewV2):
             ManageAccountsListEndpoint.get_read_explorer(),
             ManageAccountsActionEndpoint.get_approve_write_explorer(),
             ManageAccountsActionEndpoint.get_deny_write_explorer(),
+            MeEndpoint.get_read_explorer(),
             MessagesEndpoint.get_read_explorer(),
             MessageActionsEndpoint.get_write_explorer(),
             OrgEndpoint.get_read_explorer(),
@@ -2011,6 +2011,49 @@ class RunsEndpoint(RunsEndpointV2):
 
 
 # Surveyor views
+
+class MeEndpoint(BaseAPIView):
+    """
+    This endpoint allows you to view details about the user logged.
+
+    ## Viewing Current User
+
+    A **GET** returns the details of the user logged. There are no parameters.
+
+    Example:
+
+        GET /api/v3/me.json
+
+    Response containing your organization:
+
+        {
+            "id": 1,
+            "full_name": "John Connor",
+            "email": "johnconnor@example.com"
+        }
+    """
+    permission = 'orgs.org_api'
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        data = {
+            'id': user.id,
+            'full_name': user.get_full_name(),
+            'email': user.email
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
+
+    @classmethod
+    def get_read_explorer(cls):
+        return {
+            'method': "GET",
+            'title': "View Current User",
+            'url': reverse('api.v3.me'),
+            'slug': 'me-read'
+        }
+
 
 class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
     """
