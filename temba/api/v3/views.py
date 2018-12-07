@@ -2290,12 +2290,10 @@ class ValidateSurvayorPasswordView(SmartFormView):
         return super(ValidateSurvayorPasswordView, self).dispatch(*args, **kwargs)
 
     def form_invalid(self, form):
-        errors = [form.cleaned_data.get('password_error')]
-        return JsonResponse(dict(errors=errors), safe=False, status=400)
+        return JsonResponse(dict(verified=False), safe=False, status=400)
 
     def form_valid(self, form):
-        org = self.form.cleaned_data.get('org')
-        return JsonResponse(dict(org=dict(id=org.id, name=org.name)), safe=False)
+        return JsonResponse(dict(verified=True), safe=False, status=204)
 
 
 class CreateAccountView(SmartFormView):
