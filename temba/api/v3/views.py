@@ -2020,6 +2020,8 @@ class MeEndpoint(BaseAPIView):
 
     A **GET** returns the details of the user logged. There are no parameters.
 
+    The role field could be "Administrators", "Editors", "Viewers" and "Surveyors"
+
     Example:
 
         GET /api/v3/me.json
@@ -2029,7 +2031,8 @@ class MeEndpoint(BaseAPIView):
         {
             "id": 1,
             "full_name": "John Connor",
-            "email": "johnconnor@example.com"
+            "email": "johnconnor@example.com",
+            "role": "Administrators"
         }
     """
     permission = 'orgs.org_api'
@@ -2037,10 +2040,17 @@ class MeEndpoint(BaseAPIView):
     def get(self, request, *args, **kwargs):
         user = request.user
 
+        api_token = get_apitoken_from_auth(user.api_token)
+        org = api_token.org if api_token else None
+        if not org:
+            return HttpResponse(status=404)
+
+        role = org.get_user_org_group(user)
         data = {
             'id': user.id,
             'full_name': user.get_full_name(),
-            'email': user.email
+            'email': user.email,
+            'role': role.name
         }
 
         return Response(data, status=status.HTTP_200_OK)
