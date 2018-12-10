@@ -875,9 +875,8 @@ class Flow(TembaModel):
             run.update_expiration(timezone.now())
 
         if ruleset.ruleset_type in RuleSet.TYPE_MEDIA and msg.attachments:
-            if not (ruleset.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and flow.flow_type == Flow.FLOW):
-                # store the media path as the value if it isn't a "wait for a photo" in a message flow
-                value = msg.attachments[0].split(':', 1)[1]
+            # store the media path as the value if it isn't a "wait for a photo" in a message flow
+            value = msg.attachments[0].split(':', 1)[1]
 
         step.save_rule_match(rule, value)
         ruleset.save_run_value(run, rule, value, msg.text)
@@ -6599,7 +6598,7 @@ class PhotoTest(Test):
     """
     Test for whether a response contains a photo
     """
-    TYPE = 'photo'
+    TYPE = 'image'
 
     def __init__(self):
         pass
