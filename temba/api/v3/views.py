@@ -2304,7 +2304,7 @@ class ValidateSurvayorPasswordView(SmartFormView):
         return JsonResponse(dict(verified=False), safe=False, status=status.HTTP_400_BAD_REQUEST)
 
     def form_valid(self, form):
-        return JsonResponse(dict(verified=True), safe=False, status=status.HTTP_204_NO_CONTENT)
+        return JsonResponse(dict(verified=True), safe=False, status=status.HTTP_200_OK)
 
 
 class CreateAccountView(SmartFormView):
