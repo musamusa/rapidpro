@@ -210,9 +210,9 @@ class AuthenticateView(AuthenticateEndpointV2):
                 token = api_token(user)
                 return JsonResponse(dict(token=token), safe=False)
             else:  # pragma: needs cover
-                return HttpResponse(status=403)
+                return HttpResponse(status=status.HTTP_403_FORBIDDEN)
         else:  # pragma: needs cover
-            return HttpResponse(status=403)
+            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
 
 class ExplorerView(ExplorerViewV2):
@@ -2020,6 +2020,8 @@ class MeEndpoint(BaseAPIView):
 
     A **GET** returns the details of the user logged. There are no parameters.
 
+    The role field could be "Administrators", "Editors", "Viewers" and "Surveyors"
+
     Example:
 
         GET /api/v3/me.json
@@ -2029,7 +2031,8 @@ class MeEndpoint(BaseAPIView):
         {
             "id": 1,
             "full_name": "John Connor",
-            "email": "johnconnor@example.com"
+            "email": "johnconnor@example.com",
+            "role": "Administrators"
         }
     """
     permission = 'orgs.org_api'
@@ -2037,10 +2040,17 @@ class MeEndpoint(BaseAPIView):
     def get(self, request, *args, **kwargs):
         user = request.user
 
+        api_token = get_apitoken_from_auth(user.api_token)
+        org = api_token.org if api_token else None
+        if not org:
+            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+        role = org.get_user_org_group(user)
         data = {
             'id': user.id,
             'full_name': user.get_full_name(),
-            'email': user.email
+            'email': user.email,
+            'role': role.name
         }
 
         return Response(data, status=status.HTTP_200_OK)
@@ -2075,7 +2085,7 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
                 orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
 
         else:  # pragma: needs cover
-            return HttpResponse(status=403)
+            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
         return JsonResponse(orgs, safe=False, json_dumps_params=dict(indent=4))
 
@@ -2104,7 +2114,7 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
         org = api_token.org if api_token else None
 
         if not org:
-            return HttpResponse(status=404)
+            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
 
         surveryors = org.surveyors.filter(is_active=False).order_by('username')
         users = []
@@ -2116,7 +2126,7 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
                 users.append({'username': user.username, 'id': user.id})
 
         else:  # pragma: needs cover
-            return HttpResponse(status=403)
+            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
         return JsonResponse(users, safe=False, json_dumps_params=dict(indent=4))
 
@@ -2177,16 +2187,17 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
                     message = _('Congrats! Your account is approved. Please log in to access your surveys.')
                 else:
                     user.delete()
-                    message = _('Sorry. Your account was not approved. If you think this was a mistake, please contact %s.' % request.user.email)
+                    message = _('Sorry. Your account was not approved. If you think this was a mistake, '
+                                'please contact %s.' % request.user.email)
 
                 send_account_manage_email_task.delay(user_email, message)
             else:
                 errors.append(_('User ID %s not found or already is active' % item.get('id')))
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=400, json_dumps_params=dict(indent=4))
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST, json_dumps_params=dict(indent=4))
         else:
-            return HttpResponse(status=204)
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
     @classmethod
     def get_approve_write_explorer(cls):
@@ -2239,7 +2250,7 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
         user = request.user
 
         if not device_token:
-            return JsonResponse({'errors': [_('device_token field is required')]}, safe=False, status=400)
+            return JsonResponse({'errors': [_('device_token field is required')]}, safe=False, status=status.HTTP_400_BAD_REQUEST)
 
         errors = []
 
@@ -2251,9 +2262,9 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
             errors.append(e.args)
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=400)
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return HttpResponse(status=204)
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
     @classmethod
     def get_write_explorer(cls):
@@ -2277,7 +2288,7 @@ class ValidateSurvayorPasswordView(SmartFormView):
             org = Org.objects.filter(surveyor_password=password).first()
             if not org:
                 password_error = _("Invalid surveyor password, please check with your project leader and try again.")
-                self.cleaned_data['password_error'] = password_error
+                self.cleaned_data['password_error'] = dict(field='surveyor_password', message=password_error)
                 raise forms.ValidationError(password_error)
             self.cleaned_data['org'] = org
             return password
@@ -2290,12 +2301,10 @@ class ValidateSurvayorPasswordView(SmartFormView):
         return super(ValidateSurvayorPasswordView, self).dispatch(*args, **kwargs)
 
     def form_invalid(self, form):
-        errors = [form.cleaned_data.get('password_error')]
-        return JsonResponse(dict(errors=errors), safe=False, status=400)
+        return JsonResponse(dict(verified=False), safe=False, status=status.HTTP_400_BAD_REQUEST)
 
     def form_valid(self, form):
-        org = self.form.cleaned_data.get('org')
-        return JsonResponse(dict(org=dict(id=org.id, name=org.name)), safe=False)
+        return JsonResponse(dict(verified=True), safe=False, status=status.HTTP_204_NO_CONTENT)
 
 
 class CreateAccountView(SmartFormView):
@@ -2319,7 +2328,7 @@ class CreateAccountView(SmartFormView):
             org = Org.objects.filter(surveyor_password=password).first()
             if not org:
                 password_error = _("Invalid surveyor password, please check with your project leader and try again.")
-                self.cleaned_data['password_error'] = password_error
+                self.cleaned_data['password_error'] = dict(field='surveyor_password', message=password_error)
                 raise forms.ValidationError(password_error)
             self.cleaned_data['org'] = org
             return password
@@ -2329,7 +2338,7 @@ class CreateAccountView(SmartFormView):
             if email:
                 if User.objects.filter(username__iexact=email):
                     email_error = _("That email address is already used")
-                    self.cleaned_data['register_email_error'] = email_error
+                    self.cleaned_data['register_email_error'] = dict(field='email', message=email_error)
                     raise forms.ValidationError(email_error)
 
             return email.lower()
@@ -2339,7 +2348,7 @@ class CreateAccountView(SmartFormView):
             if password:
                 if not len(password) >= 8:
                     password_error = _("Passwords must contain at least 8 letters.")
-                    self.cleaned_data['register_password_error'] = password_error
+                    self.cleaned_data['register_password_error'] = dict(field='password', message=password_error)
                     raise forms.ValidationError(password_error)
             return password
 
@@ -2363,7 +2372,7 @@ class CreateAccountView(SmartFormView):
         if register_password_error:
             errors.append(register_password_error)
 
-        return JsonResponse(dict(errors=errors), safe=False, status=400)
+        return JsonResponse(dict(errors=errors), safe=False, status=status.HTTP_400_BAD_REQUEST)
 
     def form_valid(self, form):
         # create our user
@@ -2383,11 +2392,7 @@ class CreateAccountView(SmartFormView):
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
-
-        surveyors_group = Group.objects.get(name="Surveyors")
-        token = APIToken.get_or_create(org, user, role=surveyors_group)
-        return JsonResponse(dict(token=token.key, user=dict(first_name=user.first_name,
-                                 last_name=user.last_name), org=dict(id=org.id, name=org.name)), safe=False)
+        return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
