@@ -2381,11 +2381,7 @@ class CreateAccountView(SmartFormView):
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
-
-        surveyors_group = Group.objects.get(name="Surveyors")
-        token = APIToken.get_or_create(org, user, role=surveyors_group)
-        return JsonResponse(dict(token=token.key, user=dict(first_name=user.first_name,
-                                 last_name=user.last_name), org=dict(id=org.id, name=org.name)), safe=False)
+        return JsonResponse(dict(), safe=False, status=204)
 
 
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
