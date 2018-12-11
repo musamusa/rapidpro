@@ -212,6 +212,10 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
         showDialog('Invalid Format', 'Audio attachments must be encoded as mp3 files.')
         return
 
+    if action.type == 'email' and file.name.split('.').pop() in ['ade', 'adp', 'apk', 'bat', 'chm', 'cmd', 'com', 'cpl', 'dll', 'dmg', 'exe', 'hta', 'ins', 'isp', 'jar', 'js', 'jse', 'lib', 'lnk', 'mde', 'msc', 'msi', 'msp', 'mst', 'nshpif', 'scr', 'sct', 'shb', 'sys', 'vb', 'vbe', 'vbs', 'vxd', 'wsc', 'wsf', 'wsh', 'cab']
+      showDialog('Invalid Format', 'This file type is not supported for security reasons. If you still wish to send, please convert this file to an allowable type.')
+      return
+
     if (!String.prototype.endsWith)
       String.prototype.endsWith = (searchString, position) ->
           subjectString = this.toString()
