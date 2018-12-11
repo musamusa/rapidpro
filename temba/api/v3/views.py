@@ -2077,17 +2077,12 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
         user_orgs = get_user_orgs(user)
         orgs = []
 
-        role = APIToken.get_role_from_code('S')
+        for org in user_orgs:
+            user_group = org.get_user_org_group(user)
+            token = APIToken.get_or_create(org, user, user_group)
+            orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
 
-        if role:
-            for org in user_orgs:
-                token = APIToken.get_or_create(org, user, role)
-                orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
-
-        else:  # pragma: needs cover
-            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
-
-        return JsonResponse(orgs, safe=False, json_dumps_params=dict(indent=4))
+        return JsonResponse(orgs, safe=False)
 
     @classmethod
     def get_read_explorer(cls):
@@ -2128,7 +2123,7 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
         else:  # pragma: needs cover
             return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
-        return JsonResponse(users, safe=False, json_dumps_params=dict(indent=4))
+        return JsonResponse(users, safe=False)
 
     @classmethod
     def get_read_explorer(cls):
@@ -2195,7 +2190,7 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
                 errors.append(_('User ID %s not found or already is active' % item.get('id')))
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST, json_dumps_params=dict(indent=4))
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST)
         else:
             return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
