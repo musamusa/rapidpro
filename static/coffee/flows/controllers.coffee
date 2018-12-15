@@ -1232,6 +1232,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
         else
           $scope.action.msg = ''
 
+    $scope.action.type = config.type
+
   $scope.showFlip = ->
     return actionset.actions.length < 2
 
