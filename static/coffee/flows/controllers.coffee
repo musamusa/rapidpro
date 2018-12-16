@@ -225,8 +225,12 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           lastIndex = subjectString.indexOf(searchString, position)
           return lastIndex != -1 && lastIndex == position
 
-    if action.type in ['reply', 'send', 'email'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
+    if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
+      return
+
+    if action.type == 'email' and (file.size > 25000000 or ((file.name.endsWith('.jpg') or file.name.endsWith('.png') or file.name.endsWith('.gif') or file.name.endsWith('.jpeg')) and file.size > 5000000))
+      showDialog('File Size Exceeded', "The file size should be less than 5MB for images and less than 25MB for others files. Please choose another file and try again.")
       return
 
     # if we have a recording already, confirm they want to replace it
