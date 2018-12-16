@@ -6610,7 +6610,7 @@ class PhotoTest(Test):
 
     def evaluate(self, run, sms, context, text):
         image_url = None
-        is_image = 1 if len(sms.attachments) > 0 else 0
+        is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
 
         if is_image:
             text_split = sms.attachments[0].split(':', 1)
@@ -6620,9 +6620,8 @@ class PhotoTest(Test):
             image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
             media_path = media_path.replace('/', '', 1)
 
-            img = Image.open(image_path)
-
             try:
+                img = Image.open(image_path)
                 exif_data = img._getexif()
             except Exception:
                 exif_data = {}
