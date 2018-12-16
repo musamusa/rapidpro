@@ -192,7 +192,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
 
     file = $files[0]
     if not file.type
-      return
+      file.type = 'application/' + file.name.split('.').pop()
 
     # check for valid voice prompts
     if action.type == 'say' and file.type != 'audio/wav' and file.type != 'audio/x-wav'
