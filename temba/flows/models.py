@@ -5286,10 +5286,8 @@ class EmailAction(Action):
 
             if real_media_url:
                 media_ = settings.MEDIA_URL.replace('/', '')
-                if media_ in real_media_url:
-                    file_path = real_media_url.split(media_)[1]
-                else:
-                    file_path = '/%s' % real_media_url
+                file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
+                    real_media_url.split(media_, 1)[1]
                 media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
                 attachments = [media_path]
 
@@ -6611,17 +6609,42 @@ class PhotoTest(Test):
         return dict(type=self.TYPE)
 
     def evaluate(self, run, sms, context, text):
-        try:
+        image_url = None
+        is_image = 1 if len(sms.attachments) > 0 else 0
+
+        if is_image:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
             is_image = 1 if 'image' in text_split[0] else 0
-            image_path = image.split('media', 1)[1]
-            image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
-        except Exception:
-            image_path = None
-            is_image = 0
+            media_path = image.split('media', 1)[1]
+            image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
+            media_path = media_path.replace('/', '', 1)
 
-        return is_image, image_path
+            img = Image.open(image_path)
+
+            try:
+                exif_data = img._getexif()
+            except Exception:
+                exif_data = {}
+
+            exif = {
+                ExifTags.TAGS[k]: v
+                for k, v in exif_data.items()
+                if k in ExifTags.TAGS
+            }
+
+            file_name = media_path.split('/', -1)[-1]
+            command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true " \
+                           "{destination}".format(source=image_path, destination=image_path)
+            subprocess.call(command_line.split(' '))
+
+            image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
+                              exif=json.dumps(exif), name=file_name, created_by=run.flow.created_by,
+                              modified_by=run.flow.created_by)
+            flow_image = FlowImage.objects.create(**image_args)
+            image_url = flow_image.get_url()
+
+        return is_image, image_url
 
 
 class WebhookStatusTest(Test):
