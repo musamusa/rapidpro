@@ -6630,7 +6630,7 @@ class PhotoTest(Test):
                 ExifTags.TAGS[k]: v
                 for k, v in exif_data.items()
                 if k in ExifTags.TAGS
-            }
+            } if exif_data else {}
 
             file_name = media_path.split('/', -1)[-1]
             command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true " \
