@@ -2100,11 +2100,9 @@ class Org(SmartModel):
                 extension = mimetypes.guess_extension(content_type)
                 extension = extension.strip('.')
             elif disposition:
-                filename = re.findall('filename="(.+)"', disposition)
-                if not filename:
-                    filename = re.findall('filename=(.+)', disposition)
-                filename = filename[0]
-                extension = filename.rpartition('.')[2]
+                filename = re.findall('filename="?(.+)"?', disposition)[0]
+                filename = filename.strip().replace('"', '').replace("'", "")
+                extension = filename.rpartition('.')[-1]
             elif content_type == 'audio/x-wav':
                 extension = 'wav'
 
