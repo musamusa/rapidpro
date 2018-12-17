@@ -491,6 +491,11 @@ class Contact(TembaModel):
     salesforce_id = models.CharField(max_length=255, verbose_name=_("Salesforce ID"), null=True, blank=True,
                                      help_text=_("Salesforce ID related to this contact"))
 
+    freshchat_id = models.CharField(max_length=255, verbose_name=_("Freshchat ID"), null=True, blank=True)
+
+    in_live_chat = models.BooleanField(default=False, verbose_name=_("In Live Chat"),
+                                       help_text=_("Whether this contact is in live chat with a human agent"))
+
     simulation = False
 
     NAME = 'name'

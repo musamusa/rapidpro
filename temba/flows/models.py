@@ -5198,6 +5198,7 @@ class Action(object):
                 TriggerFlowAction.TYPE: TriggerFlowAction,
                 EndUssdAction.TYPE: EndUssdAction,
                 SalesforceExportAction.TYPE: SalesforceExportAction,
+                FreshchatAction.TYPE: FreshchatAction,
             }
 
         action_type = json_obj.get(cls.TYPE)
@@ -6447,6 +6448,30 @@ class SendAction(VariableContactAction):
                      contact_count) % dict(msg=text, count=contact_count)
         log = ActionLog.create(run, log_txt)
         return log
+
+
+class FreshchatAction(Action):
+    """
+    Forwards the steps in this flow to the Freshchat (if any)
+    """
+    TYPE = 'freshchat_call'
+
+    def __init__(self, uuid, msg=None, freshchat_fields=None):
+        super(FreshchatAction, self).__init__(uuid)
+        self.msg = msg
+        self.freshchat_fields = freshchat_fields
+
+    @classmethod
+    def from_json(cls, org, json_obj):
+        return cls(json_obj.get(cls.UUID),
+                   json_obj.get('msg'),
+                   json_obj.get('freshchat_fields', []))
+
+    def as_json(self):
+        return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, freshchat_fields=self.freshchat_fields)
+
+    def execute(self, run, context, actionset_uuid, msg, offline_on=None):
+        return []
 
 
 class Rule(object):
