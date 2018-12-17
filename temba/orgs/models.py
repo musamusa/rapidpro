@@ -14,6 +14,7 @@ import regex
 import six
 import stripe
 import traceback
+import time
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -33,7 +34,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.text import slugify
 from django_redis import get_redis_connection
 from enum import Enum
-from requests import Session
+from requests import Session, get as request_get
 from smartmin.models import SmartModel
 from temba.bundles import get_brand_bundles, get_bundle_map
 from temba.locations.models import AdminBoundary, BoundaryAlias
@@ -2056,7 +2057,38 @@ class Org(SmartModel):
 
         return self.save_media(File(temp), extension)
 
-    def save_response_media(self, response):
+    def download_media(self, media_url):
+        """
+        Fetches the media and stores it
+        :param media_url: the url where the media lives
+        :return: the url for our downloaded media with full content type prefix
+        """
+        response = None
+        attempts = 0
+        while attempts < 4:
+            response = request_get(media_url, stream=True)
+
+            # in some cases Facebook isn't ready for us to fetch the media URL yet, if we get a 404
+            # sleep for a bit then try again up to 4 times
+            if response.status_code == 200:
+                break
+            else:
+                attempts += 1
+                time.sleep(.250)
+
+        try:
+            split_media = media_url.split('?')[0]
+            extension_from_url = split_media.split('.')[-1]
+        except Exception:
+            extension_from_url = None
+
+        content_type, downloaded = self.save_response_media(response, extension_from_url=extension_from_url)
+        if content_type:
+            return '%s:%s' % (content_type, downloaded)
+
+        return None  # pragma: needs cover
+
+    def save_response_media(self, response, extension_from_url=None):
         disposition = response.headers.get('Content-Disposition', None)
         content_type = response.headers.get('Content-Type', None)
 
@@ -2068,7 +2100,10 @@ class Org(SmartModel):
                 extension = mimetypes.guess_extension(content_type)
                 extension = extension.strip('.')
             elif disposition:
-                filename = re.findall("filename=\"(.+)\"", disposition)[0]
+                filename = re.findall('filename="(.+)"', disposition)
+                if not filename:
+                    filename = re.findall('filename=(.+)', disposition)
+                filename = filename[0]
                 extension = filename.rpartition('.')[2]
             elif content_type == 'audio/x-wav':
                 extension = 'wav'
@@ -2078,7 +2113,7 @@ class Org(SmartModel):
             temp.flush()
 
             # save our file off
-            downloaded = self.save_media(File(temp), extension)
+            downloaded = self.save_media(File(temp), extension or extension_from_url)
 
         return content_type, downloaded
 

@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 from django import template
 from django.utils.safestring import mark_safe
+from django.utils.translation import ugettext_lazy as _
 from temba.channels.models import ChannelEvent
 
 register = template.Library()
@@ -119,6 +120,7 @@ def attachment_button(attachment):
         url = 'http://www.openstreetmap.org/?mlat=%(lat)s&mlon=%(lng)s#map=18/%(lat)s/%(lng)s' % {"lat": lat, "lng": lng}
     else:
         preview = url.rpartition('.')[2].upper()  # preview is the file extension in uppercase
+        preview = preview if 'media' not in preview.lower() else str(_('FILE'))
 
     return {
         'content_type': content_type,

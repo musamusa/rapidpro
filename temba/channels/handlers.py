@@ -2499,6 +2499,8 @@ class FacebookHandler(BaseChannelHandler):
         if not channel:
             return HttpResponse("Channel not found for id: %s" % kwargs['uuid'], status=400)
 
+        org = channel.org
+
         # parse our response
         try:
             body = json.loads(request.body)
@@ -2597,6 +2599,7 @@ class FacebookHandler(BaseChannelHandler):
                         referrer_id = None
                         trigger_extra = None
                         location = None
+                        attached_images = None
 
                         if 'message' in envelope:
                             if 'text' in envelope['message']:
@@ -2605,7 +2608,11 @@ class FacebookHandler(BaseChannelHandler):
                                 urls = []
                                 for attachment in envelope['message']['attachments']:
                                     if attachment['payload'] and 'url' in attachment['payload']:
-                                        urls.append(attachment['payload']['url'])
+                                        if 'type' in attachment and attachment['type'] == 'image':
+                                            attached_images = [] if not attached_images else attached_images
+                                            attached_images.append(org.download_media(attachment['payload']['url']))
+                                        else:
+                                            urls.append(attachment['payload']['url'])
                                     elif 'url' in attachment and attachment['url']:
                                         if 'title' in attachment and attachment['title']:
                                             urls.append(attachment['title'])
@@ -2625,7 +2632,7 @@ class FacebookHandler(BaseChannelHandler):
                                 trigger_extra[ChannelEvent.EXTRA_REFERRER_ID] = referrer_id
 
                         # if we have some content, load the contact
-                        if content or postback:
+                        if content or postback or attached_images:
                             # does this contact already exist?
                             sender_id = envelope['sender']['id']
                             urn = URN.from_facebook(sender_id)
@@ -2655,9 +2662,10 @@ class FacebookHandler(BaseChannelHandler):
                                                                     name=name, urns=[urn], channel=channel)
 
                         # we received a new message, create and handle it
-                        if content:
+                        if content or attached_images:
                             msg_date = datetime.fromtimestamp(envelope['timestamp'] / 1000.0).replace(tzinfo=pytz.utc)
-                            msg = Msg.create_incoming(channel, urn, content, date=msg_date, contact=contact)
+                            msg = Msg.create_incoming(channel, urn, content, date=msg_date, contact=contact,
+                                                      attachments=attached_images)
                             Msg.objects.filter(pk=msg.id).update(external_id=envelope['message']['mid'])
 
                             status.append("Msg %d accepted." % msg.id)
