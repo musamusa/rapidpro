@@ -68,6 +68,26 @@
                       %a{href:"{% url 'contacts.contact_filter' group.uuid %}"}= group.name
                       group
 
+                     - if results.blocked
+                      %br
+                      %br
+                      .well.well-small
+                        %strong
+                          -blocktrans with results.blocked_count as blocked_count
+                            You have {{ blocked_count }} contact(s) in this import that are currently blocked. Do you want to unblock them?
+
+                          %form.smartmin-form.horizontal-form{method:"", action:""}
+                            -csrf_token
+                            .form-buttons.text-center
+                              %a{href:"{% url 'contacts.contact_import' %}?task={{ task.id }}&unblock=1"}
+                                %input.btn.btn-primary{type:"submit", value:'{% trans "Yes" %}'}
+                              %a.btn.btn-secondary{ href:"{% url 'contacts.contact_list'%}"}
+                                -trans "No"
+                        %br
+                          - for error_message in results.error_messages
+                            Row {{ error_message.line }}: {{ error_message.error }}
+                            %br
+
                     - if results.errors
                       .import-result
                         .well.well-small

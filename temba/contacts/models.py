@@ -1223,8 +1223,8 @@ class Contact(TembaModel):
         contact = Contact.get_or_create(org, user, name, uuid=uuid, urns=urns, language=language, force_urn_update=True)
 
         # if they exist and are blocked, unblock them
-        if contact.is_blocked:
-            contact.unblock(user)
+        # if contact.is_blocked:
+        #     contact.unblock(user)
 
         contact_field_keys_updated = set()
         for key in field_dict.keys():
@@ -1364,6 +1364,7 @@ class Contact(TembaModel):
         records = []
         num_errors = 0
         error_messages = []
+        blocked = []
 
         sheet_data_records = sheet_data[line_number:]
 
@@ -1392,6 +1393,8 @@ class Contact(TembaModel):
                 record = cls.create_instance(field_values)
                 if record:
                     records.append(record)
+                    if record.is_blocked:
+                        blocked.append(record.id)
                 else:  # pragma: needs cover
                     num_errors += 1
 
@@ -1405,6 +1408,8 @@ class Contact(TembaModel):
                 raise Exception("Line %d: %s\n\n%s" % (line_number, str(e), str(log_field_values)))
 
         if import_results is not None:
+            import_results['blocked'] = blocked
+            import_results['blocked_count'] = len(blocked)
             import_results['records'] = len(records)
             import_results['errors'] = num_errors + len(error_messages)
             import_results['error_messages'] = error_messages
