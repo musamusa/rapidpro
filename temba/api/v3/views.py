@@ -1142,6 +1142,28 @@ class FlowsEndpoint(FlowsEndpointV2):
         source_object['url'] = reverse('api.v3.flows')
         return source_object
 
+    def filter_queryset(self, queryset):
+        params = self.request.query_params
+
+        queryset = queryset.exclude(flow_type=Flow.MESSAGE)
+
+        # filter by UUID (optional)
+        uuid = params.get('uuid')
+        if uuid:
+            queryset = queryset.filter(uuid=uuid)
+
+        archived = params.get('archived')
+        if archived is not None:
+            queryset = queryset.filter(is_archived=str_to_bool(archived))
+
+        flow_type = params.get('type')
+        if flow_type:  # pragma: needs cover
+            queryset = queryset.filter(flow_type__in=flow_type)
+
+        queryset = queryset.prefetch_related('labels')
+
+        return self.filter_before_after(queryset, 'modified_on')
+
 
 class FlowStartsEndpoint(FlowStartsEndpointV2):
     """
