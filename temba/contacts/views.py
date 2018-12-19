@@ -33,7 +33,7 @@ from .models import Contact, ContactGroup, ContactGroupCount, ContactField, Cont
 from .models import ExportContactsTask, TEL_SCHEME
 from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
-from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task
+from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task, unblock_contacts_task
 
 from simple_salesforce import Salesforce
 
@@ -644,7 +644,6 @@ class ContactCRUDL(SmartCRUDL):
 
         def pre_save(self, task):
             super(ContactCRUDL.Import, self).pre_save(task)
-
             previous_import = ImportTask.objects.filter(created_by=self.request.user).order_by('-created_on').first()
             if previous_import and previous_import.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
                 analytics.track(self.request.user.username, 'temba.contact_imported')
@@ -670,8 +669,11 @@ class ContactCRUDL(SmartCRUDL):
             context['task'] = None
             context['group'] = None
             context['show_form'] = True
+            context['show_unblock_message'] = False
 
             task_id = self.request.GET.get('task', None)
+            unblock = self.request.POST.get('unblock', None)
+
             if task_id:
                 tasks = ImportTask.objects.filter(pk=task_id, created_by=self.request.user)
 
@@ -679,8 +681,17 @@ class ContactCRUDL(SmartCRUDL):
                     task = tasks[0]
                     context['task'] = task
                     context['show_form'] = False
-                    context['results'] = json.loads(task.import_results) if task.import_results else dict()
+                    results = json.loads(task.import_results) if task.import_results else dict()
 
+                    if unblock:
+                        contacts = results.get('blocked', [])
+                        context['show_unblock_message'] = True
+                        results['blocked'] = []
+
+                        ImportTask.objects.filter(pk=task.pk).update(import_results=json.dumps(results))
+                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, self.derive_org()))
+
+                    context['results'] = results
                     groups = ContactGroup.user_groups.filter(import_task=task)
 
                     if groups:

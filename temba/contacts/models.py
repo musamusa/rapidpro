@@ -1131,7 +1131,7 @@ class Contact(TembaModel):
         return contact_search(org, query, base_group.contacts.all(), base_set=base_set)
 
     @classmethod
-    def create_instance(cls, field_dict):
+    def create_instance(cls, field_dict, unblock=False):
         """
         Creates or updates a contact from the given field values during an import
         """
@@ -1223,8 +1223,8 @@ class Contact(TembaModel):
         contact = Contact.get_or_create(org, user, name, uuid=uuid, urns=urns, language=language, force_urn_update=True)
 
         # if they exist and are blocked, unblock them
-        # if contact.is_blocked:
-        #     contact.unblock(user)
+        if contact.is_blocked and not unblock:
+            contact.unblock(user)
 
         contact_field_keys_updated = set()
         for key in field_dict.keys():
@@ -1390,7 +1390,7 @@ class Contact(TembaModel):
             try:
 
                 field_values = cls.prepare_fields(field_values, import_params, user)
-                record = cls.create_instance(field_values)
+                record = cls.create_instance(field_values, unblock=True)
                 if record:
                     records.append(record)
                     if record.is_blocked:
