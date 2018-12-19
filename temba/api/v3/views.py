@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 
 from smartmin.views import SmartFormView
@@ -2272,34 +2272,6 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
                             help="The user device token")],
             'example': {'body': '{"device_token": "123456789987654321"}'},
         }
-
-
-class ValidateSurvayorPasswordView(SmartFormView):
-    class PasswordForm(forms.Form):
-        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
-
-        def clean_surveyor_password(self):
-            password = self.cleaned_data['surveyor_password']
-            org = Org.objects.filter(surveyor_password=password).first()
-            if not org:
-                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
-                self.cleaned_data['password_error'] = dict(field='surveyor_password', message=password_error)
-                raise forms.ValidationError(password_error)
-            self.cleaned_data['org'] = org
-            return password
-
-    permission = None
-    form_class = PasswordForm
-
-    @csrf_exempt
-    def dispatch(self, *args, **kwargs):
-        return super(ValidateSurvayorPasswordView, self).dispatch(*args, **kwargs)
-
-    def form_invalid(self, form):
-        return JsonResponse(dict(verified=False), safe=False, status=status.HTTP_400_BAD_REQUEST)
-
-    def form_valid(self, form):
-        return JsonResponse(dict(verified=True), safe=False, status=status.HTTP_200_OK)
 
 
 class CreateAccountView(SmartFormView):

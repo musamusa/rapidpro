@@ -10,8 +10,7 @@ from .views import RootView, ExplorerView, AuthenticateView, BroadcastsEndpoint,
 from .views import CampaignsEndpoint, CampaignEventsEndpoint, ContactsEndpoint, DefinitionsEndpoint, FlowsEndpoint
 from .views import FieldsEndpoint, FlowStartsEndpoint, GroupsEndpoint, LabelsEndpoint, MediaEndpoint, MessagesEndpoint
 from .views import OrgEndpoint, ResthooksEndpoint, ResthookEventsEndpoint, ResthookSubscribersEndpoint, RunsEndpoint
-from .views import BoundariesEndpoint, ContactActionsEndpoint, MessageActionsEndpoint, CustomEndpoints
-from .views import ValidateSurvayorPasswordView, MeEndpoint
+from .views import BoundariesEndpoint, ContactActionsEndpoint, MessageActionsEndpoint, CustomEndpoints, MeEndpoint
 
 
 urlpatterns = [
@@ -21,7 +20,6 @@ urlpatterns = [
     # these endpoints are retained for Android Surveyor clients
     url(r'^authenticate$', AuthenticateView.as_view(), name='api.v3.authenticate'),
     url(r'^me$', MeEndpoint.as_view(), name='api.v3.me'),
-    url(r'^validate_surveyor_password$', ValidateSurvayorPasswordView.as_view(), name='api.v3.validate_survayor_password'),
     url(r'^create_account$', CreateAccountView.as_view(), name='api.v3.create_account'),
     url(r'^user/orgs$', UserOrgsEndpoint.as_view(), name='api.v3.user_orgs'),
     url(r'^user/device_token$', DeviceTokenEndpoint.as_view(), name='api.v3.device_token'),
