@@ -36,7 +36,7 @@ from temba.triggers.models import Trigger
 from temba.ussd.models import USSDSession
 from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit
 from temba.utils.queues import push_task
-from temba.utils.http import HttpEvent
+from temba.utils.http import HttpEvent, http_headers
 from temba.utils.jiochat import JiochatClient
 from temba.utils.text import decode_base64
 from temba.utils.twitter import generate_twitter_signature
@@ -2889,15 +2889,34 @@ class LineHandler(BaseChannelHandler):
 
                 source = item.get('source')
                 message = item.get('message')
+                user_id = source.get('userId')
+                date = ms_to_datetime(item.get('timestamp'))
+                attachments = None
 
                 if message.get('type') == 'text':
                     text = message.get('text')
-                    user_id = source.get('userId')
-                    date = ms_to_datetime(item.get('timestamp'))
-                    Msg.create_incoming(channel=channel, urn=URN.from_line(user_id), text=text, date=date)
-                    return HttpResponse("Msg Accepted")
+                elif message.get('type') == 'image':
+                    text = '\n'
+                    msg_id = message.get('id')
+                    channel_config = channel.config_json()
+                    channel_access_token = channel_config.get(Channel.CONFIG_AUTH_TOKEN)
+                    headers = http_headers(extra={
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer %s' % channel_access_token
+                    })
+                    send_url = 'https://api.line.me/v2/bot/message/%s/content' % msg_id
+                    response = requests.get(send_url, headers=headers)
+                    content_type, downloaded = channel.org.save_response_media(response)
+
+                    if content_type:
+                        attachments = ['%s:%s' % (content_type, downloaded)]
+
                 else:  # pragma: needs cover
                     return HttpResponse("Msg Ignored")
+
+                Msg.create_incoming(channel=channel, urn=URN.from_line(user_id), text=text, date=date,
+                                    attachments=attachments)
+                return HttpResponse("Msg Accepted")
 
         except Exception as e:
             return HttpResponse("Not handled. Error: %s" % e.args, status=400)
