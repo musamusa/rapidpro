@@ -1,5 +1,6 @@
-from temba.flows.models import FlowRun
+from temba.flows.models import FlowRun, Flow
 from ..v2.serializers import FlowRunReadSerializer as FlowRunReadSerializerV2
+from ..v2.serializers import FlowReadSerializer as FlowReadSerializerV2
 
 from rest_framework import serializers
 
@@ -12,5 +13,12 @@ class FlowRunReadSerializer(FlowRunReadSerializerV2):
 
     class Meta:
         model = FlowRun
-        fields = ('id', 'flow', 'contact', 'start', 'responded', 'path', 'values',
-                  'created_on', 'modified_on', 'exited_on', 'exit_type', 'submitted_by')
+        fields = FlowRunReadSerializerV2.Meta.fields + ('submitted_by',)
+
+
+class FlowReadSerializer(FlowReadSerializerV2):
+    revision = serializers.ReadOnlyField(source='get_last_flow_revision')
+
+    class Meta:
+        model = Flow
+        fields = FlowReadSerializerV2.Meta.fields + ('revision',)

@@ -44,7 +44,7 @@ from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
-from .serializers import FlowRunReadSerializer
+from .serializers import FlowRunReadSerializer, FlowReadSerializer
 from ..tasks import send_account_manage_email_task
 
 
@@ -1136,6 +1136,8 @@ class FlowsEndpoint(FlowsEndpointV2):
             ]
         }
     """
+    serializer_class = FlowReadSerializer
+
     @classmethod
     def get_read_explorer(cls):
         source_object = FlowsEndpointV2.get_read_explorer()
