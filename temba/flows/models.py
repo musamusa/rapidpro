@@ -6658,7 +6658,7 @@ class PhotoTest(Test):
             } if exif_data else {}
 
             file_name = media_path.split('/', -1)[-1]
-            command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true " \
+            command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> -define deskew:auto-crop=true " \
                            "{destination}".format(source=image_path, destination=image_path)
             subprocess.call(command_line.split(' '))
 
