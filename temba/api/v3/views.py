@@ -88,6 +88,7 @@ class RootView(views.APIView):
      * [/api/v3/manage_accounts/action/approve](/api/v3/manage_accounts/action/approve) - to perform bulk approve actions
      * [/api/v3/manage_accounts/action/deny](/api/v3/manage_accounts/action/deny) - to perform bulk deny actions
      * [/api/v3/org](/api/v3/org) - to view your org
+     * [/api/v3/recovery_password](/api/v3/custom_endpoints#recovery-password) - to recovery the password through multipart form request
      * [/api/v3/runs](/api/v3/runs) - to list flow runs
      * [/api/v3/resthooks](/api/v3/resthooks) - to list resthooks
      * [/api/v3/resthook_events](/api/v3/resthook_events) - to list resthook events
@@ -2503,4 +2504,17 @@ class CustomEndpoints(ListAPIMixin, BaseAPIView):
         curl --request GET \\
              --url http://example.com/api/v3/user/orgs.json \\
              --header 'authorization: Token your-token-here'
+
+    ## Recovery Password
+    /api/v3/recovery_password - to recovery the password through multipart form request
+
+    A **POST** can be used to perform an action to recovery or change the password
+
+    * **email** - the email of the user
+
+    Example:
+
+        curl --request POST \\
+             --url http://example.com/api/v3/recovery_password.json \\
+             --form email=example@example.com
     """
