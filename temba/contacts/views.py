@@ -431,7 +431,7 @@ class ContactCRUDL(SmartCRUDL):
                 super(ContactCRUDL.Customize.CustomizeForm, self).__init__(*args, **kwargs)
 
             def clean(self):
-
+                
                 existing_contact_fields = ContactField.objects.filter(org=self.org, is_active=True).values('key', 'label')
                 existing_contact_fields_map = {elt['label']: elt['key'] for elt in existing_contact_fields}
 
@@ -439,7 +439,7 @@ class ContactCRUDL(SmartCRUDL):
                 # don't allow users to specify field keys or labels
                 re_col_name_field = regex.compile(r'column_\w+_label', regex.V0)
                 for key, value in self.data.items():
-                    if re_col_name_field.match(key):
+                    if re_col_name_field.match(key) and self.cleaned_data.get(key.replace("label", "include")):
                         field_label = value.strip()
                         if field_label.startswith('[_NEW_]'):
                             field_label = field_label[7:]
