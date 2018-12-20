@@ -1,14 +1,20 @@
 from __future__ import absolute_import, unicode_literals
 
+import random
+import string
+
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
+
 from django.views.decorators.csrf import csrf_exempt
 
 from smartmin.views import SmartFormView
+from smartmin.email import build_email_context
+from smartmin.users.models import RecoveryToken, FailedLogin
 from rest_framework import views, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -45,7 +51,7 @@ from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
 from .serializers import FlowRunReadSerializer, FlowReadSerializer
-from ..tasks import send_account_manage_email_task
+from ..tasks import send_account_manage_email_task, send_recovery_mail
 
 
 def get_apitoken_from_auth(auth):
@@ -2384,6 +2390,67 @@ class CreateAccountView(SmartFormView):
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
         return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
+
+
+class RecoveryPasswordView(SmartFormView):
+    """
+    Action to request to change the user password
+    """
+
+    class UserForgetForm(forms.Form):
+        email = forms.EmailField(label=_("Your Email"), )
+
+        def clean_email(self):
+            email = self.cleaned_data['email'].strip()
+
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                email_error = _("We didn't find an user with that email. Please, try again.")
+                self.cleaned_data['email_error'] = dict(field='email', message=email_error)
+                raise forms.ValidationError(email_error)
+
+            return email
+
+    permission = None
+    form_class = UserForgetForm
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(RecoveryPasswordView, self).dispatch(*args, **kwargs)
+
+    def form_invalid(self, form):
+        errors = []
+        email_error = form.cleaned_data.get('email_error', None)
+
+        if email_error:
+            errors.append(email_error)
+
+        return JsonResponse(dict(errors=errors), safe=False, status=status.HTTP_400_BAD_REQUEST)
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+
+        user = User.objects.filter(email__iexact=email).first()
+
+        context = build_email_context(self.request, user)
+
+        if user:
+            token = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(32))
+            RecoveryToken.objects.create(token=token, user=user)
+            FailedLogin.objects.filter(user=user).delete()
+            context['user'] = dict(username=user.username)
+            context['path'] = "%s" % reverse('users.user_recover', args=[token])
+
+            send_recovery_mail.delay(context, [email])
+
+            return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
+
+        else:
+            return JsonResponse(dict(
+                errors={'email': _('User not found')}),
+                safe=False,
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
