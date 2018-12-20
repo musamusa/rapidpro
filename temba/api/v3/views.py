@@ -1,14 +1,20 @@
 from __future__ import absolute_import, unicode_literals
 
+import random
+import string
+
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
+
 from django.views.decorators.csrf import csrf_exempt
 
 from smartmin.views import SmartFormView
+from smartmin.email import build_email_context
+from smartmin.users.models import RecoveryToken, FailedLogin
 from rest_framework import views, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -44,8 +50,8 @@ from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
-from .serializers import FlowRunReadSerializer
-from ..tasks import send_account_manage_email_task
+from .serializers import FlowRunReadSerializer, FlowReadSerializer
+from ..tasks import send_account_manage_email_task, send_recovery_mail
 
 
 def get_apitoken_from_auth(auth):
@@ -82,6 +88,7 @@ class RootView(views.APIView):
      * [/api/v3/manage_accounts/action/approve](/api/v3/manage_accounts/action/approve) - to perform bulk approve actions
      * [/api/v3/manage_accounts/action/deny](/api/v3/manage_accounts/action/deny) - to perform bulk deny actions
      * [/api/v3/org](/api/v3/org) - to view your org
+     * [/api/v3/recovery_password](/api/v3/custom_endpoints#recovery-password) - to recovery the password through multipart form request
      * [/api/v3/runs](/api/v3/runs) - to list flow runs
      * [/api/v3/resthooks](/api/v3/resthooks) - to list resthooks
      * [/api/v3/resthook_events](/api/v3/resthook_events) - to list resthook events
@@ -1136,11 +1143,35 @@ class FlowsEndpoint(FlowsEndpointV2):
             ]
         }
     """
+    serializer_class = FlowReadSerializer
+
     @classmethod
     def get_read_explorer(cls):
         source_object = FlowsEndpointV2.get_read_explorer()
         source_object['url'] = reverse('api.v3.flows')
         return source_object
+
+    def filter_queryset(self, queryset):
+        params = self.request.query_params
+
+        queryset = queryset.exclude(flow_type=Flow.MESSAGE)
+
+        # filter by UUID (optional)
+        uuid = params.get('uuid')
+        if uuid:
+            queryset = queryset.filter(uuid=uuid)
+
+        archived = params.get('archived')
+        if archived is not None:
+            queryset = queryset.filter(is_archived=str_to_bool(archived))
+
+        flow_type = params.get('type')
+        if flow_type:  # pragma: needs cover
+            queryset = queryset.filter(flow_type__in=flow_type)
+
+        queryset = queryset.prefetch_related('labels')
+
+        return self.filter_before_after(queryset, 'modified_on')
 
 
 class FlowStartsEndpoint(FlowStartsEndpointV2):
@@ -2274,34 +2305,6 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
         }
 
 
-class ValidateSurvayorPasswordView(SmartFormView):
-    class PasswordForm(forms.Form):
-        surveyor_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Password'}))
-
-        def clean_surveyor_password(self):
-            password = self.cleaned_data['surveyor_password']
-            org = Org.objects.filter(surveyor_password=password).first()
-            if not org:
-                password_error = _("Invalid surveyor password, please check with your project leader and try again.")
-                self.cleaned_data['password_error'] = dict(field='surveyor_password', message=password_error)
-                raise forms.ValidationError(password_error)
-            self.cleaned_data['org'] = org
-            return password
-
-    permission = None
-    form_class = PasswordForm
-
-    @csrf_exempt
-    def dispatch(self, *args, **kwargs):
-        return super(ValidateSurvayorPasswordView, self).dispatch(*args, **kwargs)
-
-    def form_invalid(self, form):
-        return JsonResponse(dict(verified=False), safe=False, status=status.HTTP_400_BAD_REQUEST)
-
-    def form_valid(self, form):
-        return JsonResponse(dict(verified=True), safe=False, status=status.HTTP_200_OK)
-
-
 class CreateAccountView(SmartFormView):
     """
     Action to add device tokens to user
@@ -2390,6 +2393,67 @@ class CreateAccountView(SmartFormView):
         return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
 
 
+class RecoveryPasswordView(SmartFormView):
+    """
+    Action to request to change the user password
+    """
+
+    class UserForgetForm(forms.Form):
+        email = forms.EmailField(label=_("Your Email"), )
+
+        def clean_email(self):
+            email = self.cleaned_data['email'].strip()
+
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                email_error = _("We didn't find an user with that email. Please, try again.")
+                self.cleaned_data['email_error'] = dict(field='email', message=email_error)
+                raise forms.ValidationError(email_error)
+
+            return email
+
+    permission = None
+    form_class = UserForgetForm
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(RecoveryPasswordView, self).dispatch(*args, **kwargs)
+
+    def form_invalid(self, form):
+        errors = []
+        email_error = form.cleaned_data.get('email_error', None)
+
+        if email_error:
+            errors.append(email_error)
+
+        return JsonResponse(dict(errors=errors), safe=False, status=status.HTTP_400_BAD_REQUEST)
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+
+        user = User.objects.filter(email__iexact=email).first()
+
+        context = build_email_context(self.request, user)
+
+        if user:
+            token = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(32))
+            RecoveryToken.objects.create(token=token, user=user)
+            FailedLogin.objects.filter(user=user).delete()
+            context['user'] = dict(username=user.username)
+            context['path'] = "%s" % reverse('users.user_recover', args=[token])
+
+            send_recovery_mail.delay(context, [email])
+
+            return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
+
+        else:
+            return JsonResponse(dict(
+                errors={'email': _('User not found')}),
+                safe=False,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
     """
     ## Create Account
@@ -2440,4 +2504,17 @@ class CustomEndpoints(ListAPIMixin, BaseAPIView):
         curl --request GET \\
              --url http://example.com/api/v3/user/orgs.json \\
              --header 'authorization: Token your-token-here'
+
+    ## Recovery Password
+    /api/v3/recovery_password - to recovery the password through multipart form request
+
+    A **POST** can be used to perform an action to recovery or change the password
+
+    * **email** - the email of the user
+
+    Example:
+
+        curl --request POST \\
+             --url http://example.com/api/v3/recovery_password.json \\
+             --form email=example@example.com
     """

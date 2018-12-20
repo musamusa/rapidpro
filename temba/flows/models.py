@@ -1063,6 +1063,10 @@ class Flow(TembaModel):
             results[count['result_key']] = result
         return results
 
+    def get_last_flow_revision(self):
+        last = self.revisions.last()
+        return last.revision if last else None
+
     def delete_results(self):
         """
         Removes all flow runs, values and steps for a flow.

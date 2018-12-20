@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django_redis import get_redis_connection
+from django.template import loader
+from django.core.mail import send_mail
 
 from temba.utils import chunk_list
 from temba.utils.queues import nonoverlapping_task
@@ -96,3 +98,22 @@ def send_account_manage_email_task(user_email, message):
     context['subject'] = subject
 
     send_template_email(user_email, subject, template, context, branding)
+
+
+@task(track_started=True, name='send_recovery_mail')
+def send_recovery_mail(context, emails):
+    hostname = getattr(settings, 'HOSTNAME')
+
+    col_index = hostname.find(':')
+    domain = hostname[:col_index] if col_index > 0 else hostname
+
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'website@%s' % domain)
+    user_email_template = getattr(settings, "USER_FORGET_EMAIL_TEMPLATE", "smartmin/users/user_email.txt")
+
+    email_template = loader.get_template(user_email_template)
+    send_mail(_('Password Changing Request'), email_template.render(context), from_email, emails, fail_silently=False)
+
+
+@task(track_started=True, name='push_notification_to_fcm')
+def push_notification_to_fcm():
+    pass
