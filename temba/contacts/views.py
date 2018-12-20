@@ -430,8 +430,7 @@ class ContactCRUDL(SmartCRUDL):
                 del kwargs['org']
                 super(ContactCRUDL.Customize.CustomizeForm, self).__init__(*args, **kwargs)
 
-            def clean(self):
-                
+            def clean(self):                
                 existing_contact_fields = ContactField.objects.filter(org=self.org, is_active=True).values('key', 'label')
                 existing_contact_fields_map = {elt['label']: elt['key'] for elt in existing_contact_fields}
 
