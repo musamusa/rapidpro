@@ -112,3 +112,8 @@ def send_recovery_mail(context, emails):
 
     email_template = loader.get_template(user_email_template)
     send_mail(_('Password Changing Request'), email_template.render(context), from_email, emails, fail_silently=False)
+
+
+@task(track_started=True, name='push_notification_to_fcm')
+def push_notification_to_fcm():
+    pass
