@@ -2906,7 +2906,7 @@ class LineHandler(BaseChannelHandler):
                     })
                     send_url = 'https://api.line.me/v2/bot/message/%s/content' % msg_id
                     response = requests.get(send_url, headers=headers)
-                    content_type, downloaded = channel.org.save_response_media(response)
+                    content_type, downloaded = channel.org.save_response_media(response, extension_from_url='jpg')
 
                     if content_type:
                         attachments = ['%s:%s' % (content_type, downloaded)]
