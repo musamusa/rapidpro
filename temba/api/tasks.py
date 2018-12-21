@@ -136,6 +136,7 @@ def push_notification_to_fcm(user_tokens):
         }
 
         try:
+            print("[%s] Sending push notification..." % timezone.now())
             requests.post(settings.FCM_HOST, data=json.dumps(data), headers=headers, timeout=5)
         except Exception as e:  # pragma: no cover
             import traceback
