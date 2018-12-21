@@ -51,7 +51,7 @@ from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
 from .serializers import FlowRunReadSerializer, FlowReadSerializer
-from ..tasks import send_account_manage_email_task, send_recovery_mail
+from ..tasks import send_account_manage_email_task, send_recovery_mail, push_notification_to_fcm
 
 
 def get_apitoken_from_auth(auth):
@@ -2382,14 +2382,21 @@ class CreateAccountView(SmartFormView):
         user.is_active = False
         user.save()
 
-        # TODO Here would be the push notification to Admin
-
         # log the user in
         user = authenticate(username=user.username, password=self.form.cleaned_data['password'])
         login(self.request, user)
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
+
+        # Sending push notifications via FCM to surveyor admin users
+        tokens = []
+        for admin in org.administrators.all():
+            for token in admin.device_tokens.filter(is_active=True):
+                tokens.append(token.device_token)
+
+        push_notification_to_fcm.delay(tokens)
+
         return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
 
 

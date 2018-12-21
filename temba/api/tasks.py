@@ -1,5 +1,8 @@
 from __future__ import print_function, unicode_literals
 
+import requests
+import json
+
 from celery.task import task
 from datetime import timedelta
 
@@ -11,6 +14,7 @@ from django.template import loader
 from django.core.mail import send_mail
 
 from temba.utils import chunk_list
+from temba.utils.http import http_headers
 from temba.utils.queues import nonoverlapping_task
 from temba.utils.email import send_template_email
 from .models import WebHookEvent, WebHookResult
@@ -115,5 +119,24 @@ def send_recovery_mail(context, emails):
 
 
 @task(track_started=True, name='push_notification_to_fcm')
-def push_notification_to_fcm():
-    pass
+def push_notification_to_fcm(user_tokens):
+    headers = http_headers(extra={
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer %s' % settings.FCM_SERVER_KEY})
+
+    for token in user_tokens:
+        data = {
+            "message": {
+                "token": token,
+                "notification": {
+                    "body": str(_("There is a new access request. Check your User Approval session")),
+                    "title": str(_("Surveyor User Request"))
+                }
+            }
+        }
+
+        try:
+            requests.post(settings.FCM_HOST, data=json.dumps(data), headers=headers, timeout=5)
+        except Exception as e:  # pragma: no cover
+            import traceback
+            traceback.print_exc(e)
