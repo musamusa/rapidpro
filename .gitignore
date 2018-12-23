@@ -53,6 +53,7 @@ fabfile.py
 deploy
 config
 Flows.ipynb
+test-data/ccl-surveyor-app-firebase.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
