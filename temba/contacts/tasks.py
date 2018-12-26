@@ -35,3 +35,11 @@ def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query, 
     Import contacts from Salesforce and sends an e-mail to the user when it gets the end.
     """
     Contact.import_from_salesforce(sf_instance_url, sf_access_token, sf_query, fields, user_id, org_id, counter, contact_group_name)
+
+
+@task(track_started=True, name='unblock_contacts_task')
+def unblock_contacts_task(contact_ids, org_id):
+    """
+    Unblock contacts
+    """
+    Contact.objects.filter(pk__in=contact_ids, org_id=org_id).update(is_blocked=False)
