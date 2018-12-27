@@ -51,7 +51,7 @@ from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool
 
 from .serializers import FlowRunReadSerializer, FlowReadSerializer
-from ..tasks import send_account_manage_email_task, send_recovery_mail
+from ..tasks import send_account_manage_email_task, send_recovery_mail, push_notification_to_fcm
 
 
 def get_apitoken_from_auth(auth):
@@ -261,6 +261,7 @@ class ExplorerView(ExplorerViewV2):
             ManageAccountsActionEndpoint.get_approve_write_explorer(),
             ManageAccountsActionEndpoint.get_deny_write_explorer(),
             MeEndpoint.get_read_explorer(),
+            MeEndpoint.get_write_explorer(),
             MessagesEndpoint.get_read_explorer(),
             MessageActionsEndpoint.get_write_explorer(),
             OrgEndpoint.get_read_explorer(),
@@ -2065,8 +2066,49 @@ class MeEndpoint(BaseAPIView):
             "email": "johnconnor@example.com",
             "role": "Administrators"
         }
+
+    ## Updating User
+
+    A **POST** request will update the first name and last name of the user.
+
+    Example:
+
+        POST /api/v3/me.json
+
+    Response containing your organization:
+
+        {
+            "first_name": "John",
+            "last_name": "Connor"
+        }
+
     """
     permission = 'orgs.org_api'
+
+    def post(self, request, *args, **kwargs):
+        body = request.data
+        user = request.user
+
+        first_name = body.get('first_name', None)
+        last_name = body.get('last_name', None)
+
+        errors = []
+
+        if first_name:
+            user.first_name = first_name
+        else:
+            errors.append(dict(field='first_name', message=_('This field is required')))
+
+        if last_name:
+            user.last_name = last_name
+        else:
+            errors.append(dict(field='last_name', message=_('This field is required')))
+
+        if not errors or first_name or last_name:
+            user.save(update_fields=['first_name', 'last_name'])
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -2085,6 +2127,20 @@ class MeEndpoint(BaseAPIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+    @classmethod
+    def get_write_explorer(cls):
+        return {
+            'method': "POST",
+            'title': "Action to update first name and last name of the user",
+            'url': reverse('api.v3.me'),
+            'slug': 'me-write',
+            'fields': [dict(name='first_name', required=True,
+                            help="The first name of the user"),
+                       dict(name='last_name', required=True,
+                            help="The last name of the user")],
+            'example': {'body': '{"first_name": "John", "last_name": "Connor"}'},
+        }
 
     @classmethod
     def get_read_explorer(cls):
@@ -2382,14 +2438,21 @@ class CreateAccountView(SmartFormView):
         user.is_active = False
         user.save()
 
-        # TODO Here would be the push notification to Admin
-
         # log the user in
         user = authenticate(username=user.username, password=self.form.cleaned_data['password'])
         login(self.request, user)
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
+
+        # Sending push notifications via FCM to surveyor admin users
+        tokens = []
+        for admin in org.administrators.all():
+            for token in admin.device_tokens.filter(is_active=True):
+                tokens.append(token.device_token)
+
+        push_notification_to_fcm.delay(tokens)
+
         return JsonResponse(dict(), safe=False, status=status.HTTP_204_NO_CONTENT)
 
 
