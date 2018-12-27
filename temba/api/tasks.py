@@ -138,7 +138,8 @@ def push_notification_to_fcm(user_tokens):
         try:
             print("[%s] Sending push notification..." % timezone.now())
             response = requests.post(settings.FCM_HOST, data=json.dumps(data), headers=headers, timeout=5)
-            print(response.json())
+            if response.status_code == 200:
+                print("[%s] Push notification sent successfully" % timezone.now())
         except Exception as e:  # pragma: no cover
             import traceback
             traceback.print_exc(e)

@@ -1298,3 +1298,6 @@ PARSE_SERVER_NAME = '__SERVER_NAME__'
 FCM_PROJECT_NAME = 'MISSING_FCM_PROJECT_NAME'
 FCM_SERVER_KEY = 'MISSING_FCM_SERVER_KEY'
 FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJECT_NAME
+
+# FCM configuration from JSON file got from FCM Console
+FCM_CONFIG = dict()

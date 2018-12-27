@@ -442,7 +442,7 @@ def _get_fcm_access_token():
     :return: Access token.
     """
     scopes = ['https://www.googleapis.com/auth/firebase.messaging']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('service-account.json', scopes)
+    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(settings.FCM_CONFIG, scopes)
     access_token_info = credentials.get_access_token()
     return access_token_info.access_token
 
