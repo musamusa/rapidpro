@@ -684,16 +684,18 @@ class ContactCRUDL(SmartCRUDL):
                     context['show_form'] = False
                     results = json.loads(task.import_results) if task.import_results else dict()
 
+                    context['results'] = results
+                    groups = ContactGroup.user_groups.filter(import_task=task)
+
                     if unblock:
                         contacts = results.get('blocked', [])
                         context['show_unblock_message'] = True
                         results['blocked'] = []
 
-                        ImportTask.objects.filter(pk=task.pk).update(import_results=json.dumps(results))
-                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, org.id))
+                        groups_ids = [group.id for group in groups]
 
-                    context['results'] = results
-                    groups = ContactGroup.user_groups.filter(import_task=task)
+                        ImportTask.objects.filter(pk=task.pk).update(import_results=json.dumps(results))
+                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, org.id, groups_ids))
 
                     if groups:
                         context['group'] = groups[0]

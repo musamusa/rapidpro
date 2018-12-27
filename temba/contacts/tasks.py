@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from celery.task import task
 from temba.utils.queues import nonoverlapping_task
-from .models import ExportContactsTask, ContactGroupCount, Contact
+from .models import ExportContactsTask, ContactGroupCount, Contact, ContactGroup
 
 
 @task(track_started=True, name='export_contacts_task')
@@ -38,8 +38,15 @@ def import_salesforce_contacts_task(sf_instance_url, sf_access_token, sf_query, 
 
 
 @task(track_started=True, name='unblock_contacts_task')
-def unblock_contacts_task(contact_ids, org_id):
+def unblock_contacts_task(contact_ids, org_id, groups):
     """
     Unblock contacts
     """
-    Contact.objects.filter(pk__in=contact_ids, org_id=org_id).update(is_blocked=False)
+    contacts = Contact.objects.filter(pk__in=contact_ids, org_id=org_id)
+    contacts.update(is_blocked=False)
+
+    groups = ContactGroup.user_groups.filter(pk__in=groups).order_by('name')
+
+    if groups:
+        for contact in contacts:
+            contact.update_static_groups(contact.modified_by, groups)
