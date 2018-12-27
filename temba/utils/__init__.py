@@ -18,8 +18,6 @@ from django.utils.timezone import is_aware
 from django_countries import countries
 from itertools import islice
 
-from oauth2client.service_account import ServiceAccountCredentials
-
 
 DEFAULT_DATE = datetime.datetime(1, 1, 1, 0, 0, 0, 0, None)
 MAX_UTC_OFFSET = 14 * 60 * 60  # max offset postgres supports for a timezone
@@ -434,15 +432,3 @@ def get_anonymous_user():
     """
     from django.contrib.auth.models import User
     return User.objects.get(username=settings.ANONYMOUS_USER_NAME)
-
-
-def _get_fcm_access_token():
-    """
-    Retrieve a valid access token that can be used to authorize requests.
-    :return: Access token.
-    """
-    scopes = ['https://www.googleapis.com/auth/firebase.messaging']
-    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(settings.FCM_CONFIG, scopes)
-    access_token_info = credentials.get_access_token()
-    return access_token_info.access_token
-
