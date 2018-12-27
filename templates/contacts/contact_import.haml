@@ -44,7 +44,7 @@
                 
 
                 - else 
-                  - if task.status == "SUCCESS" and group.contacts.all
+                  - if task.status == "SUCCESS"
                     - if results.creates
                       .import-result
                         .glyph.icon-checkmark.success
@@ -92,7 +92,7 @@
                       .import-result
                         .glyph.icon-checkmark.success
                         -blocktrans with results.blocked_count as blocked_count
-                          Contacts unblocked {{ blocked_count }}
+                          Contacts unblocking {{ blocked_count }}
 
                     - if results.errors
                       .import-result
@@ -128,12 +128,7 @@
                             Row {{ error_message.line }}: {{ error_message.error }}
                             %br
 
-                  - elif task.status == "SUCCESS" and not group.contacts.all
-                    %p
-                      Grouping..
-                      %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
-
-                  - elif not group.contacts.all
+                  - else
                     %p
                       -blocktrans
                         No contacts imported, please make sure your have a channel connected.

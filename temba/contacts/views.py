@@ -673,6 +673,8 @@ class ContactCRUDL(SmartCRUDL):
             task_id = self.request.GET.get('task', None)
             unblock = self.request.POST.get('unblock', None)
 
+            org = self.derive_org()
+
             if task_id:
                 tasks = ImportTask.objects.filter(pk=task_id, created_by=self.request.user)
 
@@ -688,7 +690,7 @@ class ContactCRUDL(SmartCRUDL):
                         results['blocked'] = []
 
                         ImportTask.objects.filter(pk=task.pk).update(import_results=json.dumps(results))
-                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, self.derive_org()))
+                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, org.id))
 
                     context['results'] = results
                     groups = ContactGroup.user_groups.filter(import_task=task)
