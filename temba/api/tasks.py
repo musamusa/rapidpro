@@ -13,10 +13,12 @@ from django_redis import get_redis_connection
 from django.template import loader
 from django.core.mail import send_mail
 
-from temba.utils import chunk_list, _get_fcm_access_token
+from temba.utils import chunk_list
 from temba.utils.queues import nonoverlapping_task
 from temba.utils.email import send_template_email
 from .models import WebHookEvent, WebHookResult
+
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 @task(track_started=True, name='deliver_event_task')
@@ -119,9 +121,13 @@ def send_recovery_mail(context, emails):
 
 @task(track_started=True, name='push_notification_to_fcm')
 def push_notification_to_fcm(user_tokens):
+    scopes = ['https://www.googleapis.com/auth/firebase.messaging']
+    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(settings.FCM_CONFIG, scopes)
+    access_token_info = credentials.get_access_token()
+
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer %s' % _get_fcm_access_token()
+        'Authorization': 'Bearer %s' % access_token_info.access_token
     }
 
     for token in user_tokens:
