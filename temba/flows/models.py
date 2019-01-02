@@ -6612,7 +6612,7 @@ class PhotoTest(Test):
         image_url = None
         is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
 
-        if is_image:
+        if is_image and not run.contact.is_test:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
             is_image = 1 if 'image' in text_split[0] else 0
@@ -6642,6 +6642,9 @@ class PhotoTest(Test):
                               modified_by=run.flow.created_by)
             flow_image = FlowImage.objects.create(**image_args)
             image_url = flow_image.get_url()
+        elif is_image:
+            text_split = sms.attachments[0].split(':', 1)
+            image_url = text_split[1]
 
         return is_image, image_url
 
