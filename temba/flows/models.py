@@ -5289,7 +5289,7 @@ class EmailAction(Action):
             media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
-            if real_media_url:
+            if real_media_url and not run.contact.is_test:
                 media_ = settings.MEDIA_URL.replace('/', '')
                 file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
                     real_media_url.split(media_, 1)[1]
@@ -5302,7 +5302,7 @@ class EmailAction(Action):
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
-                ActionLog.info(run, _("\"%s\" would be sent to %s") % (message, ", ".join(valid_addresses)))
+                ActionLog.info(run, _("\"%s\"%s would be sent to %s") % (message, " with an attachment" if self.media else "", ", ".join(valid_addresses)))
             if invalid_addresses:
                 invalid_addresses = ['"%s"' % elt for elt in invalid_addresses]
                 ActionLog.warn(run, _("Some email address appear to be invalid: %s") % ", ".join(invalid_addresses))
