@@ -33,7 +33,7 @@ from .models import Contact, ContactGroup, ContactGroupCount, ContactField, Cont
 from .models import ExportContactsTask, TEL_SCHEME
 from .omnibox import omnibox_query, omnibox_results_to_dict
 from .search import SearchException
-from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task
+from .tasks import export_contacts_task, export_salesforce_contacts_task, import_salesforce_contacts_task, unblock_contacts_task
 
 from simple_salesforce import Salesforce
 
@@ -430,8 +430,7 @@ class ContactCRUDL(SmartCRUDL):
                 del kwargs['org']
                 super(ContactCRUDL.Customize.CustomizeForm, self).__init__(*args, **kwargs)
 
-            def clean(self):
-
+            def clean(self):                
                 existing_contact_fields = ContactField.objects.filter(org=self.org, is_active=True).values('key', 'label')
                 existing_contact_fields_map = {elt['label']: elt['key'] for elt in existing_contact_fields}
 
@@ -439,7 +438,7 @@ class ContactCRUDL(SmartCRUDL):
                 # don't allow users to specify field keys or labels
                 re_col_name_field = regex.compile(r'column_\w+_label', regex.V0)
                 for key, value in self.data.items():
-                    if re_col_name_field.match(key):
+                    if re_col_name_field.match(key) and self.cleaned_data.get(key.replace("label", "include")):
                         field_label = value.strip()
                         if field_label.startswith('[_NEW_]'):
                             field_label = field_label[7:]
@@ -644,7 +643,6 @@ class ContactCRUDL(SmartCRUDL):
 
         def pre_save(self, task):
             super(ContactCRUDL.Import, self).pre_save(task)
-
             previous_import = ImportTask.objects.filter(created_by=self.request.user).order_by('-created_on').first()
             if previous_import and previous_import.created_on < timezone.now() - timedelta(hours=24):  # pragma: needs cover
                 analytics.track(self.request.user.username, 'temba.contact_imported')
@@ -670,8 +668,13 @@ class ContactCRUDL(SmartCRUDL):
             context['task'] = None
             context['group'] = None
             context['show_form'] = True
+            context['show_unblock_message'] = False
 
             task_id = self.request.GET.get('task', None)
+            unblock = self.request.POST.get('unblock', None)
+
+            org = self.derive_org()
+
             if task_id:
                 tasks = ImportTask.objects.filter(pk=task_id, created_by=self.request.user)
 
@@ -679,9 +682,20 @@ class ContactCRUDL(SmartCRUDL):
                     task = tasks[0]
                     context['task'] = task
                     context['show_form'] = False
-                    context['results'] = json.loads(task.import_results) if task.import_results else dict()
+                    results = json.loads(task.import_results) if task.import_results else dict()
 
+                    context['results'] = results
                     groups = ContactGroup.user_groups.filter(import_task=task)
+
+                    if unblock:
+                        contacts = results.get('blocked', [])
+                        context['show_unblock_message'] = True
+                        results['blocked'] = []
+
+                        groups_ids = [group.id for group in groups]
+
+                        ImportTask.objects.filter(pk=task.pk).update(import_results=json.dumps(results))
+                        on_transaction_commit(lambda: unblock_contacts_task.delay(contacts, org.id, groups_ids))
 
                     if groups:
                         context['group'] = groups[0]
