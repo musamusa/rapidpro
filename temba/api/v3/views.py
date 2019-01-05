@@ -2063,6 +2063,8 @@ class MeEndpoint(BaseAPIView):
         {
             "id": 1,
             "full_name": "John Connor",
+            "first_name": "John",
+            "last_name": "Connor",
             "email": "johnconnor@example.com",
             "role": "Administrators"
         }
@@ -2122,6 +2124,8 @@ class MeEndpoint(BaseAPIView):
         data = {
             'id': user.id,
             'full_name': user.get_full_name(),
+            'first_name': user.first_name,
+            'last_name': user.last_name,
             'email': user.email,
             'role': role.name
         }
