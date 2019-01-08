@@ -438,7 +438,7 @@ class Org(SmartModel):
         Trigger.import_triggers(data, self, user, same_site)
 
     @classmethod
-    def export_definitions(cls, site_link, components):
+    def export_definitions(cls, site_link, components, revision=None):
         from temba.campaigns.models import Campaign
         from temba.flows.models import Flow
         from temba.triggers.models import Trigger
@@ -449,10 +449,17 @@ class Org(SmartModel):
         exported_triggers = []
         exported_links = []
 
+        keep_on_current_version = True if not revision else False
+
         for component in components:
             if isinstance(component, Flow):
-                component.ensure_current_version()  # only export current versions
-                exported_flows.append(component.as_json(expand_contacts=True))
+                if keep_on_current_version:
+                    component.ensure_current_version()  # only export current versions
+                    exported_flows.append(component.as_json(expand_contacts=True))
+                else:
+                    flow_revision = component.revisions.filter(revision=revision).first()
+                    if flow_revision:
+                        exported_flows.append(flow_revision.get_definition_json())
             elif isinstance(component, Campaign):
                 exported_campaigns.append(component.as_json())
             elif isinstance(component, Trigger):
