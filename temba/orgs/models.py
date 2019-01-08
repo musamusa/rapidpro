@@ -2114,7 +2114,8 @@ class Org(SmartModel):
             return None
 
         if not hasattr(user, '_org'):
-            org = Org.objects.filter(administrators=user, is_active=True).first()
+            org = Org.objects.filter(Q(administrators=user) | Q(editors=user) | Q(viewers=user) | Q(surveyors=user),
+                                     is_active=True).first()
             if org:
                 user._org = org
 

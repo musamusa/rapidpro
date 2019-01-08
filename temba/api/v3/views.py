@@ -2449,6 +2449,10 @@ class CreateAccountView(SmartFormView):
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
 
+        # Creating a API token to the user
+        role = APIToken.get_role_from_code('S')
+        APIToken.get_or_create(org, user, role=role)
+
         # Sending push notifications via FCM to surveyor admin users
         tokens = []
         for admin in org.administrators.all():
