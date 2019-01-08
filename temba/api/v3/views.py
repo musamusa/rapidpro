@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals
 
 import random
 import string
+import itertools
 
 from django import forms
 from django.contrib.auth import authenticate, login
@@ -45,13 +46,15 @@ from temba.api.v2.views import OrgEndpoint as OrgEndpointV2
 from temba.api.v2.views import ResthooksEndpoint as ResthooksEndpointV2
 from temba.api.v2.views import ResthookSubscribersEndpoint as ResthookSubscribersEndpointV2
 from temba.api.v2.views import ResthookEventsEndpoint as ResthookEventsEndpointV2
+from temba.campaigns.models import Campaign
 from temba.contacts.models import Contact
 from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
-from temba.utils import str_to_bool
+from temba.utils import str_to_bool, splitting_getlist
 
 from .serializers import FlowRunReadSerializer, FlowReadSerializer
 from ..tasks import send_account_manage_email_task, send_recovery_mail, push_notification_to_fcm
+from ..support import InvalidQueryError
 
 
 def get_apitoken_from_auth(auth):
@@ -1009,6 +1012,47 @@ class DefinitionsEndpoint(DefinitionsEndpointV2):
         source_object = DefinitionsEndpointV2.get_read_explorer()
         source_object['url'] = reverse('api.v3.definitions')
         return source_object
+
+    def get(self, request, *args, **kwargs):
+        org = request.user.get_org()
+        params = request.query_params
+
+        if 'flow_uuid' in params or 'campaign_uuid' in params:  # deprecated
+            flow_uuids = splitting_getlist(self.request, 'flow_uuid')
+            campaign_uuids = splitting_getlist(self.request, 'campaign_uuid')
+        else:
+            flow_uuids = params.getlist('flow')
+            campaign_uuids = params.getlist('campaign')
+
+        include = params.get('dependencies', 'all')
+        if include not in DefinitionsEndpointV2.Depends.__members__:
+            raise InvalidQueryError("dependencies must be one of %s" % ', '.join(DefinitionsEndpointV2.Depends.__members__))
+
+        include = DefinitionsEndpointV2.Depends[include]
+
+        if flow_uuids:
+            flows = set(Flow.objects.filter(uuid__in=flow_uuids, org=org, is_active=True))
+        else:
+            flows = set()
+
+        if campaign_uuids:
+            campaigns = set(Campaign.objects.filter(uuid__in=campaign_uuids, org=org, is_active=True))
+        else:
+            campaigns = set()
+
+        if include == DefinitionsEndpointV2.Depends.none:
+            components = set(itertools.chain(flows, campaigns))
+        elif include == DefinitionsEndpointV2.Depends.flows:
+            components = org.resolve_dependencies(flows, campaigns, include_campaigns=False, include_triggers=True)
+        else:
+            components = org.resolve_dependencies(flows, campaigns, include_campaigns=True, include_triggers=True)
+
+        revision = params.get('revision', None)
+        revision = int(revision) if revision else None
+
+        export = org.export_definitions(self.request.branding['link'], components, revision=revision)
+
+        return Response(export, status=status.HTTP_200_OK)
 
 
 class FieldsEndpoint(FieldsEndpointV2):
@@ -2448,6 +2492,10 @@ class CreateAccountView(SmartFormView):
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
+
+        # Creating a API token to the user
+        role = APIToken.get_role_from_code('S')
+        APIToken.get_or_create(org, user, role=role)
 
         # Sending push notifications via FCM to surveyor admin users
         tokens = []
