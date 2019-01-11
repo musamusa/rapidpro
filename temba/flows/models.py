@@ -2723,6 +2723,9 @@ class FlowImage(TembaModel):
         return json.loads(self.exif) if self.exif else dict()
 
     def get_url(self):
+        if settings.AWS_BUCKET_DOMAIN in self.path:
+            return self.path
+
         protocol = 'https' if settings.IS_PROD else 'http'
         image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.path)
         return image_url
@@ -6611,14 +6614,21 @@ class PhotoTest(Test):
     def evaluate(self, run, sms, context, text):
         image_url = None
         is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
+        org = run.flow.org
 
         if is_image and not run.contact.is_test:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
             is_image = 1 if 'image' in text_split[0] else 0
-            media_path = image.split('media', 1)[1]
-            image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
-            media_path = media_path.replace('/', '', 1)
+
+            if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                media_path = image
+                image = Org.get_temporary_file_from_url(media_url=image)
+                image_path = image.file.name
+            else:
+                media_path = image.split('media', 1)[1]
+                image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
+                media_path = media_path.replace('/', '', 1)
 
             try:
                 img = Image.open(image_path)
@@ -6633,13 +6643,9 @@ class PhotoTest(Test):
             } if exif_data else {}
 
             file_name = media_path.split('/', -1)[-1]
-            command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> -define deskew:auto-crop=true " \
-                           "{destination}".format(source=image_path, destination=image_path)
-            subprocess.call(command_line.split(' '))
 
-            image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
-                              exif=json.dumps(exif), name=file_name, created_by=run.flow.created_by,
-                              modified_by=run.flow.created_by)
+            image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
+                              name=file_name, created_by=run.flow.created_by, modified_by=run.flow.created_by)
             flow_image = FlowImage.objects.create(**image_args)
             image_url = flow_image.get_url()
         elif is_image:
