@@ -8,14 +8,11 @@ import json
 import pytz
 import requests
 import six
-import magic
 import xml.etree.ElementTree as ET
 import logging
 
 from datetime import datetime
 from django.conf import settings
-from django.core.files import File
-from django.core.files.temp import NamedTemporaryFile
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone

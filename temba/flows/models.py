@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
-import os
 import json
 import logging
 import numbers
@@ -11,7 +10,6 @@ import six
 import time
 import urllib2
 import requests
-import subprocess
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
@@ -25,7 +23,6 @@ from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
 from django.utils import timezone
-from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
 from django_redis import get_redis_connection
