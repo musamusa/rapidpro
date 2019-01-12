@@ -18,7 +18,7 @@ from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
 from django.core.cache import cache
-from django.core.files.storage import default_storage
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.core.files.temp import NamedTemporaryFile
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group
@@ -5288,10 +5288,25 @@ class EmailAction(Action):
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
             if real_media_url and not run.contact.is_test:
-                media_ = settings.MEDIA_URL.replace('/', '')
-                file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
-                    real_media_url.split(media_, 1)[1]
-                media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                    media_file = Org.get_temporary_file_from_url(real_media_url)
+
+                    extension = real_media_url.split('.')[-1]
+
+                    random_file = str(uuid4())
+                    random_dir = random_file[0:4]
+                    filename = '%s/%s.%s' % (random_dir, random_file, extension)
+
+                    path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, run.flow.org.id, filename)
+                    file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                    location = file_storage.save(name=path, content=media_file)
+                    media_path = '%s/%s' % (settings.MEDIA_ROOT, location)
+                else:
+                    media_ = settings.MEDIA_URL.replace('/', '')
+                    file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
+                        real_media_url.split(media_, 1)[1]
+                    media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+
                 attachments = [media_path]
 
         if not run.contact.is_test:
