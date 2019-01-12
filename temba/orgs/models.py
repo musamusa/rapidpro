@@ -2094,9 +2094,6 @@ class Org(SmartModel):
 
         content_type, downloaded = self.save_response_media(response, extension_from_url=extension)
 
-        if not content_type or content_type == 'application/octet-stream':
-            content_type = response.headers.get('Content-Type', None)
-
         if content_type:
             return '%s:%s' % (content_type, downloaded)
 

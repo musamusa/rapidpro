@@ -8,6 +8,7 @@ import json
 import pytz
 import requests
 import six
+import magic
 import xml.etree.ElementTree as ET
 import logging
 
@@ -668,7 +669,23 @@ class TelegramHandler(BaseChannelHandler):
             if response_json['ok']:
                 url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
                 extension = url.rpartition('.')[2]
-                return channel.org.download_media(media_url=url, extension=extension)
+                response = requests.get(url)
+
+                # attempt to determine our content type using magic bytes
+                content_type = None
+                try:
+                    m = magic.Magic(mime=True)
+                    content_type = m.from_buffer(response.content)
+                except Exception:  # pragma: no cover
+                    pass
+
+                # fallback on the content type in our response header
+                if not content_type or content_type == 'application/octet-stream':
+                    content_type = response.headers['Content-Type']
+
+                (content_type_, downloaded) = channel.org.save_response_media(response, extension_from_url=extension)
+
+                return '%s:%s' % (content_type, downloaded)
 
     def post(self, request, *args, **kwargs):
 
