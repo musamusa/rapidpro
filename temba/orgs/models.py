@@ -2058,10 +2058,11 @@ class Org(SmartModel):
 
         return self.save_media(File(temp), extension)
 
-    def download_media(self, media_url):
+    def download_media(self, media_url, extension=None):
         """
         Fetches the media and stores it
         :param media_url: the url where the media lives
+        :param extension: the extension of the file, could be None
         :return: the url for our downloaded media with full content type prefix
         """
         response = None
@@ -2077,13 +2078,14 @@ class Org(SmartModel):
                 attempts += 1
                 time.sleep(.250)
 
-        try:
-            split_media = media_url.split('?')[0]
-            extension_from_url = split_media.split('.')[-1]
-        except Exception:
-            extension_from_url = None
+        if not extension:
+            try:
+                split_media = media_url.split('?')[0]
+                extension = split_media.split('.')[-1]
+            except Exception:
+                extension = None
 
-        content_type, downloaded = self.save_response_media(response, extension_from_url=extension_from_url)
+        content_type, downloaded = self.save_response_media(response, extension_from_url=extension)
         if content_type:
             return '%s:%s' % (content_type, downloaded)
 
@@ -2097,15 +2099,16 @@ class Org(SmartModel):
 
         if content_type:
             extension = None
-            if disposition == 'inline':
-                extension = mimetypes.guess_extension(content_type)
-                extension = extension.strip('.')
-            elif disposition:
-                filename = re.findall('filename="?(.+)"?', disposition)[0]
-                filename = filename.strip().replace('"', '').replace("'", "")
-                extension = filename.rpartition('.')[-1]
-            elif content_type == 'audio/x-wav':
-                extension = 'wav'
+            if not extension_from_url:
+                if disposition == 'inline':
+                    extension = mimetypes.guess_extension(content_type)
+                    extension = extension.strip('.')
+                elif disposition:
+                    filename = re.findall('filename="?(.+)"?', disposition)[0]
+                    filename = filename.strip().replace('"', '').replace("'", "")
+                    extension = filename.rpartition('.')[-1]
+                elif content_type == 'audio/x-wav':
+                    extension = 'wav'
 
             temp = NamedTemporaryFile(delete=True)
             temp.write(response.content)

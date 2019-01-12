@@ -667,7 +667,8 @@ class TelegramHandler(BaseChannelHandler):
             response_json = response.json()
             if response_json['ok']:
                 url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
-                return channel.org.download_media(media_url=url)
+                extension = url.rpartition('.')[2]
+                return channel.org.download_media(media_url=url, extension=extension)
 
     def post(self, request, *args, **kwargs):
 
