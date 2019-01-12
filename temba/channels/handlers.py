@@ -8,14 +8,11 @@ import json
 import pytz
 import requests
 import six
-import magic
 import xml.etree.ElementTree as ET
 import logging
 
 from datetime import datetime
 from django.conf import settings
-from django.core.files import File
-from django.core.files.temp import NamedTemporaryFile
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
@@ -667,30 +664,10 @@ class TelegramHandler(BaseChannelHandler):
         response = requests.post(url, {'file_id': file_id})
 
         if response.status_code == 200:
-            if json:
-                response_json = response.json()
-                if response_json['ok']:
-                    url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
-                    extension = url.rpartition('.')[2]
-                    response = requests.get(url)
-
-                    # attempt to determine our content type using magic bytes
-                    content_type = None
-                    try:
-                        m = magic.Magic(mime=True)
-                        content_type = m.from_buffer(response.content)
-                    except Exception:  # pragma: no cover
-                        pass
-
-                    # fallback on the content type in our response header
-                    if not content_type or content_type == 'application/octet-stream':
-                        content_type = response.headers['Content-Type']
-
-                    temp = NamedTemporaryFile(delete=True)
-                    temp.write(response.content)
-                    temp.flush()
-
-                    return '%s:%s' % (content_type, channel.org.save_media(File(temp), extension))
+            response_json = response.json()
+            if response_json['ok']:
+                url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
+                return channel.org.download_media(media_url=url)
 
     def post(self, request, *args, **kwargs):
 

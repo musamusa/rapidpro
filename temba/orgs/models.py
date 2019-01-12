@@ -8,6 +8,7 @@ import mimetypes
 import os
 import pycountry
 import random
+import subprocess
 
 import re
 import regex
@@ -2117,8 +2118,14 @@ class Org(SmartModel):
             temp.write(response.content)
             temp.flush()
 
+            file = File(temp)
+            command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
+                           "-define deskew:auto-crop=true {destination}".format(source=file.file.name,
+                                                                                destination=file.file.name)
+            subprocess.call(command_line.split(' '))
+
             # save our file off
-            downloaded = self.save_media(File(temp), extension or extension_from_url)
+            downloaded = self.save_media(file, extension or extension_from_url)
 
         return content_type, downloaded
 
@@ -2145,6 +2152,29 @@ class Org(SmartModel):
             scheme = 'http'
 
         return "%s://%s/%s" % (scheme, settings.AWS_BUCKET_DOMAIN, location)
+
+    @classmethod
+    def get_temporary_file_from_url(cls, media_url):
+        response = None
+        attempts = 0
+        while attempts < 4:
+            response = request_get(media_url, stream=True)
+
+            # in some cases Facebook isn't ready for us to fetch the media URL yet, if we get a 404
+            # sleep for a bit then try again up to 4 times
+            if response.status_code == 200:
+                break
+            else:
+                attempts += 1
+                time.sleep(.250)
+
+        if not response:
+            return response
+
+        temp = NamedTemporaryFile(delete=True)
+        temp.write(response.content)
+        temp.flush()
+        return File(temp)
 
     @classmethod
     def create_user(cls, email, password):
