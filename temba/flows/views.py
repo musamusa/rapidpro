@@ -1532,7 +1532,9 @@ class FlowCRUDL(SmartCRUDL):
             new_message = json_dict.get('new_message', '')
             media = None
 
-            media_url = 'http://%s%simages' % (user.get_org().get_brand_domain(), settings.STATIC_URL)
+            protocol = 'http' if settings.DEBUG else 'https'
+
+            media_url = '%s://%s%simages' % (protocol, user.get_org().get_brand_domain(), settings.STATIC_URL)
 
             if 'new_photo' in json_dict:  # pragma: needs cover
                 media = '%s/png:%s/simulator_photo.png' % (Msg.MEDIA_IMAGE, media_url)
