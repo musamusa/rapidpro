@@ -5,14 +5,20 @@ RUN apt-get update && apt-get install -qyy --fix-missing \
     build-essential python-imaging git python-setuptools  ncurses-dev python-virtualenv  python-pip postgresql-client-9.3 libpq-dev \
     libpython-dev lib32ncurses5-dev pypy libffi6 openssl libgeos-dev \
     coffeescript node-less yui-compressor gcc libreadline6 libreadline6-dev patch libffi-dev libssl-dev libxml2-dev libxslt1-dev  python-dev \
-    python-zmq libzmq-dev nginx libpcre3 libpcre3-dev supervisor wget libjpeg-dev libjpeg-turbo8-dev libmagic-dev
+    python-zmq libzmq-dev nginx libpcre3 libpcre3-dev supervisor wget libjpeg-dev libjpeg-turbo8-dev libmagic-dev checkinstall imagemagick
 
 WORKDIR /tmp
 RUN wget http://download.osgeo.org/gdal/1.11.0/gdal-1.11.0.tar.gz
 RUN tar xvfz gdal-1.11.0.tar.gz
 RUN cd gdal-1.11.0;./configure --with-python; make -j4; make install
 RUN ldconfig
-RUN rm -rf /tmp/* 
+RUN rm -rf /tmp/*
+
+RUN wget http://www.imagemagick.org/download/ImageMagick-7.0.8-23.tar.gz
+RUN tar xzvf ImageMagick-7.0.8-23.tar.gz
+RUN cd ImageMagick-7.0.8-23; ./configure; make; make install
+RUN ldconfig
+RUN rm -rf /tmp/*
 
 RUN mkdir /rapidpro
 WORKDIR /rapidpro
