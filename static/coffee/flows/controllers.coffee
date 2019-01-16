@@ -192,7 +192,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
 
     file = $files[0]
     if not file.type
-      return
+      file.type = 'application/' + file.name.split('.').pop()
 
     # check for valid voice prompts
     if action.type == 'say' and file.type != 'audio/wav' and file.type != 'audio/x-wav'
@@ -212,6 +212,10 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
         showDialog('Invalid Format', 'Audio attachments must be encoded as mp3 files.')
         return
 
+    if action.type == 'email' and file.name.split('.').pop().toLowerCase() in ['ade', 'adp', 'apk', 'bat', 'chm', 'cmd', 'com', 'cpl', 'dll', 'dmg', 'exe', 'hta', 'ins', 'isp', 'jar', 'js', 'jse', 'lib', 'lnk', 'mde', 'msc', 'msi', 'msp', 'mst', 'nshpif', 'scr', 'sct', 'shb', 'sys', 'vb', 'vbe', 'vbs', 'vxd', 'wsc', 'wsf', 'wsh', 'cab']
+      showDialog('Invalid Format', 'This file type is not supported for security reasons. If you still wish to send, please convert this file to an allowable type.')
+      return
+
     if (!String.prototype.endsWith)
       String.prototype.endsWith = (searchString, position) ->
           subjectString = this.toString()
@@ -221,8 +225,12 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           lastIndex = subjectString.indexOf(searchString, position)
           return lastIndex != -1 && lastIndex == position
 
-    if action.type in ['reply', 'send', 'email'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
+    if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.toLowerCase().endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
+      return
+
+    if action.type == 'email' and (file.size > 25000000 or ((file.name.toLowerCase().endsWith('.jpg') or file.name.toLowerCase().endsWith('.png') or file.name.toLowerCase().endsWith('.gif') or file.name.toLowerCase().endsWith('.jpeg')) and file.size > 5000000))
+      showDialog('File Size Exceeded', "The file size should be less than 5MB for images and less than 25MB for others files. Please choose another file and try again.")
       return
 
     # if we have a recording already, confirm they want to replace it
@@ -1227,6 +1235,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
           $scope.action.msg = $scope.action.msg[Flow.flow.base_language]
         else
           $scope.action.msg = ''
+
+    $scope.action.type = config.type
 
   $scope.showFlip = ->
     return actionset.actions.length < 2

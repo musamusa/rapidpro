@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
-import os
 import json
 import logging
 import numbers
@@ -11,21 +10,19 @@ import six
 import time
 import urllib2
 import requests
-import subprocess
 
 from collections import OrderedDict, defaultdict
 from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
 from django.core.cache import cache
-from django.core.files.storage import default_storage
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.core.files.temp import NamedTemporaryFile
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
 from django.utils import timezone
-from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
 from django_redis import get_redis_connection
@@ -875,9 +872,8 @@ class Flow(TembaModel):
             run.update_expiration(timezone.now())
 
         if ruleset.ruleset_type in RuleSet.TYPE_MEDIA and msg.attachments:
-            if not (ruleset.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and flow.flow_type == Flow.FLOW):
-                # store the media path as the value if it isn't a "wait for a photo" in a message flow
-                value = msg.attachments[0].split(':', 1)[1]
+            # store the media path as the value if it isn't a "wait for a photo" in a message flow
+            value = msg.attachments[0].split(':', 1)[1]
 
         step.save_rule_match(rule, value)
         ruleset.save_run_value(run, rule, value, msg.text)
@@ -2724,6 +2720,9 @@ class FlowImage(TembaModel):
         return json.loads(self.exif) if self.exif else dict()
 
     def get_url(self):
+        if settings.AWS_BUCKET_DOMAIN in self.path:
+            return self.path
+
         protocol = 'https' if settings.IS_PROD else 'http'
         image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.path)
         return image_url
@@ -3706,54 +3705,7 @@ class RuleSet(models.Model):
                     if result > 0:
                         return rule, value
 
-        elif self.ruleset_type == RuleSet.TYPE_WAIT_PHOTO and run.flow.flow_type == Flow.FLOW:
-            try:
-                text_split = msg.attachments[0].split(':', 1)
-                image = text_split[1]
-                is_image = True if 'image' in text_split[0] else False
-                image_path = image.split('media', 1)[1]
-                image_path = '%s%s' % (settings.MEDIA_ROOT, image_path)
-            except Exception:
-                image_path = None
-                is_image = None
-
-            if image_path and is_image:
-                img = Image.open(image_path)
-                exif_data = img._getexif()
-
-                exif = {
-                    ExifTags.TAGS[k]: v
-                    for k, v in exif_data.items()
-                    if k in ExifTags.TAGS
-                } if exif_data else None
-
-                flow_name_slugified = slugify(run.flow.name)
-                output_name = '%s_%s.png' % (flow_name_slugified, datetime.now().strftime('%Y-%m-%dT%H-%M-%S-%f'))
-                main_directory = 'flows_images/orgs/%d' % run.flow.org.id
-                media_path = '%s/%s/%s' % (main_directory, flow_name_slugified, output_name)
-                full_directory = '%s/%s/%s' % (settings.MEDIA_ROOT, main_directory, flow_name_slugified)
-
-                if not os.path.exists(full_directory):
-                    os.makedirs(full_directory)
-
-                image_destination = '%s/%s' % (full_directory, output_name)
-                command_line = "magick {source} -auto-orient -resize 1920x1920> -define deskew:auto-crop=true {destination}".format(source=image_path, destination=image_destination)
-                subprocess.call(command_line.split(' '))
-
-                image_args = dict(org=run.flow.org, flow=run.flow, contact=run.contact, path=media_path,
-                                  exif=json.dumps(exif), name=output_name, created_by=run.flow.created_by,
-                                  modified_by=run.flow.created_by)
-                flow_image = FlowImage.objects.create(**image_args)
-
-                for rule in self.get_rules():
-                    (result, value) = rule.matches(run, msg, context, flow_image.get_url())
-                    if result > 0:
-                        return rule, value
-            else:
-                return None, None
-
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            resthook = None
             url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
@@ -5332,13 +5284,26 @@ class EmailAction(Action):
             media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
-            if real_media_url:
-                media_ = settings.MEDIA_URL.replace('/', '')
-                if media_ in real_media_url:
-                    file_path = real_media_url.split(media_)[1]
+            if real_media_url and not run.contact.is_test:
+                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                    media_file = Org.get_temporary_file_from_url(real_media_url)
+
+                    extension = real_media_url.split('.')[-1]
+
+                    random_file = str(uuid4())
+                    random_dir = random_file[0:4]
+                    filename = '%s/%s.%s' % (random_dir, random_file, extension)
+
+                    path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, run.flow.org.id, filename)
+                    file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                    location = file_storage.save(name=path, content=media_file)
+                    media_path = '%s/%s' % (settings.MEDIA_ROOT, location)
                 else:
-                    file_path = '/%s' % real_media_url
-                media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+                    media_ = settings.MEDIA_URL.replace('/', '')
+                    file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
+                        real_media_url.split(media_, 1)[1]
+                    media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+
                 attachments = [media_path]
 
         if not run.contact.is_test:
@@ -5347,7 +5312,7 @@ class EmailAction(Action):
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
-                ActionLog.info(run, _("\"%s\" would be sent to %s") % (message, ", ".join(valid_addresses)))
+                ActionLog.info(run, _("\"%s\"%s would be sent to %s") % (message, " with an attachment" if self.media else "", ", ".join(valid_addresses)))
             if invalid_addresses:
                 invalid_addresses = ['"%s"' % elt for elt in invalid_addresses]
                 ActionLog.warn(run, _("Some email address appear to be invalid: %s") % ", ".join(invalid_addresses))
@@ -6607,6 +6572,7 @@ class Test(object):
                 NumberTest.TYPE: NumberTest,
                 OrTest.TYPE: OrTest,
                 PhoneTest.TYPE: PhoneTest,
+                PhotoTest.TYPE: PhotoTest,
                 RegexTest.TYPE: RegexTest,
                 StartsWithTest.TYPE: StartsWithTest,
                 SubflowTest.TYPE: SubflowTest,
@@ -6639,6 +6605,66 @@ class Test(object):
         side effects.
         """
         raise FlowException("Subclasses must implement evaluate, returning a tuple containing 1 or 0 and the value tested")
+
+
+class PhotoTest(Test):
+    """
+    Test for whether a response contains a photo
+    """
+    TYPE = 'image'
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_json(cls, org, json):
+        return cls()
+
+    def as_json(self):  # pragma: needs cover
+        return dict(type=self.TYPE)
+
+    def evaluate(self, run, sms, context, text):
+        image_url = None
+        is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
+        org = run.flow.org
+
+        if is_image and not run.contact.is_test:
+            text_split = sms.attachments[0].split(':', 1)
+            image = text_split[1]
+            is_image = 1 if 'image' in text_split[0] else 0
+
+            if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                media_path = image
+                image = Org.get_temporary_file_from_url(media_url=image)
+                image_path = image.file.name
+            else:
+                media_path = image.split('media', 1)[1]
+                image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
+                media_path = media_path.replace('/', '', 1)
+
+            try:
+                img = Image.open(image_path)
+                exif_data = img._getexif()
+            except Exception:
+                exif_data = {}
+
+            exif = {
+                ExifTags.TAGS[k]: v
+                for k, v in exif_data.items()
+                if k in ExifTags.TAGS
+            } if exif_data else {}
+
+            file_name = media_path.split('/', -1)[-1]
+
+            image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
+                              name=file_name, created_by=run.flow.created_by, modified_by=run.flow.created_by)
+            flow_image = FlowImage.objects.create(**image_args)
+            image_url = flow_image.get_url()
+        elif is_image:
+            text_split = sms.attachments[0].split(':', 1)
+            image_url = text_split[1]
+
+        return is_image, image_url
 
 
 class WebhookStatusTest(Test):

@@ -14,8 +14,6 @@ import logging
 
 from datetime import datetime
 from django.conf import settings
-from django.core.files import File
-from django.core.files.temp import NamedTemporaryFile
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
@@ -36,7 +34,7 @@ from temba.triggers.models import Trigger
 from temba.ussd.models import USSDSession
 from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit
 from temba.utils.queues import push_task
-from temba.utils.http import HttpEvent
+from temba.utils.http import HttpEvent, http_headers
 from temba.utils.jiochat import JiochatClient
 from temba.utils.text import decode_base64
 from temba.utils.twitter import generate_twitter_signature
@@ -667,30 +665,27 @@ class TelegramHandler(BaseChannelHandler):
         response = requests.post(url, {'file_id': file_id})
 
         if response.status_code == 200:
-            if json:
-                response_json = response.json()
-                if response_json['ok']:
-                    url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
-                    extension = url.rpartition('.')[2]
-                    response = requests.get(url)
+            response_json = response.json()
+            if response_json['ok']:
+                url = 'https://api.telegram.org/file/bot%s/%s' % (auth_token, response_json['result']['file_path'])
+                extension = url.rpartition('.')[2]
+                response = requests.get(url)
 
-                    # attempt to determine our content type using magic bytes
-                    content_type = None
-                    try:
-                        m = magic.Magic(mime=True)
-                        content_type = m.from_buffer(response.content)
-                    except Exception:  # pragma: no cover
-                        pass
+                # attempt to determine our content type using magic bytes
+                content_type = None
+                try:
+                    m = magic.Magic(mime=True)
+                    content_type = m.from_buffer(response.content)
+                except Exception:  # pragma: no cover
+                    pass
 
-                    # fallback on the content type in our response header
-                    if not content_type or content_type == 'application/octet-stream':
-                        content_type = response.headers['Content-Type']
+                # fallback on the content type in our response header
+                if not content_type or content_type == 'application/octet-stream':
+                    content_type = response.headers['Content-Type']
 
-                    temp = NamedTemporaryFile(delete=True)
-                    temp.write(response.content)
-                    temp.flush()
+                (content_type_, downloaded) = channel.org.save_response_media(response, extension_from_url=extension)
 
-                    return '%s:%s' % (content_type, channel.org.save_media(File(temp), extension))
+                return '%s:%s' % (content_type, downloaded)
 
     def post(self, request, *args, **kwargs):
 
@@ -2499,6 +2494,8 @@ class FacebookHandler(BaseChannelHandler):
         if not channel:
             return HttpResponse("Channel not found for id: %s" % kwargs['uuid'], status=400)
 
+        org = channel.org
+
         # parse our response
         try:
             body = json.loads(request.body)
@@ -2597,6 +2594,7 @@ class FacebookHandler(BaseChannelHandler):
                         referrer_id = None
                         trigger_extra = None
                         location = None
+                        attached_images = None
 
                         if 'message' in envelope:
                             if 'text' in envelope['message']:
@@ -2605,7 +2603,11 @@ class FacebookHandler(BaseChannelHandler):
                                 urls = []
                                 for attachment in envelope['message']['attachments']:
                                     if attachment['payload'] and 'url' in attachment['payload']:
-                                        urls.append(attachment['payload']['url'])
+                                        if 'type' in attachment and attachment['type'] == 'image':
+                                            attached_images = [] if not attached_images else attached_images
+                                            attached_images.append(org.download_media(attachment['payload']['url']))
+                                        else:
+                                            urls.append(attachment['payload']['url'])
                                     elif 'url' in attachment and attachment['url']:
                                         if 'title' in attachment and attachment['title']:
                                             urls.append(attachment['title'])
@@ -2625,7 +2627,7 @@ class FacebookHandler(BaseChannelHandler):
                                 trigger_extra[ChannelEvent.EXTRA_REFERRER_ID] = referrer_id
 
                         # if we have some content, load the contact
-                        if content or postback:
+                        if content or postback or attached_images:
                             # does this contact already exist?
                             sender_id = envelope['sender']['id']
                             urn = URN.from_facebook(sender_id)
@@ -2655,9 +2657,10 @@ class FacebookHandler(BaseChannelHandler):
                                                                     name=name, urns=[urn], channel=channel)
 
                         # we received a new message, create and handle it
-                        if content:
+                        if content or attached_images:
                             msg_date = datetime.fromtimestamp(envelope['timestamp'] / 1000.0).replace(tzinfo=pytz.utc)
-                            msg = Msg.create_incoming(channel, urn, content, date=msg_date, contact=contact)
+                            msg = Msg.create_incoming(channel, urn, content, date=msg_date, contact=contact,
+                                                      attachments=attached_images)
                             Msg.objects.filter(pk=msg.id).update(external_id=envelope['message']['mid'])
 
                             status.append("Msg %d accepted." % msg.id)
@@ -2881,15 +2884,34 @@ class LineHandler(BaseChannelHandler):
 
                 source = item.get('source')
                 message = item.get('message')
+                user_id = source.get('userId')
+                date = ms_to_datetime(item.get('timestamp'))
+                attachments = None
 
                 if message.get('type') == 'text':
                     text = message.get('text')
-                    user_id = source.get('userId')
-                    date = ms_to_datetime(item.get('timestamp'))
-                    Msg.create_incoming(channel=channel, urn=URN.from_line(user_id), text=text, date=date)
-                    return HttpResponse("Msg Accepted")
+                elif message.get('type') == 'image':
+                    text = '\n'
+                    msg_id = message.get('id')
+                    channel_config = channel.config_json()
+                    channel_access_token = channel_config.get(Channel.CONFIG_AUTH_TOKEN)
+                    headers = http_headers(extra={
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer %s' % channel_access_token
+                    })
+                    send_url = 'https://api.line.me/v2/bot/message/%s/content' % msg_id
+                    response = requests.get(send_url, headers=headers)
+                    content_type, downloaded = channel.org.save_response_media(response, extension_from_url='jpg')
+
+                    if content_type:
+                        attachments = ['%s:%s' % (content_type, downloaded)]
+
                 else:  # pragma: needs cover
                     return HttpResponse("Msg Ignored")
+
+                Msg.create_incoming(channel=channel, urn=URN.from_line(user_id), text=text, date=date,
+                                    attachments=attachments)
+                return HttpResponse("Msg Accepted")
 
         except Exception as e:
             return HttpResponse("Not handled. Error: %s" % e.args, status=400)
