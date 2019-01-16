@@ -1,0 +1,217 @@
+-extends "smartmin/list.html"
+-load smartmin sms contacts
+-load i18n humanize
+
+-block title-icon
+  .title-icon
+    %span.glyph.icon-photo
+
+-block page-title
+  -trans "Flow Images"
+
+-block page-top
+  {% render as page_top %}
+    {{block.super}}
+  {% endrender %}
+  -if org_has_flowimages
+    {{page_top}}
+
+-block above-bar
+  -block top-form
+    %form{method:'get'}
+      %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{search}}"}
+
+-block content
+  #pjax
+    -block pjax
+      .row-fluid
+        .span3.sidebox
+
+          #sidebar-nav
+            %ul.nav.nav-list
+              %li.nav-header
+                -trans "Flow Images"
+              %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
+                %a{'href':''}
+                  -trans "All Images"
+                  ({{ org_has_flowimages }})
+
+              %li.nav-header
+                -trans "Images by Groups"
+              - for group in groups
+                %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
+                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                    {{group.label}} ({{ group.count | intcomma }})
+
+              %li.nav-header
+                -trans "Images by Flows"
+              - for group in groups
+                %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
+                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                    {{group.label}} ({{ group.count | intcomma }})
+
+        - if org_has_flowimages
+          - block contacts-list
+            .span9
+
+              - block buttons
+
+                .pull-right
+                  -block buttons-right
+                    -block gear-menu
+                      -include "gear_links_include.haml"
+
+                - if org_perms.contacts.contact_update
+                  .list-buttons-container
+                    .list-buttons
+                      - if 'download' in actions
+                        %span.btn-group
+                          %a.object-btn-block{'href':'#'}
+                            %button.btn
+                              .glyph.icon-cloud-download
+                              -trans "Download"
+
+              .search-details
+                -if search_error
+                  %span.search-error
+                    =search_error
+                -elif search
+                  -blocktrans count results_count=paginator.count
+                    Found {{ results_count }} contact matching <i>{{search}}</i>.
+                    -plural
+                      Found {{ results_count }} contacts matching <i>{{search}}</i>.
+
+              .list-container
+                %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
+                  %tr.contacts
+                    - if org_perms.contacts.contact_update
+                      %th
+
+                    %th
+                    -for field in contact_fields
+                      -if field.show_in_table
+                        %th
+                          {{ field.label }}
+                    %th
+                      - if object_list
+                        -trans "Created On"
+
+                  %tbody
+                    - for object in object_list
+                      %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
+
+                        - if org_perms.contacts.contact_update
+                          %td.contact.checkbox.object-row-checkbox
+                            .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
+
+                        %td.value-text.field_name
+                          {{ object.contact|name:user_org }}
+
+                        -for field in contact_fields
+                          -if field.show_in_table
+                            %td.field
+                              {{ object|contact_field:field.key }}
+
+                        %td.value-received.field_received
+                          %nobr
+                            {{ object.created_on|gmail_time }}
+
+                        // This is needed for action buttons
+                        %td.hide
+                          .value-labels
+                            %nobr
+                              - for group in object.all_groups.all
+                                - if group.group_type == 'U'
+                                  %span.label.label-info.lbl{ data-id: '{{group.id}}'}
+                                    %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                                      {{group.name}}
+
+                    -empty
+                      %tr
+                        %td{colspan:3}
+                          -trans "No matching flow images."
+                        -for field in contact_fields
+                          -if field.show_in_table
+                            %td.field
+                        %td
+
+
+              - block paginator
+                - if object_list.count
+                  .paginator
+                    - include "smartmin/sidebar_pagination.haml"
+
+        - else
+          - include "flowimages/empty_include.haml"
+
+-block post-content
+
+-block extra-style
+  :css
+
+    tr.contacts th {
+      font-size:11px;
+      height:10px;
+      padding:0;
+      padding-top:10px;
+      font-weight:200;
+      color: #aaa;
+      border:0px solid;
+      text-align:center;
+    }
+
+    td.field {
+      text-align:center;
+      min-width:125px;
+    }
+
+    .span9 .contact_list tr.contacts {
+      border-top: none;
+    }
+
+    .span9 .object-list tbody td.value-text {
+      min-width: 30px;
+    }
+
+    .modal .modal-body .control-group .control-label {
+      display:none;
+    }
+
+    .search-error {
+      color: #da4f49;
+    }
+
+
+-block extra-script
+  {{ block.super }}
+
+  :javascript
+
+    $(document).on('click', '.search-query', function() {
+      $(this).animate({ width: '600px'}, 200);
+    });
+
+
+    // keeps track if we are on a link or not
+    var onLink = false;
+
+    {% if org_perms.contacts.contact_create %}
+    function showCreateContactModal() {
+      var modal = new Modax('{% trans "Create Contact" %}', '{% url "contacts.contact_create" %}')
+      modal.setIcon('icon-user')
+      modal.setListeners({
+        onSuccess: function() {
+          location.reload();
+        }
+      })
+      modal.show()
+    }
+    {% endif %}
+
+    $('.select-row').live('mouseover', function(){
+      url = '/contact/read/' + $(this).data('uuid');
+
+      $(this).find('td').not(':first-child').each(function(){
+        $(this).attr('onClick', "document.location.href=url;");
+      });
+    });

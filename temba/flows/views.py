@@ -375,9 +375,55 @@ class FlowRunCRUDL(SmartCRUDL):
 
 
 class FlowImageCRUDL(SmartCRUDL):
-    actions = ('read',)
+    actions = ('list', 'read',)
 
     model = FlowImage
+
+    class OrgQuerysetMixin(object):
+        def derive_queryset(self, *args, **kwargs):
+            queryset = super(FlowImageCRUDL.OrgQuerysetMixin, self).derive_queryset(*args, **kwargs)
+            if not self.request.user.is_authenticated():  # pragma: needs cover
+                return queryset.exclude(pk__gt=0)
+            else:
+                return queryset.filter(org=self.request.user.get_org())
+
+    class BaseList(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        title = _("Flow Images")
+        refresh = 10000
+        fields = ('name', 'modified_on')
+        default_template = 'flowimages/flowimage_list.html'
+        default_order = ('-created_on',)
+        search_fields = ('name__icontains',)
+
+        def get_context_data(self, **kwargs):
+            context = super(FlowImageCRUDL.BaseList, self).get_context_data(**kwargs)
+            context['org_has_flowimages'] = FlowImage.objects.filter(org=self.request.user.get_org(),
+                                                                     is_active=True).count()
+            context['request_url'] = self.request.path
+            context['actions'] = self.actions
+
+            return context
+
+        def derive_queryset(self, *args, **kwargs):
+            qs = super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
+            return qs.exclude(is_active=False)
+
+    class List(BaseList):
+        title = _("Flow Images")
+        actions = ('download',)
+
+        def derive_queryset(self, *args, **kwargs):
+            queryset = super(FlowImageCRUDL.List, self).derive_queryset(*args, **kwargs)
+            queryset = queryset.filter(is_active=True)
+            return queryset
+
+        def get_gear_links(self):
+            links = []
+
+            if self.has_org_perm('contacts.contactgroup_create'):
+                links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+
+            return links
 
     class Read(OrgObjPermsMixin, SmartReadView):
         slug_url_kwarg = 'uuid'
