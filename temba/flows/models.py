@@ -3706,7 +3706,7 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            url = 'https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=%s' % settings.FDL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
@@ -3715,7 +3715,8 @@ class RuleSet(models.Model):
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                data = json.dumps({'longUrl': long_url})
+                data = json.dumps({'longDynamicLink': '%s/?link=%s' % (settings.FDL_URL, long_url),
+                                   'suffix': {'option': 'SHORT'}})
 
                 response = requests.post(url, data=data, headers=headers, timeout=10)
 
@@ -3724,7 +3725,7 @@ class RuleSet(models.Model):
                     response_json = response.json()
                     run.update_fields(response_json)
                     if result > 0:
-                        short_url = response_json.get('id')
+                        short_url = response_json.get('shortLink')
                         return rule, short_url
             else:
                 return None, None
