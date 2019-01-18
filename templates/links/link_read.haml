@@ -293,7 +293,7 @@
     {% if org_perms.contacts.contact_update %}
     $(".update-link").live('click', function(){
       var modal = new Modax('{% trans "Update Link" %}','{% url "links.link_update" object.pk %}');
-      modal.setIcon('icon-user');
+      modal.setIcon('icon-easy');
       modal.setRedirectOnSuccess(true);
       modal.show();
     });
