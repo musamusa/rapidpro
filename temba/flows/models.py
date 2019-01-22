@@ -4174,6 +4174,7 @@ class FlowRevision(SmartModel):
     def get_definition_json(self):
 
         definition = json.loads(self.definition)
+        definition['metadata']['revision'] = self.revision
 
         # if it's previous to version 6, wrap the definition to
         # mirror our exports for those versions
