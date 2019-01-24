@@ -5291,8 +5291,9 @@ class EmailAction(Action):
             media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
+            delete_file = False
             if real_media_url and not run.contact.is_test:
-                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' or real_media_url.startswith('http'):
 
                     if settings.AWS_BUCKET_DOMAIN not in real_media_url and not real_media_url.startswith('http'):
                         real_media_url = "https://%s/%s" % (settings.AWS_BUCKET_DOMAIN, media_url)
@@ -5309,6 +5310,7 @@ class EmailAction(Action):
                     file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
                     location = file_storage.save(name=path, content=media_file)
                     media_path = '%s/%s' % (settings.MEDIA_ROOT, location)
+                    delete_file = True
                 else:
                     media_ = settings.MEDIA_URL.replace('/', '')
                     file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
@@ -5319,7 +5321,8 @@ class EmailAction(Action):
 
         if not run.contact.is_test:
             if valid_addresses:
-                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message, attachments))
+                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject,
+                                                                           message, attachments, delete_file))
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
