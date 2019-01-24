@@ -716,7 +716,9 @@ class FlowCRUDL(SmartCRUDL):
             file_extension = path.split('.')[-1]
             if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' and file_extension == 'mp3':
                 s3_uri = "s3://%s/%s" % (settings.AWS_STORAGE_BUCKET_NAME, path)
-                command = ["s3cmd", "modify", "--add-header=content-type:audio/mpeg", "--include", "'.mp3'", s3_uri]
+                command = ["s3cmd", "modify", "--access_key=%s" % settings.AWS_ACCESS_KEY_ID,
+                           "--secret_key=%s" % settings.AWS_SECRET_ACCESS_KEY, "--add-header=content-type:audio/mpeg",
+                           "--include", "'.mp3'", s3_uri]
                 subprocess.call(command)
 
             return JsonResponse(dict(path=path))
