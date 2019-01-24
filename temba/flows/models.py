@@ -5288,7 +5288,7 @@ class EmailAction(Action):
             if real_media_url and not run.contact.is_test:
                 if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
 
-                    if settings.AWS_BUCKET_DOMAIN not in real_media_url:
+                    if settings.AWS_BUCKET_DOMAIN not in real_media_url and not real_media_url.startswith('http'):
                         real_media_url = "https://%s/%s" % (settings.AWS_BUCKET_DOMAIN, media_url)
 
                     media_file = Org.get_temporary_file_from_url(real_media_url)
