@@ -50,7 +50,7 @@ def link_components(request=None, user=None):
     return {'protocol': protocol, 'hostname': hostname}
 
 
-def send_simple_email(recipients, subject, body, from_email=None, attachments=None):
+def send_simple_email(recipients, subject, body, from_email=None, attachments=None, delete_file=False):
     """
     Sends a simple text email to the given recipients
 
@@ -63,10 +63,10 @@ def send_simple_email(recipients, subject, body, from_email=None, attachments=No
 
     recipient_list = [recipients] if isinstance(recipients, six.string_types) else recipients
 
-    send_temba_email(subject, body, None, from_email, recipient_list, attachments=attachments)
+    send_temba_email(subject, body, None, from_email, recipient_list, attachments=attachments, delete_file=delete_file)
 
 
-def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smtp_port, smtp_username, smtp_password, use_tls, attachments=None):
+def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smtp_port, smtp_username, smtp_password, use_tls, attachments=None, delete_file=False):
     """
     Sends a text email to the given recipients using the SMTP configuration
 
@@ -88,7 +88,8 @@ def send_custom_smtp_email(recipients, subject, body, from_email, smtp_host, smt
     connection = get_smtp_connection(None, fail_silently=False, host=smtp_host, port=smtp_port, username=smtp_username,
                                      password=smtp_password, use_tls=use_tls)
 
-    send_temba_email(subject, body, None, from_email, recipient_list, connection=connection, attachments=attachments)
+    send_temba_email(subject, body, None, from_email, recipient_list, connection=connection, attachments=attachments,
+                     delete_file=delete_file)
 
 
 def send_template_email(recipients, subject, template, context, branding):
@@ -116,7 +117,8 @@ def send_template_email(recipients, subject, template, context, branding):
     send_temba_email(subject, text, html, from_email, recipient_list)
 
 
-def send_temba_email(subject, text, html, from_email, recipient_list, connection=None, attachments=None):
+def send_temba_email(subject, text, html, from_email, recipient_list, connection=None, attachments=None,
+                     delete_file=False):
     """
     Actually sends the email. Having this as separate function makes testing multi-part emails easier
     """
@@ -141,3 +143,6 @@ def send_temba_email(subject, text, html, from_email, recipient_list, connection
         print("----------- Skipping sending email, SEND_EMAILS to set False -----------")
         print(text)
         print("------------------------------------------------------------------------")
+
+    if delete_file:
+        os.remove(attachments[0])
