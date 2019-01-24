@@ -5,6 +5,7 @@ import logging
 import regex
 import six
 import traceback
+import subprocess
 
 from collections import Counter
 from random import randint
@@ -710,6 +711,14 @@ class FlowCRUDL(SmartCRUDL):
             generated_uuid = six.text_type(uuid4())
             path = self.save_media_upload(self.request.FILES['file'], self.request.POST.get('actionset'),
                                           generated_uuid)
+
+            # Make sure that mp3 files will have audio/mpeg content-type when using s3 storage
+            file_extension = path.split('.')[-1]
+            if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' and file_extension == 'mp3':
+                s3_uri = "s3://%s/%s" % (settings.AWS_STORAGE_BUCKET_NAME, path)
+                command = ["s3cmd", "modify", "--add-header=content-type:audio/mpeg", "--include", "'.mp3'", s3_uri]
+                subprocess.call(command)
+
             return JsonResponse(dict(path=path))
 
         def save_media_upload(self, file, actionset_id, name_uuid):
