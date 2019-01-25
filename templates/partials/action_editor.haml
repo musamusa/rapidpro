@@ -98,7 +98,7 @@
             %a{href:'javascript:void(0);', ng-click:'removeAttachment(); $event.stopPropagation();'}
               .icon-close
 
-        .icon-button-quick-reply{ng-click: 'addNewQuickReply();', ng-show: '!showAttachOptions && showQuickReplyButton && flow.flow_type in ["F", "S"]'}
+        .icon-button-quick-reply{ng-click: 'addNewQuickReply();', ng-show: '!showAttachOptions && showQuickReplyButton && (flow.flow_type=="F" || flow.flow_type=="S")'}
 
       .quick-reply{ng-show:"!showQuickReplyButton"}
         .modal-quick-reply-header
