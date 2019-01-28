@@ -5279,12 +5279,12 @@ class EmailAction(Action):
                 invalid_addresses.append(address)
 
         attachments = None
+        delete_file = False
         if self.media:
             # localize our media attachment
             media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
-            delete_file = False
             if real_media_url and not run.contact.is_test:
                 if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' or real_media_url.startswith('http'):
 
