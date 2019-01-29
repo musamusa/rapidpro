@@ -3706,7 +3706,7 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            url = 'https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=%s' % settings.FDL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
@@ -3715,7 +3715,8 @@ class RuleSet(models.Model):
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                data = json.dumps({'longUrl': long_url})
+                data = json.dumps({'longDynamicLink': '%s/?link=%s' % (settings.FDL_URL, long_url),
+                                   'suffix': {'option': 'SHORT'}})
 
                 response = requests.post(url, data=data, headers=headers, timeout=10)
 
@@ -3724,7 +3725,7 @@ class RuleSet(models.Model):
                     response_json = response.json()
                     run.update_fields(response_json)
                     if result > 0:
-                        short_url = response_json.get('id')
+                        short_url = response_json.get('shortLink')
                         return rule, short_url
             else:
                 return None, None
@@ -5279,13 +5280,18 @@ class EmailAction(Action):
                 invalid_addresses.append(address)
 
         attachments = None
+        delete_file = False
         if self.media:
             # localize our media attachment
             media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
             (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
 
             if real_media_url and not run.contact.is_test:
-                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' or real_media_url.startswith('http'):
+
+                    if settings.AWS_BUCKET_DOMAIN not in real_media_url and not real_media_url.startswith('http'):
+                        real_media_url = "https://%s/%s" % (settings.AWS_BUCKET_DOMAIN, media_url)
+
                     media_file = Org.get_temporary_file_from_url(real_media_url)
 
                     extension = real_media_url.split('.')[-1]
@@ -5298,6 +5304,7 @@ class EmailAction(Action):
                     file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
                     location = file_storage.save(name=path, content=media_file)
                     media_path = '%s/%s' % (settings.MEDIA_ROOT, location)
+                    delete_file = True
                 else:
                     media_ = settings.MEDIA_URL.replace('/', '')
                     file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
@@ -5308,7 +5315,8 @@ class EmailAction(Action):
 
         if not run.contact.is_test:
             if valid_addresses:
-                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message, attachments))
+                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject,
+                                                                           message, attachments, delete_file))
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
