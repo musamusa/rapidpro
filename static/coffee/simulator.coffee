@@ -89,11 +89,11 @@ window.updateSimulator = (data) ->
       ele_quick_replies += quick_replies
       ele_quick_replies += "</div>"
       ele += ele_quick_replies
-    
-    if media_type and media_viewer_elt
-      ele += media_viewer_elt
 
-    $(".simulator-body").append(ele)
+    if msg.text or quick_replies
+      $(".simulator-body").append(ele)
+    if media_type and media_viewer_elt
+      $(".simulator-body").append(media_viewer_elt)
     i++
   $(".simulator-body").scrollTop $(".simulator-body")[0].scrollHeight
   $("#simulator textarea").val ""
@@ -335,6 +335,9 @@ $('#simulator .gps-button').on 'click', ->
   sendGPS();
 
 $('#simulator .photo-button').on 'click', ->
+  sendPhoto()
+
+$('#simulator .simulator-footer .imessage .send-photo').on 'click', ->
   sendPhoto()
 
 $('#simulator .video-button').on 'click', ->

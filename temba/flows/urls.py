@@ -1,9 +1,10 @@
 from __future__ import unicode_literals
 
 from django.conf.urls import url
-from .views import FlowCRUDL, RuleCRUDL, FlowLabelCRUDL, FlowRunCRUDL, PartialTemplate
+from .views import FlowCRUDL, RuleCRUDL, FlowLabelCRUDL, FlowRunCRUDL, FlowImageCRUDL, PartialTemplate
 
 urlpatterns = FlowCRUDL().as_urlpatterns()
+urlpatterns += FlowImageCRUDL().as_urlpatterns()
 urlpatterns += RuleCRUDL().as_urlpatterns()
 urlpatterns += FlowLabelCRUDL().as_urlpatterns()
 urlpatterns += FlowRunCRUDL().as_urlpatterns()

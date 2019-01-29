@@ -16,7 +16,7 @@ from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
 from django.core.cache import cache
-from django.core.files.storage import default_storage
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.core.files.temp import NamedTemporaryFile
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group
@@ -51,6 +51,7 @@ from temba_expressions.utils import tokenize
 from uuid import uuid4
 
 from simple_salesforce import Salesforce
+from PIL import Image, ExifTags
 
 
 logger = logging.getLogger(__name__)
@@ -871,7 +872,7 @@ class Flow(TembaModel):
             run.update_expiration(timezone.now())
 
         if ruleset.ruleset_type in RuleSet.TYPE_MEDIA and msg.attachments:
-            # store the media path as the value
+            # store the media path as the value if it isn't a "wait for a photo" in a message flow
             value = msg.attachments[0].split(':', 1)[1]
 
         step.save_rule_match(rule, value)
@@ -2704,6 +2705,44 @@ class Flow(TembaModel):
         ordering = ('-modified_on',)
 
 
+class FlowImage(TembaModel):
+    uuid = models.UUIDField(unique=True, default=uuid4)
+
+    org = models.ForeignKey(Org, related_name='flow_images', db_index=False)
+
+    flow = models.ForeignKey(Flow, related_name='flow_images')
+
+    contact = models.ForeignKey(Contact, related_name='flow_images')
+
+    name = models.CharField(help_text='Image name', max_length=255)
+
+    path = models.CharField(help_text='Image URL', max_length=255)
+
+    exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
+
+    def get_exif(self):
+        return json.loads(self.exif) if self.exif else dict()
+
+    def get_url(self):
+        if settings.AWS_BUCKET_DOMAIN in self.path:
+            return self.path
+
+        protocol = 'https' if settings.IS_PROD else 'http'
+        image_url = '%s://%s/%s' % (protocol, settings.AWS_BUCKET_DOMAIN, self.path)
+        return image_url
+
+    def get_full_path(self):
+        return '%s/%s' % (settings.MEDIA_ROOT, self.path)
+
+    def get_permalink(self):
+        protocol = 'https' if settings.IS_PROD else 'http'
+        return '%s://%s%s' % (protocol, settings.HOSTNAME, reverse('flows.flowimage_read', args=[self.uuid]))
+
+    def set_deleted(self):
+        self.is_active = False
+        self.save(update_fields=('is_active'))
+
+
 class FlowRun(models.Model):
     STATE_ACTIVE = 'A'
 
@@ -3671,8 +3710,7 @@ class RuleSet(models.Model):
                         return rule, value
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            resthook = None
-            url = 'https://www.googleapis.com/urlshortener/v1/url?key=%s' % settings.GOOGLE_SHORTEN_URL_API_KEY
+            url = 'https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=%s' % settings.FDL_API_KEY
             headers = {'Content-Type': 'application/json'}
 
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
@@ -3681,7 +3719,8 @@ class RuleSet(models.Model):
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                data = json.dumps({'longUrl': long_url})
+                data = json.dumps({'longDynamicLink': '%s/?link=%s' % (settings.FDL_URL, long_url),
+                                   'suffix': {'option': 'SHORT'}})
 
                 response = requests.post(url, data=data, headers=headers, timeout=10)
 
@@ -3690,7 +3729,7 @@ class RuleSet(models.Model):
                     response_json = response.json()
                     run.update_fields(response_json)
                     if result > 0:
-                        short_url = response_json.get('id')
+                        short_url = response_json.get('shortLink')
                         return rule, short_url
             else:
                 return None, None
@@ -5194,8 +5233,9 @@ class EmailAction(Action):
     EMAILS = 'emails'
     SUBJECT = 'subject'
     MESSAGE = 'msg'
+    MEDIA = 'media'
 
-    def __init__(self, uuid, emails, subject, message):
+    def __init__(self, uuid, emails, subject, message, media=None):
         super(EmailAction, self).__init__(uuid)
 
         if not emails:
@@ -5204,16 +5244,19 @@ class EmailAction(Action):
         self.emails = emails
         self.subject = subject
         self.message = message
+        self.media = media if media else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
         emails = json_obj.get(EmailAction.EMAILS)
         message = json_obj.get(EmailAction.MESSAGE)
         subject = json_obj.get(EmailAction.SUBJECT)
-        return cls(json_obj.get(cls.UUID), emails, subject, message)
+        media = json_obj.get(EmailAction.MEDIA, None)
+        return cls(json_obj.get(cls.UUID), emails, subject, message, media)
 
     def as_json(self):
-        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message)
+        return dict(type=self.TYPE, uuid=self.uuid, emails=self.emails, subject=self.subject, msg=self.message,
+                    media=self.media)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         from .tasks import send_email_action_task
@@ -5241,13 +5284,48 @@ class EmailAction(Action):
             else:
                 invalid_addresses.append(address)
 
+        attachments = None
+        delete_file = False
+        if self.media:
+            # localize our media attachment
+            media_type, media_url = run.flow.get_localized_text(self.media, run.contact).split(':', 1)
+            (real_media_url, errors) = Msg.evaluate_template(media_url, context, org=run.flow.org)
+
+            if real_media_url and not run.contact.is_test:
+                if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' or real_media_url.startswith('http'):
+
+                    if settings.AWS_BUCKET_DOMAIN not in real_media_url and not real_media_url.startswith('http'):
+                        real_media_url = "https://%s/%s" % (settings.AWS_BUCKET_DOMAIN, media_url)
+
+                    media_file = Org.get_temporary_file_from_url(real_media_url)
+
+                    extension = real_media_url.split('.')[-1]
+
+                    random_file = str(uuid4())
+                    random_dir = random_file[0:4]
+                    filename = '%s/%s.%s' % (random_dir, random_file, extension)
+
+                    path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, run.flow.org.id, filename)
+                    file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                    location = file_storage.save(name=path, content=media_file)
+                    media_path = '%s/%s' % (settings.MEDIA_ROOT, location)
+                    delete_file = True
+                else:
+                    media_ = settings.MEDIA_URL.replace('/', '')
+                    file_path = '/{path}'.format(path=real_media_url) if 'attachments' in real_media_url else \
+                        real_media_url.split(media_, 1)[1]
+                    media_path = '%s%s' % (settings.MEDIA_ROOT, file_path)
+
+                attachments = [media_path]
+
         if not run.contact.is_test:
             if valid_addresses:
-                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject, message))
+                on_transaction_commit(lambda: send_email_action_task.delay(run.flow.org.id, valid_addresses, subject,
+                                                                           message, attachments, delete_file))
         else:
             if valid_addresses:
                 valid_addresses = ['"%s"' % elt for elt in valid_addresses]
-                ActionLog.info(run, _("\"%s\" would be sent to %s") % (message, ", ".join(valid_addresses)))
+                ActionLog.info(run, _("\"%s\"%s would be sent to %s") % (message, " with an attachment" if self.media else "", ", ".join(valid_addresses)))
             if invalid_addresses:
                 invalid_addresses = ['"%s"' % elt for elt in invalid_addresses]
                 ActionLog.warn(run, _("Some email address appear to be invalid: %s") % ", ".join(invalid_addresses))
@@ -6507,6 +6585,7 @@ class Test(object):
                 NumberTest.TYPE: NumberTest,
                 OrTest.TYPE: OrTest,
                 PhoneTest.TYPE: PhoneTest,
+                PhotoTest.TYPE: PhotoTest,
                 RegexTest.TYPE: RegexTest,
                 StartsWithTest.TYPE: StartsWithTest,
                 SubflowTest.TYPE: SubflowTest,
@@ -6539,6 +6618,66 @@ class Test(object):
         side effects.
         """
         raise FlowException("Subclasses must implement evaluate, returning a tuple containing 1 or 0 and the value tested")
+
+
+class PhotoTest(Test):
+    """
+    Test for whether a response contains a photo
+    """
+    TYPE = 'image'
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def from_json(cls, org, json):
+        return cls()
+
+    def as_json(self):  # pragma: needs cover
+        return dict(type=self.TYPE)
+
+    def evaluate(self, run, sms, context, text):
+        image_url = None
+        is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
+        org = run.flow.org
+
+        if is_image and not run.contact.is_test:
+            text_split = sms.attachments[0].split(':', 1)
+            image = text_split[1]
+            is_image = 1 if 'image' in text_split[0] else 0
+
+            if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                media_path = image
+                image = Org.get_temporary_file_from_url(media_url=image)
+                image_path = image.file.name
+            else:
+                media_path = image.split('media', 1)[1]
+                image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
+                media_path = media_path.replace('/', '', 1)
+
+            try:
+                img = Image.open(image_path)
+                exif_data = img._getexif()
+            except Exception:
+                exif_data = {}
+
+            exif = {
+                ExifTags.TAGS[k]: v
+                for k, v in exif_data.items()
+                if k in ExifTags.TAGS
+            } if exif_data else {}
+
+            file_name = media_path.split('/', -1)[-1]
+
+            image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
+                              name=file_name, created_by=run.flow.created_by, modified_by=run.flow.created_by)
+            flow_image = FlowImage.objects.create(**image_args)
+            image_url = flow_image.get_url()
+        elif is_image:
+            text_split = sms.attachments[0].split(':', 1)
+            image_url = text_split[1]
+
+        return is_image, image_url
 
 
 class WebhookStatusTest(Test):

@@ -5,6 +5,7 @@ import logging
 import regex
 import six
 import traceback
+import subprocess
 
 from collections import Counter
 from random import randint
@@ -33,7 +34,7 @@ from temba.ivr.models import IVRCall
 from temba.ussd.models import USSDSession
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.reports.models import Report
-from temba.flows.models import Flow, FlowRun, FlowRevision, FlowRunCount
+from temba.flows.models import Flow, FlowRun, FlowRevision, FlowRunCount, FlowImage
 from temba.flows.tasks import export_flow_results_task
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, PENDING
@@ -374,6 +375,20 @@ class FlowRunCRUDL(SmartCRUDL):
             return HttpResponse()
 
 
+class FlowImageCRUDL(SmartCRUDL):
+    actions = ('read',)
+
+    model = FlowImage
+
+    class Read(OrgObjPermsMixin, SmartReadView):
+        slug_url_kwarg = 'uuid'
+
+        def get(self, request, *args, **kwargs):
+            flow_image = self.get_object()
+            with open(flow_image.get_full_path(), 'r') as image:
+                return HttpResponse(image.read(), content_type='image/png')
+
+
 class FlowCRUDL(SmartCRUDL):
     actions = ('list', 'archived', 'copy', 'create', 'delete', 'update', 'simulate', 'export_results',
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
@@ -696,6 +711,16 @@ class FlowCRUDL(SmartCRUDL):
             generated_uuid = six.text_type(uuid4())
             path = self.save_media_upload(self.request.FILES['file'], self.request.POST.get('actionset'),
                                           generated_uuid)
+
+            # Make sure that mp3 files will have audio/mpeg content-type when using s3 storage
+            file_extension = path.split('.')[-1]
+            if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' and file_extension == 'mp3':
+                s3_uri = "s3://%s/%s" % (settings.AWS_STORAGE_BUCKET_NAME, path)
+                command = ["s3cmd", "modify", "--access_key=%s" % settings.AWS_ACCESS_KEY_ID,
+                           "--secret_key=%s" % settings.AWS_SECRET_ACCESS_KEY, "--add-header=content-type:audio/mpeg",
+                           "--include", "'.mp3'", s3_uri]
+                subprocess.call(command)
+
             return JsonResponse(dict(path=path))
 
         def save_media_upload(self, file, actionset_id, name_uuid):
@@ -1518,7 +1543,9 @@ class FlowCRUDL(SmartCRUDL):
             new_message = json_dict.get('new_message', '')
             media = None
 
-            media_url = 'http://%s%simages' % (user.get_org().get_brand_domain(), settings.STATIC_URL)
+            protocol = 'http' if settings.DEBUG else 'https'
+
+            media_url = '%s://%s%simages' % (protocol, user.get_org().get_brand_domain(), settings.STATIC_URL)
 
             if 'new_photo' in json_dict:  # pragma: needs cover
                 media = '%s/png:%s/simulator_photo.png' % (Msg.MEDIA_IMAGE, media_url)

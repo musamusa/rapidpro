@@ -192,7 +192,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
 
     file = $files[0]
     if not file.type
-      return
+      file.type = 'application/' + file.name.split('.').pop()
 
     # check for valid voice prompts
     if action.type == 'say' and file.type != 'audio/wav' and file.type != 'audio/x-wav'
@@ -212,6 +212,10 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
         showDialog('Invalid Format', 'Audio attachments must be encoded as mp3 files.')
         return
 
+    if action.type == 'email' and file.name.split('.').pop().toLowerCase() in ['ade', 'adp', 'apk', 'bat', 'chm', 'cmd', 'com', 'cpl', 'dll', 'dmg', 'exe', 'hta', 'ins', 'isp', 'jar', 'js', 'jse', 'lib', 'lnk', 'mde', 'msc', 'msi', 'msp', 'mst', 'nshpif', 'scr', 'sct', 'shb', 'sys', 'vb', 'vbe', 'vbs', 'vxd', 'wsc', 'wsf', 'wsh', 'cab']
+      showDialog('Invalid Format', 'This file type is not supported for security reasons. If you still wish to send, please convert this file to an allowable type.')
+      return
+
     if (!String.prototype.endsWith)
       String.prototype.endsWith = (searchString, position) ->
           subjectString = this.toString()
@@ -221,8 +225,12 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           lastIndex = subjectString.indexOf(searchString, position)
           return lastIndex != -1 && lastIndex == position
 
-    if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.endsWith('.jpg') and file.size > 500000))
+    if action.type in ['reply', 'send'] and (file.size > 20000000 or (file.name.toLowerCase().endsWith('.jpg') and file.size > 500000))
       showDialog('File Size Exceeded', "The file size should be less than 500kB for images and less than 20MB for audio and video files. Please choose another file and try again.")
+      return
+
+    if action.type == 'email' and (file.size > 25000000 or ((file.name.toLowerCase().endsWith('.jpg') or file.name.toLowerCase().endsWith('.png') or file.name.toLowerCase().endsWith('.gif') or file.name.toLowerCase().endsWith('.jpeg')) and file.size > 5000000))
+      showDialog('File Size Exceeded', "The file size should be less than 5MB for images and less than 25MB for others files. Please choose another file and try again.")
       return
 
     # if we have a recording already, confirm they want to replace it
@@ -235,7 +243,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
       return
 
     # if we have an attachment already, confirm they want to replace it
-    if action.type in ['reply', 'send'] and action._media
+    if action.type in ['reply', 'send', 'email'] and action._media
       modal = showDialog('Overwrite Attachment', 'This step already has an attachment, would you like to replace this attachment with ' + file.name + '?', 'Overwrite Attachemnt', false)
       modal.result.then (value) ->
         if value == 'ok'
@@ -252,7 +260,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
     if action.type == 'say'
       uploadURL = window.uploadURL
 
-    if action.type in ['reply', 'send']
+    if action.type in ['reply', 'send', 'email']
       uploadURL = window.uploadMediaURL
 
     if not uploadURL
@@ -273,7 +281,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
           action.recording = {}
         action.recording[Flow.language.iso_code] = data['path']
 
-      if action.type in ['reply', 'send']
+      if action.type in ['reply', 'send', 'email']
         if not action.media
           action.media = {}
         action.media[Flow.language.iso_code] = file.type + ':' + data['path']
@@ -1228,6 +1236,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
         else
           $scope.action.msg = ''
 
+    $scope.action.type = config.type
+
   $scope.showFlip = ->
     return actionset.actions.length < 2
 
@@ -1936,6 +1946,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       action: -> action
       type: -> "attachment-viewer"
 
+    if action._media.type not in ['image', 'video', 'audio']
+      win = window.open(action._media.url, '_blank');
+      win.focus();
+      return
+
     $scope.dialog = utils.openModal("/partials/attachment_viewer", AttachmentViewerController , resolveObj)
 
   $scope.onFileSelect = ($files, actionset, action) ->
@@ -2285,10 +2300,28 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
 
-  $scope.saveEmail = (addresses) ->
+  $scope.saveEmail = (addresses, hasAttachURL=false) ->
 
-    if $scope.hasInvalidFields([$scope.action.subject, $scope.action.msg])
+    inputs = [$scope.action.subject, $scope.action.msg]
+    if hasAttachURL
+      inputs.push($scope.action._attachURL)
+    if $scope.hasInvalidFields(inputs)
       return
+
+    if hasAttachURL and $scope.action._attachURL
+      if not $scope.action.media
+        $scope.action.media = {}
+
+      $scope.action.media[$scope.base_language] = $scope.action._attachType + ':' + $scope.action._attachURL
+
+      # make sure our localizations all have the same type
+      for key in Object.keys($scope.action.media)
+        if key != $scope.base_language
+          translation = $scope.action.media[key]
+          $scope.action.media[key] = $scope.action._attachType + ':' + translation.split(':')[1]
+
+    else if not $scope.action._media
+      $scope.action.media = null
 
     to = []
     for address in addresses

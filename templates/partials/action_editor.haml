@@ -51,6 +51,13 @@
     -webkit-transition: none;
   }
 
+  textarea#email-text {
+    height: 50px;
+  }
+
+  #attach-email {
+    margin-top: 2px;
+  }
 
 .modal-header.title
   %span{ng-model:"config",data-icon:"show",class:"modal-title action-name"}><
@@ -232,8 +239,41 @@
       %input{ng-model:"action.subject",name:"subject",auto-complete:"",flow:"[[flowId]]",ng-required:"true",type:"text"}
       .label
         -trans "Message"
-      %textarea{ng-model:"action.msg",auto-complete:"",flow:"[[flowId]]",name:"body",ng-required:"true"}
-      %button{ng-click:"saveEmail(action_editor.to.selected)",class:"submit hide"}
+      %textarea{ng-model:"action.msg",auto-complete:"",flow:"[[flowId]]",name:"body",ng-required:"true",id:"email-text"}
+      .media{ng-hide:'action.uploading',id:"attach-email"}
+        .attachments{ng-class: '{active:showAttachOptions}', ng-show: '!action._media'}
+          .attach-button{ng-show:'!showAttachOptions'}
+            .icon-attachment.add-attachment{ng-click:'showAttachOptions = !showAttachOptions; showAttachVariable=false' }
+
+          %span.attach-options{ng-show: 'showAttachOptions && !showAttachVariable'}
+            .attach-option.btn.btn-tiny{ng-file-select:'onFileSelect($files, actionset, action);', ng-click:'$event.stopPropagation();'}
+              Attach File
+            .attach-option.btn.btn-tiny{ng-click:'showAttachVariable = true'}
+              Attach URL
+
+            .icon.icon-close{ng-click:"showAttachOptions = false; showAttachVariable = false"}
+
+          .attach-variable{ng-show:'showAttachVariable'}
+            %span.attach-type
+              %select.select2{ng-model:"action._attachType"}
+                %option{value:"image"}
+                  Image
+                %option{value:"audio"}
+                  Audio
+                %option{value:"video"}
+                  Video
+            %span.attach-url
+              %input{ng-model:"action._attachURL", name:"url", type:'text', auto-complete:"", placeholder: '@extra.attachment_url', ng-required:"showAttachVariable"}
+            .icon.icon-close{ng-click:"showAttachOptions = false; showAttachVariable = false"}
+
+        .tag-button{ng-show:'action._media', ng-click:'clickShowActionMedia(action); $event.stopPropagation();'}
+          .viewer-button{ng-class:'{"icon-videocam": action._media.type == "video", "icon-photo": action._media.type=="image", "icon-arrow-right-8": action._media.type=="audio"}'}
+          .summary
+            [[action._media.type]] attachment
+          .remove
+            %a{href:'javascript:void(0);', ng-click:'removeAttachment(); $event.stopPropagation();'}
+              .icon-close
+      %button{ng-click:"saveEmail(action_editor.to.selected, showAttachVariable)",class:"submit hide"}
         -trans "Ok"
 
     %div{ng-if:'config.type == "trigger-flow"'}
