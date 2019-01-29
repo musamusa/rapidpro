@@ -25,7 +25,9 @@
 
       .imessage
         %textarea
-        %span.send-message{style:"padding-left:2px"} Send
+        %span.send-message{title:"Send Text",style:"padding-left:2px;padding-right:4px;"} Send
+        %span.send-photo{title:"Send Photo",style:"padding-left:5px;border-left:1px solid #CCC;"}
+          %i.icon-photo{style:"font-size:16px"}
     .simulator-actions
       .simulator-refresh.icon-loop
 
@@ -41,4 +43,14 @@
   .media-button .btn {
     padding: 2px 12px;
     margin-top: 3px;
+  }
+
+  span.media-file {
+    width: 100%;
+    display: block;
+    text-align: center;
+  }
+
+  span.media-file img {
+    width: 90%;
   }

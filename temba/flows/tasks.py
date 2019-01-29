@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 @task(track_started=True, name='send_email_action_task')
-def send_email_action_task(org_id, recipients, subject, message):
+def send_email_action_task(org_id, recipients, subject, message, attachments=None, delete_file=False):
     org = Org.objects.filter(pk=org_id, is_active=True).first()
     if org:
-        org.email_action_send(recipients, subject, message)
+        org.email_action_send(recipients, subject, message, attachments, delete_file)
 
 
 @task(track_started=True, name='update_run_expirations_task')  # pragma: no cover

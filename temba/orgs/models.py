@@ -8,12 +8,14 @@ import mimetypes
 import os
 import pycountry
 import random
+import subprocess
 
 import re
 import regex
 import six
 import stripe
 import traceback
+import time
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -33,7 +35,7 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.text import slugify
 from django_redis import get_redis_connection
 from enum import Enum
-from requests import Session
+from requests import Session, get as request_get
 from smartmin.models import SmartModel
 from temba.bundles import get_brand_bundles, get_bundle_map
 from temba.locations.models import AdminBoundary, BoundaryAlias
@@ -867,7 +869,7 @@ class Org(SmartModel):
         else:
             return False
 
-    def email_action_send(self, recipients, subject, body):
+    def email_action_send(self, recipients, subject, body, attachments=None, delete_file=False):
         if self.has_smtp_config():
             config = self.config_json()
             smtp_from_email = config.get(SMTP_FROM_EMAIL, None)
@@ -879,9 +881,10 @@ class Org(SmartModel):
 
             send_custom_smtp_email(recipients, subject, body, smtp_from_email,
                                    smtp_host, smtp_port, smtp_username, smtp_password,
-                                   use_tls)
+                                   use_tls, attachments, delete_file)
         else:
-            send_simple_email(recipients, subject, body, from_email=settings.FLOW_FROM_EMAIL)
+            send_simple_email(recipients, subject, body, from_email=settings.FLOW_FROM_EMAIL, attachments=attachments,
+                              delete_file=delete_file)
 
     def has_airtime_transfers(self):
         from temba.airtime.models import AirtimeTransfer
@@ -2063,7 +2066,41 @@ class Org(SmartModel):
 
         return self.save_media(File(temp), extension)
 
-    def save_response_media(self, response):
+    def download_media(self, media_url, extension=None):
+        """
+        Fetches the media and stores it
+        :param media_url: the url where the media lives
+        :param extension: the extension of the file, could be None
+        :return: the url for our downloaded media with full content type prefix
+        """
+        response = None
+        attempts = 0
+        while attempts < 4:
+            response = request_get(media_url, stream=True)
+
+            # in some cases Facebook isn't ready for us to fetch the media URL yet, if we get a 404
+            # sleep for a bit then try again up to 4 times
+            if response.status_code == 200:
+                break
+            else:
+                attempts += 1
+                time.sleep(.250)
+
+        if not extension:
+            try:
+                split_media = media_url.split('?')[0]
+                extension = split_media.split('.')[-1]
+            except Exception:
+                extension = None
+
+        content_type, downloaded = self.save_response_media(response, extension_from_url=extension)
+
+        if content_type:
+            return '%s:%s' % (content_type, downloaded)
+
+        return None  # pragma: needs cover
+
+    def save_response_media(self, response, extension_from_url=None):
         disposition = response.headers.get('Content-Disposition', None)
         content_type = response.headers.get('Content-Type', None)
 
@@ -2071,21 +2108,29 @@ class Org(SmartModel):
 
         if content_type:
             extension = None
-            if disposition == 'inline':
-                extension = mimetypes.guess_extension(content_type)
-                extension = extension.strip('.')
-            elif disposition:
-                filename = re.findall("filename=\"(.+)\"", disposition)[0]
-                extension = filename.rpartition('.')[2]
-            elif content_type == 'audio/x-wav':
-                extension = 'wav'
+            if not extension_from_url:
+                if disposition == 'inline':
+                    extension = mimetypes.guess_extension(content_type)
+                    extension = extension.strip('.')
+                elif disposition:
+                    filename = re.findall('filename="?(.+)"?', disposition)[0]
+                    filename = filename.strip().replace('"', '').replace("'", "")
+                    extension = filename.rpartition('.')[-1]
+                elif content_type == 'audio/x-wav':
+                    extension = 'wav'
 
             temp = NamedTemporaryFile(delete=True)
             temp.write(response.content)
             temp.flush()
 
+            file = File(temp)
+            command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
+                           "-define deskew:auto-crop=true {destination}".format(source=file.file.name,
+                                                                                destination=file.file.name)
+            subprocess.call(command_line.split(' '))
+
             # save our file off
-            downloaded = self.save_media(File(temp), extension)
+            downloaded = self.save_media(file, extension or extension_from_url)
 
         return content_type, downloaded
 
@@ -2095,6 +2140,9 @@ class Org(SmartModel):
         """
         random_file = str(uuid4())
         random_dir = random_file[0:4]
+
+        if extension in ['png', 'jpeg', 'gif']:
+            extension = 'jpg'
 
         filename = '%s/%s' % (random_dir, random_file)
         if extension:
@@ -2109,6 +2157,29 @@ class Org(SmartModel):
             scheme = 'http'
 
         return "%s://%s/%s" % (scheme, settings.AWS_BUCKET_DOMAIN, location)
+
+    @classmethod
+    def get_temporary_file_from_url(cls, media_url):
+        response = None
+        attempts = 0
+        while attempts < 4:
+            response = request_get(media_url, stream=True)
+
+            # in some cases Facebook isn't ready for us to fetch the media URL yet, if we get a 404
+            # sleep for a bit then try again up to 4 times
+            if response.status_code == 200:
+                break
+            else:
+                attempts += 1
+                time.sleep(.250)
+
+        if not response:
+            return response
+
+        temp = NamedTemporaryFile(delete=True)
+        temp.write(response.content)
+        temp.flush()
+        return File(temp)
 
     @classmethod
     def create_user(cls, email, password):

@@ -44,7 +44,7 @@
                 
 
                 - else 
-                  - if task.status == "SUCCESS" and group.contacts.all
+                  - if task.status == "SUCCESS"
                     - if results.creates
                       .import-result
                         .glyph.icon-checkmark.success
@@ -67,6 +67,32 @@
                         Added all contacts to the new
                       %a{href:"{% url 'contacts.contact_filter' group.uuid %}"}= group.name
                       group
+
+                     - if results.blocked
+                      %br
+                      %br
+                      .well.well-small
+                        %strong
+                          -blocktrans with results.blocked_count as blocked_count
+                            You have {{ blocked_count }} contact(s) in this import that are currently blocked. Do you want to unblock them?
+
+                          %form.smartmin-form.horizontal-form{method:"post", action:"{% url 'contacts.contact_import' %}?task={{ task.id }}"}
+                            -csrf_token
+                            %input{type: "hidden", value: "1", name: "unblock"}
+                            .form-buttons.text-center
+                              %input.btn.btn-primary{type:"submit", value:'{% trans "Yes" %}'}
+                              %a.btn.btn-secondary{ href:"{% url 'contacts.contact_list'%}"}
+                                -trans "No"
+                        %br
+                          - for error_message in results.error_messages
+                            Row {{ error_message.line }}: {{ error_message.error }}
+                            %br
+
+                    - if show_unblock_message
+                      .import-result
+                        .glyph.icon-checkmark.success
+                        -blocktrans with results.blocked_count as blocked_count
+                          Contacts unblocked {{ blocked_count }}
 
                     - if results.errors
                       .import-result
@@ -102,12 +128,7 @@
                             Row {{ error_message.line }}: {{ error_message.error }}
                             %br
 
-                  - elif task.status == "SUCCESS" and not group.contacts.all
-                    %p
-                      Grouping..
-                      %img{src:"{{ STATIC_URL }}images/loader-circles.gif"}
-
-                  - elif not group.contacts.all
+                  - else
                     %p
                       -blocktrans
                         No contacts imported, please make sure your have a channel connected.

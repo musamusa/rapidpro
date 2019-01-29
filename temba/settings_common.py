@@ -477,6 +477,8 @@ PERMISSIONS = {
                    'giftcards_api',
                    ),
 
+    'flows.flowimage': ('read',),
+
     'flows.ruleset': ('analytics',
                       'choropleth',
                       'map',
@@ -688,6 +690,8 @@ GROUP_PERMISSIONS = {
         'flows.ruleset.*',
         'flows.flowrun_delete',
 
+        'flows.flowimage.*',
+
         'schedules.schedule.*',
 
         'msgs.broadcast.*',
@@ -808,6 +812,8 @@ GROUP_PERMISSIONS = {
         'flows.flowstart_api',
         'flows.flowlabel.*',
         'flows.ruleset.*',
+
+        'flows.flowimage.*',
 
         'schedules.schedule.*',
 
@@ -1282,7 +1288,8 @@ CHATBASE_API_URL = 'https://chatbase.com/api/message'
 # To allow manage fields to support up to 1000 fields
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 4000
 
-GOOGLE_SHORTEN_URL_API_KEY = '__YOUR_GOOGLE_SHORTEN_URL_API_KEY__'
+FDL_API_KEY = '__YOUR_FDL_API_KEY__'
+FDL_URL = '__YOUR_FDL_URL__'
 
 SALESFORCE_CONSUMER_KEY = '__SALESFORCE_CONSUMER_KEY__'
 SALESFORCE_CONSUMER_SECRET = '__SALESFORCE_CONSUMER_SECRET__'
