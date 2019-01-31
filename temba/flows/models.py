@@ -3478,6 +3478,7 @@ class FlowStep(models.Model):
 @six.python_2_unicode_compatible
 class RuleSet(models.Model):
     TYPE_WAIT_MESSAGE = 'wait_message'
+    TYPE_ALL_THAT_APPLY = 'wait_all_that_apply'
 
     # Ussd
     TYPE_WAIT_USSD_MENU = 'wait_menu'
@@ -3517,7 +3518,8 @@ class RuleSet(models.Model):
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
 
     TYPE_WAIT = (TYPE_WAIT_MESSAGE, TYPE_WAIT_RECORDING, TYPE_WAIT_DIGIT, TYPE_WAIT_DIGITS, TYPE_WAIT_USSD_MENU,
-                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS)
+                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS,
+                 TYPE_ALL_THAT_APPLY)
 
     TYPE_USSD = (TYPE_WAIT_USSD_MENU, TYPE_WAIT_USSD)
 
@@ -3527,6 +3529,7 @@ class RuleSet(models.Model):
                     (TYPE_WAIT_RECORDING, "Wait for recording"),
                     (TYPE_WAIT_DIGIT, "Wait for digit"),
                     (TYPE_WAIT_DIGITS, "Wait for digits"),
+                    (TYPE_ALL_THAT_APPLY, "Wait for all that apply"),
                     (TYPE_SUBFLOW, "Subflow"),
                     (TYPE_WEBHOOK, "Webhook"),
                     (TYPE_RESTHOOK, "Resthook"),
@@ -5765,14 +5768,21 @@ class ReplyAction(Action):
     MEDIA = 'media'
     SEND_ALL = 'send_all'
     QUICK_REPLIES = 'quick_replies'
+    APPLY_OPTIONS = 'apply_options'
+    APPLY_TRUE = 'apply_true'
+    APPLY_FALSE = 'apply_false'
 
-    def __init__(self, uuid, msg=None, media=None, quick_replies=None, send_all=False):
+    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, apply_true=None,
+                 apply_false=None, send_all=False):
         super(ReplyAction, self).__init__(uuid)
 
         self.msg = msg
         self.media = media if media else {}
         self.send_all = send_all
         self.quick_replies = quick_replies if quick_replies else []
+        self.apply_options = apply_options if apply_options else []
+        self.apply_true = apply_true
+        self.apply_false = apply_false
 
     @classmethod
     def from_json(cls, org, json_obj):
@@ -5788,10 +5798,13 @@ class ReplyAction(Action):
             raise FlowException("Invalid reply action, no message")
 
         return cls(json_obj.get(cls.UUID), msg=json_obj.get(cls.MESSAGE), media=json_obj.get(cls.MEDIA, None),
-                   quick_replies=json_obj.get(cls.QUICK_REPLIES), send_all=json_obj.get(cls.SEND_ALL, False))
+                   quick_replies=json_obj.get(cls.QUICK_REPLIES), apply_options=json_obj.get(cls.APPLY_OPTIONS),
+                   apply_true=json_obj.get(cls.APPLY_TRUE), apply_false=json_obj.get(cls.APPLY_FALSE),
+                   send_all=json_obj.get(cls.SEND_ALL, False))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, media=self.media, quick_replies=self.quick_replies,
+                    apply_options=self.apply_options, apply_true=self.apply_true, apply_false=self.apply_false,
                     send_all=self.send_all)
 
     @staticmethod

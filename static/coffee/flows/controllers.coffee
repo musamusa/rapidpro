@@ -751,6 +751,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
             from: action.msg[Flow.flow.base_language],
             to: action.msg[Flow.language.iso_code],
             fromQuickReplies: action.quick_replies || []
+            fromApplyOptions: action.apply_options || []
           }
         ]
 
@@ -791,6 +792,9 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
 
             if translation.fromQuickReplies? && translation.fromQuickReplies != []
               action.quick_replies = translation.fromQuickReplies
+
+            if translation.fromApplyOptions? && translation.fromApplyOptions != []
+              action.apply_options = translation.fromApplyOptions
             
             if translation.name == "Attachment"
               results = action.media
@@ -1986,6 +1990,14 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.quickReplies = $scope.action.quick_replies
     $scope.showQuickReplyButton = false
 
+  if $scope.options.dragSource? or !($scope.action.apply_options? and $scope.action.apply_options != undefined and $scope.action.apply_options.length > 0)
+    $scope.allThatApplies = []
+    $scope.action.apply_options = []
+    $scope.showAllThatApplyButton = true
+  else
+    $scope.allThatApplies = $scope.action.apply_options
+    $scope.showAllThatApplyButton = false
+
   if $scope.action.webhook_headers
     item_counter = 0
     for item in $scope.action.webhook_headers
@@ -2043,6 +2055,19 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     if $scope.quickReplies.length == 0
       $scope.showQuickReplyButton = true
       $scope.action.quick_replies = []
+
+  $scope.addNewAllThatApplyOption = ->
+    $scope.showAllThatApplyButton = false
+    addOption = {}
+    addOption[$scope.base_language] = ''
+    $scope.allThatApplies.push(addOption)
+
+  $scope.removeAllThatApplyOption = (index) ->
+    $scope.allThatApplies.splice(index, 1)
+
+    if $scope.allThatApplies.length == 0
+      $scope.showAllThatApplyButton = true
+      $scope.action.apply_options = []
 
   $scope.addNewActionSalesforceField = () ->
     if !$scope.action.salesforce_fields
@@ -2143,6 +2168,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       $scope.action.quick_replies = $scope.quickReplies
     else
       $scope.action.quick_replies = []
+
+    if $scope.allThatApplies.length > 0
+      $scope.action.apply_options = $scope.allThatApplies
+    else
+      $scope.action.apply_options = []
 
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
