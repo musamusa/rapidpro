@@ -5770,17 +5770,14 @@ class ReplyAction(Action):
     QUICK_REPLIES = 'quick_replies'
     APPLY_OPTIONS = 'apply_options'
 
-    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, apply_true=None,
-                 apply_false=None, send_all=False):
+    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, send_all=False):
         super(ReplyAction, self).__init__(uuid)
 
         self.msg = msg
         self.media = media if media else {}
         self.send_all = send_all
         self.quick_replies = quick_replies if quick_replies else []
-        self.apply_options = apply_options if apply_options else []
-        self.apply_true = apply_true
-        self.apply_false = apply_false
+        self.apply_options = apply_options if apply_options else {}
 
     @classmethod
     def from_json(cls, org, json_obj):

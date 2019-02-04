@@ -1998,12 +1998,14 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.quickReplies = $scope.action.quick_replies
     $scope.showQuickReplyButton = false
 
-  if $scope.options.dragSource? or !($scope.action.apply_options.options? and $scope.action.apply_options.options != undefined and $scope.action.apply_options.options.length > 0)
-    $scope.allThatApplies = []
-    $scope.action.apply_options = {}
+  if !$scope.action.apply_options?
+    $scope.action['apply_options'] = {}
     $scope.action.apply_options['options'] = []
     $scope.action.apply_options['option_true'] = {}
     $scope.action.apply_options['option_false'] = {}
+
+  if $scope.options.dragSource? or !($scope.action.apply_options.options? and $scope.action.apply_options.options != undefined and $scope.action.apply_options.options.length > 0)
+    $scope.allThatApplies = []
     $scope.allThatApplyTrue = {}
     $scope.allThatApplyFalse = {}
     $scope.allThatApplyTrue[Flow.flow.base_language] = "Yes"
