@@ -59,6 +59,26 @@
     margin-top: 2px;
   }
 
+  .all-that-apply-true {
+    width: 49%;
+    float: left;
+  }
+
+  .all-that-apply-false {
+    width: 49%;
+    float: right;
+  }
+
+  .all-that-apply-true label, .all-that-apply-false label {
+    font-size: 14px !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  input[name='apply-true'], input[name='apply-false'] {
+    width: 100% !important;
+    margin: 5px 0 2px 0 !important;
+  }
+
 .modal-header.title
   %span{ng-model:"config",data-icon:"show",class:"modal-title action-name"}><
 .modal-body
@@ -126,8 +146,6 @@
         .modal-all-that-apply-header
           .all-that-apply-title
             -trans "Select all that apply"
-          .all-that-apply-title
-            -trans "Main options"
 
         .modal-all-that-apply{ng-repeat:"option in allThatApplies", class:""}
           .all-that-apply-title
@@ -138,11 +156,14 @@
           -trans "Add option"
 
         .all-that-apply-title
-          -trans "Selection text"
           .modal-all-that-apply
             .all-that-apply-true
+              %label
+                -trans "Select"
               %input{type:"text", name:"apply-true", auto-complete:"", ng-model:"allThatApplyTrue[base_language]", ng-required:"true"}
             .all-that-apply-false
+              %label
+                -trans "Diselect"
               %input{type:"text", name:"apply-false", auto-complete:"", ng-model:"allThatApplyFalse[base_language]", ng-required:"true"}
 
     %span{ng-if:'config.type == "end_ussd"'}
