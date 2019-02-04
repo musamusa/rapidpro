@@ -751,7 +751,9 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
             from: action.msg[Flow.flow.base_language],
             to: action.msg[Flow.language.iso_code],
             fromQuickReplies: action.quick_replies || []
-            fromApplyOptions: action.apply_options || []
+            fromApplyOptions: action.apply_options.options || []
+            fromApplyTrue: action.apply_options.option_true,
+            fromApplyFalse: action.apply_options.option_false
           }
         ]
 
@@ -794,7 +796,13 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
               action.quick_replies = translation.fromQuickReplies
 
             if translation.fromApplyOptions? && translation.fromApplyOptions != []
-              action.apply_options = translation.fromApplyOptions
+              action.apply_options.options = translation.fromApplyOptions
+
+            if translation.fromApplyTrue? && translation.fromApplyTrue != undefined
+              action.apply_options.options.option_true = translation.fromApplyTrue
+
+            if translation.fromApplyFalse? && translation.fromApplyFalse != undefined
+              action.apply_options.options.option_false = translation.fromApplyFalse
             
             if translation.name == "Attachment"
               results = action.media
@@ -1990,12 +1998,23 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.quickReplies = $scope.action.quick_replies
     $scope.showQuickReplyButton = false
 
-  if $scope.options.dragSource? or !($scope.action.apply_options? and $scope.action.apply_options != undefined and $scope.action.apply_options.length > 0)
+  if $scope.options.dragSource? or !($scope.action.apply_options.options? and $scope.action.apply_options.options != undefined and $scope.action.apply_options.options.length > 0)
     $scope.allThatApplies = []
-    $scope.action.apply_options = []
+    $scope.action.apply_options = {}
+    $scope.action.apply_options['options'] = []
+    $scope.action.apply_options['option_true'] = {}
+    $scope.action.apply_options['option_false'] = {}
+    $scope.allThatApplyTrue = {}
+    $scope.allThatApplyFalse = {}
+    $scope.allThatApplyTrue[Flow.flow.base_language] = "Yes"
+    $scope.allThatApplyFalse[Flow.flow.base_language] = "No"
     $scope.showAllThatApplyButton = true
   else
-    $scope.allThatApplies = $scope.action.apply_options
+    $scope.allThatApplies = $scope.action.apply_options.options
+    $scope.allThatApplyTrue = {}
+    $scope.allThatApplyFalse = {}
+    $scope.allThatApplyTrue[Flow.flow.base_language] = $scope.action.apply_options.option_true[Flow.flow.base_language]
+    $scope.allThatApplyFalse[Flow.flow.base_language] = $scope.action.apply_options.option_false[Flow.flow.base_language]
     $scope.showAllThatApplyButton = false
 
   if $scope.action.webhook_headers
@@ -2067,7 +2086,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
     if $scope.allThatApplies.length == 0
       $scope.showAllThatApplyButton = true
-      $scope.action.apply_options = []
+      $scope.action.apply_options.options = []
 
   $scope.addNewActionSalesforceField = () ->
     if !$scope.action.salesforce_fields
@@ -2170,9 +2189,25 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       $scope.action.quick_replies = []
 
     if $scope.allThatApplies.length > 0
-      $scope.action.apply_options = $scope.allThatApplies
+      if 'options' not in $scope.action.apply_options
+        $scope.action.apply_options['options'] = []
+
+      if 'option_true' not in $scope.action.apply_options
+        $scope.action.apply_options['option_true'] = {}
+
+      if 'option_false' not in $scope.action.apply_options
+        $scope.action.apply_options['option_false'] = {}
+
+      $scope.action.apply_options.options = $scope.allThatApplies
+      $scope.action.apply_options.option_true = $scope.allThatApplyTrue
+      $scope.action.apply_options.option_false = $scope.allThatApplyFalse
     else
-      $scope.action.apply_options = []
+      $scope.action.apply_options = {}
+      $scope.action.apply_options['options'] = []
+      $scope.action.apply_options['option_true'] = {}
+      $scope.action.apply_options.option_true[$scope.base_language] = "Yes"
+      $scope.action.apply_options['option_false'] = {}
+      $scope.action.apply_options.option_false[$scope.base_language] = "No"
 
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()

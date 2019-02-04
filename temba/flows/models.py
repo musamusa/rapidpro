@@ -5769,8 +5769,6 @@ class ReplyAction(Action):
     SEND_ALL = 'send_all'
     QUICK_REPLIES = 'quick_replies'
     APPLY_OPTIONS = 'apply_options'
-    APPLY_TRUE = 'apply_true'
-    APPLY_FALSE = 'apply_false'
 
     def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, apply_true=None,
                  apply_false=None, send_all=False):
@@ -5799,13 +5797,11 @@ class ReplyAction(Action):
 
         return cls(json_obj.get(cls.UUID), msg=json_obj.get(cls.MESSAGE), media=json_obj.get(cls.MEDIA, None),
                    quick_replies=json_obj.get(cls.QUICK_REPLIES), apply_options=json_obj.get(cls.APPLY_OPTIONS),
-                   apply_true=json_obj.get(cls.APPLY_TRUE), apply_false=json_obj.get(cls.APPLY_FALSE),
                    send_all=json_obj.get(cls.SEND_ALL, False))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, media=self.media, quick_replies=self.quick_replies,
-                    apply_options=self.apply_options, apply_true=self.apply_true, apply_false=self.apply_false,
-                    send_all=self.send_all)
+                    apply_options=self.apply_options, send_all=self.send_all)
 
     @staticmethod
     def get_translated_quick_replies(metadata, run):
