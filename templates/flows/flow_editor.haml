@@ -609,6 +609,10 @@
               -trans "Wait for "
               [[ruleset.label]]
 
+            .title.wait-gps{ng-show:'ruleset.ruleset_type=="all_that_apply"'}
+              -trans "Select all that apply "
+              [[ruleset.label]]
+
             .title.webhook-header{ng-show:'ruleset.ruleset_type=="wait_recording"'}
               -trans "Wait for "
               [[ruleset.label]]
