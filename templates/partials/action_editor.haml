@@ -160,11 +160,11 @@
             .all-that-apply-true
               %label
                 -trans "Select"
-              %input{type:"text", name:"apply-true", auto-complete:"", ng-model:"allThatApplyTrue[base_language]", ng-required:"true"}
+              %input{type:"text", name:"apply-true", auto-complete:"", ng-model:"allThatApplyTrue[base_language]", ng-required:"true", ng-maxlength:"32"}
             .all-that-apply-false
               %label
                 -trans "Diselect"
-              %input{type:"text", name:"apply-false", auto-complete:"", ng-model:"allThatApplyFalse[base_language]", ng-required:"true"}
+              %input{type:"text", name:"apply-false", auto-complete:"", ng-model:"allThatApplyFalse[base_language]", ng-required:"true", ng-maxlength:"32"}
 
     %span{ng-if:'config.type == "end_ussd"'}
       %span{auto-complete:"",msg:"action.msg",type:"ussd",data-message:"message"}
