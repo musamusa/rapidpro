@@ -3478,7 +3478,7 @@ class FlowStep(models.Model):
 @six.python_2_unicode_compatible
 class RuleSet(models.Model):
     TYPE_WAIT_MESSAGE = 'wait_message'
-    TYPE_ALL_THAT_APPLY = 'wait_all_that_apply'
+    TYPE_ALL_THAT_APPLY = 'all_that_apply'
 
     # Ussd
     TYPE_WAIT_USSD_MENU = 'wait_menu'

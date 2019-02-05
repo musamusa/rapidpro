@@ -451,6 +451,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
         { type: 'wait_audio', name:'Wait for an audio recording', verbose_name: 'Wait for audio', filter:[SURVEY] },
         { type: 'wait_video', name:'Wait for a video', verbose_name: 'Wait for video', filter:[SURVEY] },
         { type: 'wait_gps', name:'Wait for GPS coordinates', verbose_name: 'Wait for GPS', filter:[SURVEY] },
+        { type: 'all_that_apply', name:'Wait for select all that apply', verbose_name: 'Wait for select all that apply', filter:[SURVEY] },
 
         # voice flows only
         { type: 'wait_recording', name:'Get Recording', verbose_name: 'Wait for recording', filter:VOICE },
