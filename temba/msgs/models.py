@@ -1431,7 +1431,8 @@ class Msg(models.Model):
     @classmethod
     def create_outgoing(cls, org, user, recipient, text, broadcast=None, channel=None, high_priority=False,
                         created_on=None, response_to=None, expressions_context=None, status=PENDING, insert_object=True,
-                        attachments=None, topup_id=None, msg_type=INBOX, connection=None, quick_replies=None):
+                        attachments=None, topup_id=None, msg_type=INBOX, connection=None, quick_replies=None,
+                        apply_options=None):
 
         if not org or not user:  # pragma: no cover
             raise ValueError("Trying to create outgoing message with no org or user")
@@ -1545,6 +1546,13 @@ class Msg(models.Model):
                 if value:
                     quick_replies[counter] = value
             metadata = json.dumps(dict(quick_replies=quick_replies))
+
+        if apply_options and apply_options.get('options', []):
+            for counter, option in enumerate(apply_options.get('options')):
+                (value, errors) = Msg.evaluate_template(text=option, context=expressions_context, org=org)
+                if value:
+                    apply_options.get('options')[counter] = value
+            metadata = json.dumps(dict(apply_options=apply_options))
 
         msg_args = dict(contact=contact,
                         contact_urn=contact_urn,

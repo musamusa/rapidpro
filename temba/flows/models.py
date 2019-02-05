@@ -5827,6 +5827,15 @@ class ReplyAction(Action):
             if self.quick_replies:
                 quick_replies = ReplyAction.get_translated_quick_replies(self.quick_replies, run)
 
+            apply_options = {}
+            if self.apply_options:
+                apply_options['option_true'] = run.flow.get_localized_text(self.apply_options.get('option_true'),
+                                                                           run.contact)
+                apply_options['option_false'] = run.flow.get_localized_text(self.apply_options.get('option_false'),
+                                                                            run.contact)
+                apply_options['options'] = ReplyAction.get_translated_quick_replies(self.apply_options.get('options'),
+                                                                                    run)
+
             attachments = None
             if self.media:
                 # localize our media attachment
@@ -5855,7 +5864,7 @@ class ReplyAction(Action):
                 replies = run.contact.send(text, user, trigger_send=False, expressions_context=context,
                                            connection=run.connection, msg_type=self.MSG_TYPE, attachments=attachments,
                                            quick_replies=quick_replies, created_on=created_on, all_urns=self.send_all,
-                                           high_priority=high_priority)
+                                           high_priority=high_priority, apply_options=apply_options)
         return replies
 
 
