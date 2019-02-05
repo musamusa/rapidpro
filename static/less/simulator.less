@@ -153,6 +153,38 @@
     }
   }
 
+  .item-option {
+    visibility: initial;
+  }
+
+  .item-option.option-hidden {
+    visibility: hidden;
+  }
+
+  input[type='radio'].option-hidden {
+    display: none;
+  }
+
+  label.option-label {
+    display: inline-block;
+    padding: 5px;
+    margin: 0px -1px 10px 0;
+    border: 1px solid #E5E4E9;
+  }
+
+  label.option-label.true {
+    border-radius: 4px 0 0 4px;
+  }
+
+  label.option-label.false {
+    border-radius: 0 4px 4px 0;
+  }
+
+  label.option-label.checked {
+    background-color: #E5E4E9;
+    color: #FFF;
+  }
+
   .imsg.to.media-msg {
 
     // background: #afafaf;
