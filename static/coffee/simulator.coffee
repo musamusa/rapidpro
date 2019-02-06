@@ -62,7 +62,11 @@ window.updateSimulator = (data) ->
     if metadata and metadata.apply_options? and metadata.apply_options.options?
       apply_options = "<div id='apply-options-content'>"
 
+      apply_options += "<div id='options-" + data.ruleset.uuid + "' data-options='" + metadata.apply_options.options.join() + "'></div>"
+
       for option, index in metadata.apply_options.options
+
+        last_index = if (index + 1) == metadata.apply_options.options.length then true else false
 
         if index > 0
           apply_options += "<div class='item-option option-hidden option-" + index + "'>"
@@ -71,12 +75,12 @@ window.updateSimulator = (data) ->
 
         apply_options += "<label class='apply-option'>" + option + "</label>"
 
-        apply_options += "<label class='option-label true' data-field='" + data.ruleset.uuid + "-" + option + "' data-index='" + index + "'>"
-        apply_options += metadata.apply_options.option_true + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_true + "' />"
+        apply_options += "<label class='option-label true' data-last_index='" + last_index + "' data-ruleset='" + data.ruleset.uuid + "' data-field='" + data.ruleset.uuid + "-" + option + "-true' data-value='true' data-index='" + index + "'>"
+        apply_options += metadata.apply_options.option_true + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_true + "' data-value='true'/>"
         apply_options += "</label>"
 
-        apply_options += "<label class='option-label false' data-field='" + data.ruleset.uuid + "-" + option + "' data-index='" + index + "'>"
-        apply_options += metadata.apply_options.option_false + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_false + "' />"
+        apply_options += "<label class='option-label false' data-last_index='" + last_index + "' data-ruleset='" + data.ruleset.uuid + "' data-field='" + data.ruleset.uuid + "-" + option + "-false' data-value='false' data-index='" + index + "'>"
+        apply_options += metadata.apply_options.option_false + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_false + "' data-value='false'/>"
         apply_options += "</label>"
 
         apply_options += "</div>"
@@ -135,11 +139,20 @@ window.updateSimulator = (data) ->
     sendMessage(payload)
 
   $("label.option-label").on "click", (event) ->
-    optionIndex = event.currentTarget.dataset.index
-    goToNextOption(optionIndex)
+    field = event.currentTarget.dataset.field
+    value = event.currentTarget.dataset.value
+    ruleset = event.currentTarget.dataset.ruleset
+    last_index = if event.currentTarget.dataset.last_index == 'true' then true else false
 
-  $("input.option-hidden").on "change", (event) ->
-    console.log(event)
+    if value == 'true'
+      other_field = field.replace('-true', '-false')
+    else
+      other_field = field.replace('-false', '-true')
+
+    $('label[data-field="' + other_field + '"]').removeClass 'checked'
+    $('label[data-field="' + field + '"]').addClass 'checked'
+    optionIndex = event.currentTarget.dataset.index
+    goToNextOption(optionIndex, ruleset, last_index)
 
   if window.simulation
 
@@ -288,9 +301,31 @@ hideSimulator = ->
     window.hangup()
 
 
-goToNextOption = (e, apply_options) ->
-  nextOption = $(".item-option.option-" + String(parseInt(e) + 1))
-  nextOption.removeClass('option-hidden')
+goToNextOption = (e, ruleset, last_index) ->
+  if last_index
+    txtMessage = ''
+    options = $('#options-' + ruleset);
+    options = options[0].dataset.options
+    arrayOptions = options.split(",");
+
+    for option, i in arrayOptions
+      tagInput = $("input[name='" + ruleset + "-" + option + "']:checked")
+
+      if tagInput[0].dataset.value == 'true'
+        if (i + 1) == arrayOptions.length
+          txtMessage += option
+        else
+          txtMessage += option + ', '
+      else
+        if (i + 1) == arrayOptions.length
+          txtMessage += ','
+        else
+          txtMessage += ', '
+
+    processForm({new_message: txtMessage})
+  else
+    nextOption = $(".item-option.option-" + String(parseInt(e) + 1))
+    nextOption.removeClass('option-hidden')
 
 getSimulateURL = ->
   scope = $('html').scope()
