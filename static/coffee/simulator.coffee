@@ -399,16 +399,20 @@ $('#simulator .options-button').on 'click', (event) ->
   for option, i in arrayOptions
     tagInput = $("input[name='" + msg_id + "-" + option + "']:checked")
 
-    if tagInput[0].dataset.value == 'true'
-      if (i + 1) == arrayOptions.length
-        txtMessage += option
-      else
-        txtMessage += option + ', '
+    if tagInput.length == 0
+      alert('Please, select all that apply options before sending.')
+      break
     else
-      if (i + 1) == arrayOptions.length
-        txtMessage += ','
+      if tagInput[0].dataset.value == 'true'
+        if (i + 1) == arrayOptions.length
+          txtMessage += option
+        else
+          txtMessage += option + ', '
       else
-        txtMessage += ', '
+        if (i + 1) == arrayOptions.length
+          txtMessage += ','
+        else
+          txtMessage += ', '
 
     if (i + 1) == arrayOptions.length
       sendMessage(txtMessage)
