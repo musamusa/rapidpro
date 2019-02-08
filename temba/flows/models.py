@@ -1776,7 +1776,8 @@ class Flow(TembaModel):
                                                  media=send_action.media,
                                                  base_language=self.base_language,
                                                  send_all=send_action.send_all,
-                                                 quick_replies=send_action.quick_replies)
+                                                 quick_replies=send_action.quick_replies,
+                                                 apply_options=send_action.apply_options)
                     broadcast.update_contacts(all_contact_ids)
 
                     # manually set our broadcast status to QUEUED, our sub processes will send things off for us
@@ -3478,6 +3479,7 @@ class FlowStep(models.Model):
 @six.python_2_unicode_compatible
 class RuleSet(models.Model):
     TYPE_WAIT_MESSAGE = 'wait_message'
+    TYPE_ALL_THAT_APPLY = 'all_that_apply'
 
     # Ussd
     TYPE_WAIT_USSD_MENU = 'wait_menu'
@@ -3517,7 +3519,8 @@ class RuleSet(models.Model):
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
 
     TYPE_WAIT = (TYPE_WAIT_MESSAGE, TYPE_WAIT_RECORDING, TYPE_WAIT_DIGIT, TYPE_WAIT_DIGITS, TYPE_WAIT_USSD_MENU,
-                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS)
+                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS,
+                 TYPE_ALL_THAT_APPLY)
 
     TYPE_USSD = (TYPE_WAIT_USSD_MENU, TYPE_WAIT_USSD)
 
@@ -3527,6 +3530,7 @@ class RuleSet(models.Model):
                     (TYPE_WAIT_RECORDING, "Wait for recording"),
                     (TYPE_WAIT_DIGIT, "Wait for digit"),
                     (TYPE_WAIT_DIGITS, "Wait for digits"),
+                    (TYPE_ALL_THAT_APPLY, "Wait for all that apply"),
                     (TYPE_SUBFLOW, "Subflow"),
                     (TYPE_WEBHOOK, "Webhook"),
                     (TYPE_RESTHOOK, "Resthook"),
@@ -5766,14 +5770,16 @@ class ReplyAction(Action):
     MEDIA = 'media'
     SEND_ALL = 'send_all'
     QUICK_REPLIES = 'quick_replies'
+    APPLY_OPTIONS = 'apply_options'
 
-    def __init__(self, uuid, msg=None, media=None, quick_replies=None, send_all=False):
+    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, send_all=False):
         super(ReplyAction, self).__init__(uuid)
 
         self.msg = msg
         self.media = media if media else {}
         self.send_all = send_all
         self.quick_replies = quick_replies if quick_replies else []
+        self.apply_options = apply_options if apply_options else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
@@ -5789,11 +5795,12 @@ class ReplyAction(Action):
             raise FlowException("Invalid reply action, no message")
 
         return cls(json_obj.get(cls.UUID), msg=json_obj.get(cls.MESSAGE), media=json_obj.get(cls.MEDIA, None),
-                   quick_replies=json_obj.get(cls.QUICK_REPLIES), send_all=json_obj.get(cls.SEND_ALL, False))
+                   quick_replies=json_obj.get(cls.QUICK_REPLIES), apply_options=json_obj.get(cls.APPLY_OPTIONS),
+                   send_all=json_obj.get(cls.SEND_ALL, False))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, media=self.media, quick_replies=self.quick_replies,
-                    send_all=self.send_all)
+                    apply_options=self.apply_options, send_all=self.send_all)
 
     @staticmethod
     def get_translated_quick_replies(metadata, run):
@@ -5822,6 +5829,15 @@ class ReplyAction(Action):
             if self.quick_replies:
                 quick_replies = ReplyAction.get_translated_quick_replies(self.quick_replies, run)
 
+            apply_options = {}
+            if self.apply_options:
+                apply_options['option_true'] = run.flow.get_localized_text(self.apply_options.get('option_true'),
+                                                                           run.contact)
+                apply_options['option_false'] = run.flow.get_localized_text(self.apply_options.get('option_false'),
+                                                                            run.contact)
+                apply_options['options'] = ReplyAction.get_translated_quick_replies(self.apply_options.get('options'),
+                                                                                    run)
+
             attachments = None
             if self.media:
                 # localize our media attachment
@@ -5842,7 +5858,8 @@ class ReplyAction(Action):
             if msg and msg.id:
                 replies = msg.reply(text, user, trigger_send=False, expressions_context=context,
                                     connection=run.connection, msg_type=self.MSG_TYPE, quick_replies=quick_replies,
-                                    attachments=attachments, send_all=self.send_all, created_on=created_on)
+                                    attachments=attachments, send_all=self.send_all, created_on=created_on,
+                                    apply_options=apply_options)
             else:
                 # if our run has been responded to or any of our parent runs have
                 # been responded to consider us interactive with high priority
@@ -5850,7 +5867,7 @@ class ReplyAction(Action):
                 replies = run.contact.send(text, user, trigger_send=False, expressions_context=context,
                                            connection=run.connection, msg_type=self.MSG_TYPE, attachments=attachments,
                                            quick_replies=quick_replies, created_on=created_on, all_urns=self.send_all,
-                                           high_priority=high_priority)
+                                           high_priority=high_priority, apply_options=apply_options)
         return replies
 
 

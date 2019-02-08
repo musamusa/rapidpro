@@ -59,6 +59,26 @@
     margin-top: 2px;
   }
 
+  .all-that-apply-true {
+    width: 49%;
+    float: left;
+  }
+
+  .all-that-apply-false {
+    width: 49%;
+    float: right;
+  }
+
+  .all-that-apply-true label, .all-that-apply-false label {
+    font-size: 14px !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  input[name='apply-true'], input[name='apply-false'] {
+    width: 100% !important;
+    margin: 5px 0 2px 0 !important;
+  }
+
 .modal-header.title
   %span{ng-model:"config",data-icon:"show",class:"modal-title action-name"}><
 .modal-body
@@ -72,7 +92,7 @@
       %span{auto-complete:"",msg:"action.msg",type:"sms",data-message:"message"}
       %button{ng-click:'saveMessage(message, "reply", showAttachVariable)',class:"submit hide"}
       .media{ng-hide:'action.uploading'}
-        .attachments{ng-class: '{active:showAttachOptions}', ng-show: '!action._media && !quickReplies.length'}
+        .attachments{ng-class: '{active:showAttachOptions}', ng-show: '!action._media && !quickReplies.length && !allThatApplies.length'}
           .attach-button{ng-show:'!showAttachOptions'}
             .icon-attachment.add-attachment{ng-click:'showAttachOptions = !showAttachOptions; showAttachVariable=false' }
 
@@ -105,7 +125,9 @@
             %a{href:'javascript:void(0);', ng-click:'removeAttachment(); $event.stopPropagation();'}
               .icon-close
 
-        .icon-button-quick-reply{ng-click: 'addNewQuickReply();', ng-show: '!showAttachOptions && showQuickReplyButton && flow.flow_type=="F"'}
+        .icon-button-quick-reply{ng-click: 'addNewQuickReply();', ng-show: '!action._media && !showAttachOptions && showQuickReplyButton && !allThatApplies.length && (flow.flow_type=="F" || flow.flow_type=="S")'}
+
+        .icon-checkbox-checked{ng-click: 'addNewAllThatApplyOption();', ng-show: '!action._media && !showAttachOptions && showAllThatApplyButton && !quickReplies.length && flow.flow_type=="S"'}
 
       .quick-reply{ng-show:"!showQuickReplyButton"}
         .modal-quick-reply-header
@@ -119,6 +141,30 @@
           .icon.icon-close{ng-click:"removeQuickReply($index);"}
         %a.add-reply{href:"javascript:;", ng-click:"addNewQuickReply()", ng-hide:"quickReplies.length == 11"}
           -trans "Add reply"
+
+      .all-that-apply{ng-show:"!showAllThatApplyButton"}
+        .modal-all-that-apply-header
+          .all-that-apply-title
+            -trans "Select all that apply"
+
+        .modal-all-that-apply{ng-repeat:"option in allThatApplies", class:""}
+          .all-that-apply-title
+            %input{type:"text", name:"all-that-apply-title", auto-complete:"", ng-model:"option[base_language]", ng-required:"true"}
+
+          .icon.icon-close{ng-click:"removeAllThatApplyOption($index);"}
+        %a.add-that-apply-option{href:"javascript:;", ng-click:"addNewAllThatApplyOption()"}
+          -trans "Add option"
+
+        .all-that-apply-title
+          .modal-all-that-apply
+            .all-that-apply-true
+              %label
+                -trans "Select"
+              %input{type:"text", name:"apply-true", auto-complete:"", ng-model:"allThatApplyTrue[base_language]", ng-required:"true", ng-maxlength:"32"}
+            .all-that-apply-false
+              %label
+                -trans "Diselect"
+              %input{type:"text", name:"apply-false", auto-complete:"", ng-model:"allThatApplyFalse[base_language]", ng-required:"true", ng-maxlength:"32"}
 
     %span{ng-if:'config.type == "end_ussd"'}
       %span{auto-complete:"",msg:"action.msg",type:"ussd",data-message:"message"}

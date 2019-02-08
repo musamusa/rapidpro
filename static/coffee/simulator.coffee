@@ -26,6 +26,9 @@ window.updateSimulator = (data) ->
     else if data.ruleset.ruleset_type == 'wait_audio'
       $('.simulator-footer .imessage').hide()
       $('.simulator-footer .audio-button').show()
+    else if data.ruleset.ruleset_type == 'all_that_apply'
+      $('.simulator-footer .imessage').hide()
+      $('.simulator-footer .options-button').show()
     else
       $('.simulator-footer .imessage').show()
 
@@ -49,6 +52,7 @@ window.updateSimulator = (data) ->
     media_viewer_elt = null
 
     quick_replies = null
+    apply_options = null
 
     metadata = msg.metadata
     if metadata and metadata.quick_replies?
@@ -56,6 +60,29 @@ window.updateSimulator = (data) ->
       for reply in metadata.quick_replies
         quick_replies += "<button class=\"btn quick-reply\" data-payload=\"" + reply + "\"> " + reply + "</button>"
       quick_replies += "</div>"
+
+    if metadata and metadata.apply_options?
+      apply_options = "<div class='apply-options-content' data-msg='" + msg.id + "'>"
+
+      if metadata.apply_options.options?
+        apply_options += "<div id='options-" + msg.id + "' data-options='" + metadata.apply_options.options.join() + "'></div>"
+        for option in metadata.apply_options.options
+
+          apply_options += "<div class='item-option'>"
+
+          apply_options += "<label class='apply-option'>" + option + "</label>"
+
+          apply_options += "<label class='option-label true' data-msg='" + msg.id + "' data-field='" + msg.id + "-" + option + "-true' data-value='true'>"
+          apply_options += metadata.apply_options.option_true + "<input class='option-hidden' type='radio' name='" + msg.id + "-" + option + "' value='" + metadata.apply_options.option_true + "' data-value='true'/>"
+          apply_options += "</label>"
+
+          apply_options += "<label class='option-label false' data-msg='" + msg.id + "' data-field='" + msg.id + "-" + option + "-false' data-value='false'>"
+          apply_options += metadata.apply_options.option_false + "<input class='option-hidden' type='radio' name='" + msg.id + "-" + option + "' value='" + metadata.apply_options.option_false + "' data-value='false'/>"
+          apply_options += "</label>"
+
+          apply_options += "</div>"
+
+      apply_options += "</div>"
 
     if msg.attachments and msg.attachments.length > 0
       attachment = msg.attachments[0]
@@ -90,7 +117,13 @@ window.updateSimulator = (data) ->
       ele_quick_replies += "</div>"
       ele += ele_quick_replies
 
-    if msg.text or quick_replies
+    if apply_options
+      ele_apply_options = "<div class='ilog " + level + " " + direction + " " + ussd + "'>"
+      ele_apply_options += apply_options
+      ele_apply_options += "</div>"
+      ele += ele_apply_options
+
+    if msg.text or quick_replies or apply_options
       $(".simulator-body").append(ele)
     if media_type and media_viewer_elt
       $(".simulator-body").append(media_viewer_elt)
@@ -101,6 +134,16 @@ window.updateSimulator = (data) ->
   $(".btn.quick-reply").on "click", (event) ->
     payload = event.target.innerText
     sendMessage(payload)
+
+  $("label.option-label").on "click", (event) ->
+    field = event.currentTarget.dataset.field
+    value = event.currentTarget.dataset.value
+    if value == 'true'
+      other_field = field.replace('-true', '-false')
+    else
+      other_field = field.replace('-false', '-true')
+    $('label[data-field="' + other_field + '"]').removeClass 'checked'
+    $('label[data-field="' + field + '"]').addClass 'checked'
 
   if window.simulation
 
@@ -248,7 +291,6 @@ hideSimulator = ->
   if window.is_voice
     window.hangup()
 
-
 getSimulateURL = ->
   scope = $('html').scope()
   if scope and scope.language
@@ -345,6 +387,30 @@ $('#simulator .video-button').on 'click', ->
 
 $('#simulator .audio-button').on 'click', ->
   sendAudio()
+
+$('#simulator .options-button').on 'click', (event) ->
+  content_tag = $('.apply-options-content').last()
+  msg_id = content_tag[0].dataset.msg
+  options_tag = $('#options-' + msg_id).last()
+  options = options_tag[0].dataset.options
+  arrayOptions = options.split(",")
+
+  txtMessage = ''
+  for option, i in arrayOptions
+    tagInput = $("input[name='" + msg_id + "-" + option + "']:checked")
+
+    if tagInput.length == 0
+      alert('Please, select all that apply options before sending.')
+      break
+    else
+      if tagInput[0].dataset.value == 'true'
+        txtMessage += option
+        txtMessage += if (i + 1) == arrayOptions.length then '' else ','
+      else
+        txtMessage += if (i + 1) == arrayOptions.length then '' else ','
+
+    if (i + 1) == arrayOptions.length
+      sendMessage(txtMessage)
 
 # send new message to simulate
 $("#simulator .send-message").on "click", ->

@@ -8,15 +8,15 @@ RUN apt-get update && apt-get install -qyy --fix-missing \
     python-zmq libzmq-dev nginx libpcre3 libpcre3-dev supervisor wget libjpeg-dev libjpeg-turbo8-dev libmagic-dev checkinstall imagemagick
 
 WORKDIR /tmp
-RUN wget http://download.osgeo.org/gdal/1.11.0/gdal-1.11.0.tar.gz
+RUN wget https://s3.amazonaws.com/hs.communityconnectlabs.com/gdal-1.11.0.tar.gz
 RUN tar xvfz gdal-1.11.0.tar.gz
 RUN cd gdal-1.11.0;./configure --with-python; make -j4; make install
 RUN ldconfig
 RUN rm -rf /tmp/*
 
-RUN wget http://www.imagemagick.org/download/ImageMagick-7.0.8-23.tar.gz
-RUN tar xzvf ImageMagick-7.0.8-23.tar.gz
-RUN cd ImageMagick-7.0.8-23; ./configure; make; make install
+RUN wget https://s3.amazonaws.com/hs.communityconnectlabs.com/ImageMagick.tar.gz
+RUN tar xzvf ImageMagick.tar.gz
+RUN cd ImageMagick-7.0.8-24; ./configure; make; make install
 RUN ldconfig
 RUN rm -rf /tmp/*
 
