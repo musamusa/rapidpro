@@ -51,6 +51,7 @@ window.updateSimulator = (data) ->
     media_viewer_elt = null
 
     quick_replies = null
+    apply_options = null
 
     metadata = msg.metadata
     if metadata and metadata.quick_replies?
@@ -62,7 +63,7 @@ window.updateSimulator = (data) ->
     if metadata and metadata.apply_options? and metadata.apply_options.options?
       apply_options = "<div id='apply-options-content'>"
 
-      apply_options += "<div id='options-" + data.ruleset.uuid + "' data-options='" + metadata.apply_options.options.join() + "'></div>"
+      apply_options += "<div id='options-" + msg.id + "' data-options='" + metadata.apply_options.options.join() + "'></div>"
 
       for option, index in metadata.apply_options.options
 
@@ -75,12 +76,12 @@ window.updateSimulator = (data) ->
 
         apply_options += "<label class='apply-option'>" + option + "</label>"
 
-        apply_options += "<label class='option-label true' data-last_index='" + last_index + "' data-ruleset='" + data.ruleset.uuid + "' data-field='" + data.ruleset.uuid + "-" + option + "-true' data-value='true' data-index='" + index + "'>"
-        apply_options += metadata.apply_options.option_true + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_true + "' data-value='true'/>"
+        apply_options += "<label class='option-label true' data-last_index='" + last_index + "' data-msg='" + msg.id + "' data-field='" + msg.id + "-" + option + "-true' data-value='true' data-index='" + index + "'>"
+        apply_options += metadata.apply_options.option_true + "<input class='option-hidden' type='radio' name='" + msg.id + "-" + option + "' value='" + metadata.apply_options.option_true + "' data-value='true'/>"
         apply_options += "</label>"
 
-        apply_options += "<label class='option-label false' data-last_index='" + last_index + "' data-ruleset='" + data.ruleset.uuid + "' data-field='" + data.ruleset.uuid + "-" + option + "-false' data-value='false' data-index='" + index + "'>"
-        apply_options += metadata.apply_options.option_false + "<input class='option-hidden' type='radio' name='" + data.ruleset.uuid + "-" + option + "' value='" + metadata.apply_options.option_false + "' data-value='false'/>"
+        apply_options += "<label class='option-label false' data-last_index='" + last_index + "' data-msg='" + msg.id + "' data-field='" + msg.id + "-" + option + "-false' data-value='false' data-index='" + index + "'>"
+        apply_options += metadata.apply_options.option_false + "<input class='option-hidden' type='radio' name='" + msg.id + "-" + option + "' value='" + metadata.apply_options.option_false + "' data-value='false'/>"
         apply_options += "</label>"
 
         apply_options += "</div>"
@@ -141,7 +142,7 @@ window.updateSimulator = (data) ->
   $("label.option-label").on "click", (event) ->
     field = event.currentTarget.dataset.field
     value = event.currentTarget.dataset.value
-    ruleset = event.currentTarget.dataset.ruleset
+    msg = event.currentTarget.dataset.msg
     last_index = if event.currentTarget.dataset.last_index == 'true' then true else false
 
     if value == 'true'
@@ -152,7 +153,7 @@ window.updateSimulator = (data) ->
     $('label[data-field="' + other_field + '"]').removeClass 'checked'
     $('label[data-field="' + field + '"]').addClass 'checked'
     optionIndex = event.currentTarget.dataset.index
-    goToNextOption(optionIndex, ruleset, last_index)
+    goToNextOption(optionIndex, msg, last_index)
 
   if window.simulation
 
@@ -301,31 +302,34 @@ hideSimulator = ->
     window.hangup()
 
 
-goToNextOption = (e, ruleset, last_index) ->
-  if last_index
-    txtMessage = ''
-    options = $('#options-' + ruleset);
-    options = options[0].dataset.options
-    arrayOptions = options.split(",");
+goToNextOption = (e, msg, last_index) ->
+  try
+    if last_index and msg
+      txtMessage = ''
+      options = $('#options-' + msg);
+      options = options[0].dataset.options
+      arrayOptions = options.split(",");
 
-    for option, i in arrayOptions
-      tagInput = $("input[name='" + ruleset + "-" + option + "']:checked")
+      for option, i in arrayOptions
+        tagInput = $("input[name='" + msg + "-" + option + "']:checked")
+        console.log(i, tagInput)
 
-      if tagInput[0].dataset.value == 'true'
-        if (i + 1) == arrayOptions.length
-          txtMessage += option
+        if tagInput[0].dataset.value == 'true'
+          if (i + 1) == arrayOptions.length
+            txtMessage += option
+          else
+            txtMessage += option + ', '
         else
-          txtMessage += option + ', '
-      else
-        if (i + 1) == arrayOptions.length
-          txtMessage += ','
-        else
-          txtMessage += ', '
+          if (i + 1) == arrayOptions.length
+            txtMessage += ','
+          else
+            txtMessage += ', '
+      sendMessage(txtMessage)
+    else
+      nextOption = $(".item-option.option-" + String(parseInt(e) + 1))
+      nextOption.removeClass('option-hidden')
+  catch e
 
-    processForm({new_message: txtMessage})
-  else
-    nextOption = $(".item-option.option-" + String(parseInt(e) + 1))
-    nextOption.removeClass('option-hidden')
 
 getSimulateURL = ->
   scope = $('html').scope()
