@@ -1776,7 +1776,8 @@ class Flow(TembaModel):
                                                  media=send_action.media,
                                                  base_language=self.base_language,
                                                  send_all=send_action.send_all,
-                                                 quick_replies=send_action.quick_replies)
+                                                 quick_replies=send_action.quick_replies,
+                                                 apply_options=send_action.apply_options)
                     broadcast.update_contacts(all_contact_ids)
 
                     # manually set our broadcast status to QUEUED, our sub processes will send things off for us
@@ -5856,7 +5857,8 @@ class ReplyAction(Action):
             if msg and msg.id:
                 replies = msg.reply(text, user, trigger_send=False, expressions_context=context,
                                     connection=run.connection, msg_type=self.MSG_TYPE, quick_replies=quick_replies,
-                                    attachments=attachments, send_all=self.send_all, created_on=created_on)
+                                    attachments=attachments, send_all=self.send_all, created_on=created_on,
+                                    apply_options=apply_options)
             else:
                 # if our run has been responded to or any of our parent runs have
                 # been responded to consider us interactive with high priority
