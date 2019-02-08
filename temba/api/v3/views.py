@@ -1199,7 +1199,7 @@ class FlowsEndpoint(FlowsEndpointV2):
     def filter_queryset(self, queryset):
         params = self.request.query_params
 
-        queryset = queryset.exclude(flow_type=Flow.MESSAGE)
+        queryset = queryset.exclude(flow_type=Flow.MESSAGE).filter(is_active=True)
 
         # filter by UUID (optional)
         uuid = params.get('uuid')
