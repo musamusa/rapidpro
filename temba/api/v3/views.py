@@ -2215,7 +2215,7 @@ class UserOrgsEndpoint(BaseAPIView, ListAPIMixin):
             token = APIToken.get_or_create(org, user, user_group)
             orgs.append({'org': {'id': org.pk, 'name': org.name}, 'token': token.key})
 
-        return JsonResponse(orgs, safe=False)
+        return JsonResponse(orgs, safe=False, json_dumps_params={'indent': 2})
 
     @classmethod
     def get_read_explorer(cls):
@@ -2256,7 +2256,7 @@ class ManageAccountsListEndpoint(BaseAPIView, ListAPIMixin):
         else:  # pragma: needs cover
             return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
-        return JsonResponse(users, safe=False)
+        return JsonResponse(users, safe=False, json_dumps_params={'indent': 2})
 
     @classmethod
     def get_read_explorer(cls):
@@ -2323,7 +2323,8 @@ class ManageAccountsActionEndpoint(BaseAPIView, WriteAPIMixin):
                 errors.append(_('User ID %s not found or already is active' % item.get('id')))
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST,
+                                json_dumps_params={'indent': 2})
         else:
             return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
@@ -2390,7 +2391,8 @@ class DeviceTokenEndpoint(BaseAPIView, WriteAPIMixin):
             errors.append(e.args)
 
         if errors:
-            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'errors': errors}, safe=False, status=status.HTTP_400_BAD_REQUEST,
+                                json_dumps_params={'indent': 2})
         else:
             return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
@@ -2472,7 +2474,8 @@ class CreateAccountView(SmartFormView):
         if register_password_error:
             errors.append(register_password_error)
 
-        return JsonResponse(dict(errors=errors), safe=False, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse(dict(errors=errors), safe=False, status=status.HTTP_400_BAD_REQUEST,
+                            json_dumps_params={'indent': 2})
 
     def form_valid(self, form):
         # create our user
