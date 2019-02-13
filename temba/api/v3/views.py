@@ -212,8 +212,6 @@ class AuthenticateView(AuthenticateEndpointV2):
 
         user = authenticate(username=username, password=password)
         if user and user.is_active:
-            login(self.request, user)
-
             role = APIToken.get_role_from_code(role_code)
 
             if role:
@@ -2488,7 +2486,6 @@ class CreateAccountView(SmartFormView):
 
         # log the user in
         user = authenticate(username=user.username, password=self.form.cleaned_data['password'])
-        login(self.request, user)
 
         org = self.form.cleaned_data['org']
         org.surveyors.add(user)
