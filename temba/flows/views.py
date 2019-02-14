@@ -400,6 +400,8 @@ class FlowImageCRUDL(SmartCRUDL):
             context = super(FlowImageCRUDL.BaseList, self).get_context_data(**kwargs)
             context['org_has_flowimages'] = FlowImage.objects.filter(org=self.request.user.get_org(),
                                                                      is_active=True).count()
+            context['flows'] = Flow.objects.filter(org=self.request.user.get_org(),
+                                                   is_active=True).only('name', 'uuid').order_by('name')
             context['request_url'] = self.request.path
             context['actions'] = self.actions
 

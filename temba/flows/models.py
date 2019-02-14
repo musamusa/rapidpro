@@ -2694,6 +2694,9 @@ class Flow(TembaModel):
         self.field_dependencies.clear()
         self.field_dependencies.add(*fields)
 
+    def get_images_count(self):
+        return self.flow_images.filter(is_active=True).count()
+
     def __str__(self):
         return self.name
 

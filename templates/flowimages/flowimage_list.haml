@@ -22,127 +22,125 @@
       %input.input-medium.search-query{'type':'text', 'placeholder':'{% trans "Search" %}', 'name':"search", 'value':"{{search}}"}
 
 -block content
-  #pjax
-    -block pjax
-      .row-fluid
-        .span3.sidebox
+  .row-fluid
+    .span3.sidebox
 
-          #sidebar-nav
-            %ul.nav.nav-list
-              %li.nav-header
-                -trans "Flow Images"
-              %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
-                %a{'href':''}
-                  -trans "All Images"
-                  ({{ org_has_flowimages }})
+      #sidebar-nav
+        %ul.nav.nav-list
+          %li.nav-header
+            -trans "Flow Images"
+          %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
+            %a{'href':''}
+              -trans "All Images"
+              ({{ org_has_flowimages }})
 
-              %li.nav-header
-                -trans "Images by Groups"
-              - for group in groups
-                %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
-                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                    {{group.label}} ({{ group.count | intcomma }})
+          %li.nav-header
+            -trans "Images by Groups"
+          - for group in groups
+            %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
+              %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                {{group.label}} ({{ group.count | intcomma }})
 
-              %li.nav-header
-                -trans "Images by Flows"
-              - for group in groups
-                %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
-                  %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                    {{group.label}} ({{ group.count | intcomma }})
+          %li.nav-header
+            -trans "Images by Flows"
+          - for flow in flows
+            %li{'class':'{% if current_flow.id == flow.pk %}active{% endif %}'}
+              %a{'href':'{% url "contacts.contact_filter" flow.uuid %}'}
+                {{flow.name}} ({{ flow.get_images_count | intcomma }})
 
-        - if org_has_flowimages
-          - block contacts-list
-            .span9
+    - if org_has_flowimages
+      - block contacts-list
+        .span9
 
-              - block buttons
+          - block buttons
 
-                .pull-right
-                  -block buttons-right
-                    -block gear-menu
-                      -include "gear_links_include.haml"
+            .pull-right
+              -block buttons-right
+                -block gear-menu
+                  -include "gear_links_include.haml"
 
+            - if org_perms.contacts.contact_update
+              .list-buttons-container
+                .list-buttons
+                  - if 'download' in actions
+                    %span.btn-group
+                      %a.object-btn-block{'href':'#'}
+                        %button.btn
+                          .glyph.icon-cloud-download
+                          -trans "Download"
+
+          .search-details
+            -if search_error
+              %span.search-error
+                =search_error
+            -elif search
+              -blocktrans count results_count=paginator.count
+                Found {{ results_count }} contact matching <i>{{search}}</i>.
+                -plural
+                  Found {{ results_count }} contacts matching <i>{{search}}</i>.
+
+          .list-container
+            %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
+              %tr.contacts
                 - if org_perms.contacts.contact_update
-                  .list-buttons-container
-                    .list-buttons
-                      - if 'download' in actions
-                        %span.btn-group
-                          %a.object-btn-block{'href':'#'}
-                            %button.btn
-                              .glyph.icon-cloud-download
-                              -trans "Download"
+                  %th
 
-              .search-details
-                -if search_error
-                  %span.search-error
-                    =search_error
-                -elif search
-                  -blocktrans count results_count=paginator.count
-                    Found {{ results_count }} contact matching <i>{{search}}</i>.
-                    -plural
-                      Found {{ results_count }} contacts matching <i>{{search}}</i>.
-
-              .list-container
-                %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
-                  %tr.contacts
-                    - if org_perms.contacts.contact_update
-                      %th
-
+                %th
+                -for field in contact_fields
+                  -if field.show_in_table
                     %th
+                      {{ field.label }}
+                %th
+                  - if object_list
+                    -trans "Created On"
+
+              %tbody
+                - for object in object_list
+                  %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
+
+                    - if org_perms.contacts.contact_update
+                      %td.contact.checkbox.object-row-checkbox
+                        .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
+
+                    %td.value-text.field_name
+                      {{ object.contact|name:user_org }}
+
                     -for field in contact_fields
                       -if field.show_in_table
-                        %th
-                          {{ field.label }}
-                    %th
-                      - if object_list
-                        -trans "Created On"
+                        %td.field
+                          {{ object|contact_field:field.key }}
 
-                  %tbody
-                    - for object in object_list
-                      %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
+                    %td.value-received.field_received
+                      %nobr
+                        {{ object.created_on|gmail_time }}
 
-                        - if org_perms.contacts.contact_update
-                          %td.contact.checkbox.object-row-checkbox
-                            .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
+                    // This is needed for action buttons
+                    %td.hide
+                      .value-labels
+                        %nobr
+                          - for group in object.all_groups.all
+                            - if group.group_type == 'U'
+                              %span.label.label-info.lbl{ data-id: '{{group.id}}'}
+                                %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
+                                  {{group.name}}
 
-                        %td.value-text.field_name
-                          {{ object.contact|name:user_org }}
-
-                        -for field in contact_fields
-                          -if field.show_in_table
-                            %td.field
-                              {{ object|contact_field:field.key }}
-
-                        %td.value-received.field_received
-                          %nobr
-                            {{ object.created_on|gmail_time }}
-
-                        // This is needed for action buttons
-                        %td.hide
-                          .value-labels
-                            %nobr
-                              - for group in object.all_groups.all
-                                - if group.group_type == 'U'
-                                  %span.label.label-info.lbl{ data-id: '{{group.id}}'}
-                                    %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                                      {{group.name}}
-
-                    -empty
-                      %tr
-                        %td{colspan:3}
-                          -trans "No matching flow images."
-                        -for field in contact_fields
-                          -if field.show_in_table
-                            %td.field
-                        %td
+                -empty
+                  %tr
+                    %td{colspan:3}
+                      -trans "No matching flow images."
+                    -for field in contact_fields
+                      -if field.show_in_table
+                        %td.field
+                    %td
 
 
-              - block paginator
-                - if object_list.count
-                  .paginator
-                    - include "smartmin/sidebar_pagination.haml"
+          - block paginator
+            - if object_list.count
+              .paginator
+                - include "smartmin/sidebar_pagination.haml"
 
-        - else
-          - include "flowimages/empty_include.haml"
+    - else
+      - include "flowimages/empty_include.haml"
 
 -block post-content
 
