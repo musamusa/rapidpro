@@ -12,6 +12,7 @@ import time
 import uuid
 
 from collections import defaultdict
+from functools import reduce
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import models
@@ -2492,6 +2493,20 @@ class ContactGroup(TembaModel):
     def analytics_json(self):
         if self.get_member_count() > 0:
             return dict(name=self.name, id=self.pk, count=self.get_member_count())
+
+    # TODO Double check on that function
+    def get_flow_images_count(self):
+        def counter(contact):
+            return contact.flow_images.filter(is_active=True).only('pk').count()
+
+        contacts = self.contacts.filter(is_active=True).only('pk').select_related().order_by('id')\
+            .distinct()
+        counter_list = list(map(counter, contacts))
+        if counter_list:
+            counter = reduce((lambda x, y: x + y), counter_list)
+        else:
+            counter = 0
+        return counter
 
     def __str__(self):
         return self.name

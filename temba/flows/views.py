@@ -376,7 +376,7 @@ class FlowRunCRUDL(SmartCRUDL):
 
 
 class FlowImageCRUDL(SmartCRUDL):
-    actions = ('list', 'read',)
+    actions = ('list', 'read', 'filter',)
 
     model = FlowImage
 
@@ -402,6 +402,8 @@ class FlowImageCRUDL(SmartCRUDL):
                                                                      is_active=True).count()
             context['flows'] = Flow.objects.filter(org=self.request.user.get_org(),
                                                    is_active=True).only('name', 'uuid').order_by('name')
+            context['groups'] = ContactGroup.user_groups.filter(org=self.request.user.get_org(),
+                                                                is_active=True).only('name', 'uuid').order_by('name')
             context['request_url'] = self.request.path
             context['actions'] = self.actions
 
@@ -415,18 +417,55 @@ class FlowImageCRUDL(SmartCRUDL):
         title = _("Flow Images")
         actions = ('download',)
 
-        def derive_queryset(self, *args, **kwargs):
-            queryset = super(FlowImageCRUDL.List, self).derive_queryset(*args, **kwargs)
-            queryset = queryset.filter(is_active=True)
-            return queryset
+        def get_gear_links(self):
+            links = []
+            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+            return links
+
+    class Filter(BaseList):
 
         def get_gear_links(self):
             links = []
-
-            if self.has_org_perm('contacts.contactgroup_create'):
-                links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
-
+            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
             return links
+
+        def get_context_data(self, *args, **kwargs):
+            context = super(FlowImageCRUDL.Filter, self).get_context_data(*args, **kwargs)
+            context['current_flow'] = self.derive_flow()
+            context['current_group'] = self.derive_group()
+            return context
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r'^%s/%s/(?P<uuid>\d+)/$' % (path, action)
+
+        # def derive_title(self, *args, **kwargs):
+        #     return self.derive_label().name
+
+        def derive_flow(self):
+            return Flow.objects.filter(uuid=self.kwargs['uuid']).first()
+
+        def derive_group(self):
+            return ContactGroup.objects.filter(uuid=self.kwargs['uuid']).first()
+
+        def get_queryset_filter(self):
+            get_filter = dict()
+            flow = self.derive_flow()
+            group = self.derive_group()
+            if flow:
+                get_filter = dict(flow=flow)
+            elif group:
+                contacts_id = group.contacts.all().exclude(is_active=False).order_by('pk').\
+                    values_list('pk', flat=True).distinct()
+                print(contacts_id)
+                get_filter = dict(contact__id__in=contacts_id)
+            return get_filter
+
+        def get_queryset(self, **kwargs):
+            qs = super(FlowImageCRUDL.Filter, self).get_queryset(**kwargs)
+            _filter = self.get_queryset_filter()
+            qs = qs.filter(**_filter).exclude(is_active=False).distinct()
+            return qs
 
     class Read(OrgObjPermsMixin, SmartReadView):
         slug_url_kwarg = 'uuid'

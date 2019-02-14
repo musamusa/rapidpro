@@ -39,13 +39,13 @@
           - for group in groups
             %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
               %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                {{group.label}} ({{ group.count | intcomma }})
+                {{group.name}} ({{ group.get_flow_images_count | intcomma }})
 
           %li.nav-header
             -trans "Images by Flows"
           - for flow in flows
             %li{'class':'{% if current_flow.id == flow.pk %}active{% endif %}'}
-              %a{'href':'{% url "contacts.contact_filter" flow.uuid %}'}
+              %a{'href':''}
                 {{flow.name}} ({{ flow.get_images_count | intcomma }})
 
     - if org_has_flowimages

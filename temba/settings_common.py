@@ -477,7 +477,8 @@ PERMISSIONS = {
                    'giftcards_api',
                    ),
 
-    'flows.flowimage': ('read',),
+    'flows.flowimage': ('read',
+                        'filter',),
 
     'flows.ruleset': ('analytics',
                       'choropleth',
@@ -689,7 +690,6 @@ GROUP_PERMISSIONS = {
         'flows.flowlabel.*',
         'flows.ruleset.*',
         'flows.flowrun_delete',
-
         'flows.flowimage.*',
 
         'schedules.schedule.*',
@@ -812,7 +812,6 @@ GROUP_PERMISSIONS = {
         'flows.flowstart_api',
         'flows.flowlabel.*',
         'flows.ruleset.*',
-
         'flows.flowimage.*',
 
         'schedules.schedule.*',
@@ -896,6 +895,9 @@ GROUP_PERMISSIONS = {
         'flows.ruleset_analytics',
         'flows.ruleset_results',
         'flows.ruleset_choropleth',
+        'flows.flowimage.list',
+        'flows.flowimage.read',
+        'flows.flowimage.filter',
 
         'msgs.broadcast_schedule_list',
         'msgs.broadcast_schedule_read',
