@@ -29,24 +29,24 @@
         %ul.nav.nav-list
           %li.nav-header
             -trans "Flow Images"
-          %li{'class':'{% if request.path == folder.url %}active{% endif %}'}
-            %a{'href':''}
+          %li{'class':'{% if request.path == "/flowimage/" %}active{% endif %}'}
+            %a{'href':'{% url "flows.flowimage_list" %}'}
               -trans "All Images"
               ({{ org_has_flowimages }})
 
           %li.nav-header
-            -trans "Images by Groups"
-          - for group in groups
-            %li{'class':'{% if current_group.id == group.pk %}active{% endif %}'}
-              %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                {{group.name}} ({{ group.get_flow_images_count | intcomma }})
-
-          %li.nav-header
             -trans "Images by Flows"
           - for flow in flows
-            %li{'class':'{% if current_flow.id == flow.pk %}active{% endif %}'}
-              %a{'href':''}
+            %li{'class':'{% if current_object.uuid == flow.uuid %}active{% endif %}'}
+              %a{'href':'{% url "flows.flowimage_filter" "flow" flow.uuid %}'}
                 {{flow.name}} ({{ flow.get_images_count | intcomma }})
+
+          %li.nav-header
+            -trans "Images by Groups"
+          - for group in groups
+            %li{'class':'{% if current_object.uuid == group.uuid %}active{% endif %}'}
+              %a{'href':'{% url "flows.flowimage_filter" "group" group.uuid %}'}
+                {{group.name}}
 
     - if org_has_flowimages
       - block contacts-list

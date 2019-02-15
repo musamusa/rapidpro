@@ -423,6 +423,7 @@ class FlowImageCRUDL(SmartCRUDL):
             return links
 
     class Filter(BaseList):
+        actions = ('download',)
 
         def get_gear_links(self):
             links = []
@@ -431,33 +432,34 @@ class FlowImageCRUDL(SmartCRUDL):
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowImageCRUDL.Filter, self).get_context_data(*args, **kwargs)
-            context['current_flow'] = self.derive_flow()
-            context['current_group'] = self.derive_group()
+            context['current_object'] = self.derive_object()
             return context
 
         @classmethod
         def derive_url_pattern(cls, path, action):
-            return r'^%s/%s/(?P<uuid>\d+)/$' % (path, action)
+            return r'^%s/%s/(?P<type>group|flow)/(?P<uuid>[^/]+)/$' % (path, action)
 
-        # def derive_title(self, *args, **kwargs):
-        #     return self.derive_label().name
+        def derive_title(self, *args, **kwargs):
+            obj = self.derive_object()
+            return _('Images from "%s"' % obj.name) if obj else _("Flow Images")
 
-        def derive_flow(self):
-            return Flow.objects.filter(uuid=self.kwargs['uuid']).first()
-
-        def derive_group(self):
-            return ContactGroup.objects.filter(uuid=self.kwargs['uuid']).first()
+        def derive_object(self):
+            obj_type = self.kwargs.get('type')
+            uuid = self.kwargs.get('uuid')
+            if obj_type == 'flow':
+                return Flow.objects.filter(org=self.org, uuid=uuid).first()
+            else:
+                return ContactGroup.user_groups.filter(org=self.org, uuid=uuid).first()
 
         def get_queryset_filter(self):
-            get_filter = dict()
-            flow = self.derive_flow()
-            group = self.derive_group()
-            if flow:
-                get_filter = dict(flow=flow)
-            elif group:
-                contacts_id = group.contacts.all().exclude(is_active=False).order_by('pk').\
+            obj = self.derive_object()
+            obj_type = self.kwargs.get('type')
+
+            if obj_type == 'flow':
+                get_filter = dict(flow=obj)
+            else:
+                contacts_id = obj.contacts.all().exclude(is_active=False).order_by('pk').\
                     values_list('pk', flat=True).distinct()
-                print(contacts_id)
                 get_filter = dict(contact__id__in=contacts_id)
             return get_filter
 
@@ -1131,7 +1133,7 @@ class FlowCRUDL(SmartCRUDL):
             if self.has_org_perm('flows.flow_results'):
                 links.append(dict(title=_("Download Images"),
                                   style='btn-primary',
-                                  href=reverse('flows.flow_results', args=[flow.id])))
+                                  href=reverse('flows.flowimage_filter', args=['flow', flow.uuid])))
 
             if self.has_org_perm('flows.flow_revisions'):
                 links.append(dict(divider=True)),

@@ -2494,16 +2494,6 @@ class ContactGroup(TembaModel):
         if self.get_member_count() > 0:
             return dict(name=self.name, id=self.pk, count=self.get_member_count())
 
-    def get_flow_images_count(self):
-        def counter(contact):
-            return contact.flow_images.filter(is_active=True).only('pk').count()
-
-        contacts = self.contacts.filter(is_active=True).only('pk').select_related().order_by('id')\
-            .distinct()
-        counter_list = list(map(counter, contacts))
-        counter = reduce((lambda x, y: x + y), counter_list) if counter_list else 0
-        return counter
-
     def __str__(self):
         return self.name
 

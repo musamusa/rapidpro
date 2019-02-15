@@ -895,9 +895,9 @@ GROUP_PERMISSIONS = {
         'flows.ruleset_analytics',
         'flows.ruleset_results',
         'flows.ruleset_choropleth',
-        'flows.flowimage.list',
-        'flows.flowimage.read',
-        'flows.flowimage.filter',
+        'flows.flowimage_list',
+        'flows.flowimage_read',
+        'flows.flowimage_filter',
 
         'msgs.broadcast_schedule_list',
         'msgs.broadcast_schedule_read',
