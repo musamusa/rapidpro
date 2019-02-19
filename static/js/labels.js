@@ -226,8 +226,7 @@ $(document)
             if (btnCheck.hasClass("checked")) {
                 btnCheck.removeClass("checked");
                 $('td.object-row-checkbox').each(function() {
-                    var row = $(this);
-                    console.log(1, row);
+                    var row = $(this).parent('tr');
                     row.removeClass("checked");
                     var checks = $(".object-row.checked");
                     if (checks.length == 0) {
@@ -237,8 +236,7 @@ $(document)
             } else {
                 btnCheck.addClass("checked");
                 $('td.object-row-checkbox').each(function() {
-                    var row = $(this);
-                    console.log(2, row);
+                    var row = $(this).parent('tr');
                     row.addClass("checked");
                 });
             }
