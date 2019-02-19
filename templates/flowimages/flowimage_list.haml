@@ -80,12 +80,16 @@
                   Found {{ results_count }} contacts matching <i>{{search}}</i>.
 
           .list-container
-            %table.list-table.contact_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
-              %tr.contacts
-                - if org_perms.contacts.contact_update
-                  %th
+            %table.list-table.flowimage_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
+              %tr.flowimages
+                %th.checkbox.object-row-checkbox
+                  .glyph.icon-checkbox-unchecked.flowimage-checkbox.object-row-checkbox{'title':'Select/Diselect all items'}
 
                 %th
+
+                %th{'style': 'text-align: left'}
+                  -trans "Image"
+
                 -for field in contact_fields
                   -if field.show_in_table
                     %th
@@ -96,14 +100,18 @@
 
               %tbody
                 - for object in object_list
-                  %tr.contact.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
+                  %tr.flowimage.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
 
                     - if org_perms.contacts.contact_update
-                      %td.contact.checkbox.object-row-checkbox
+                      %td.flowimage.checkbox.object-row-checkbox
                         .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
 
                     %td.value-text.field_name
                       {{ object.contact|name:user_org }}
+
+                    %td.value-text.field_name
+                      %a{'href':'{{ object.get_url }}', 'data-featherlight':'image'}
+                        %img{'src':'{{ object.get_url }}', width:'40'}
 
                     -for field in contact_fields
                       -if field.show_in_table
@@ -113,16 +121,6 @@
                     %td.value-received.field_received
                       %nobr
                         {{ object.created_on|gmail_time }}
-
-                    // This is needed for action buttons
-                    %td.hide
-                      .value-labels
-                        %nobr
-                          - for group in object.all_groups.all
-                            - if group.group_type == 'U'
-                              %span.label.label-info.lbl{ data-id: '{{group.id}}'}
-                                %a{'href':'{% url "contacts.contact_filter" group.uuid %}'}
-                                  {{group.name}}
 
                 -empty
                   %tr
@@ -147,7 +145,12 @@
 -block extra-style
   :css
 
-    tr.contacts th {
+    .flowimage-checkbox {
+      padding: 0 0 10px 0;
+      margin: 0px 0 0px 4px !important;
+    }
+
+    tr.flowimages th {
       font-size:11px;
       height:10px;
       padding:0;
@@ -163,7 +166,7 @@
       min-width:125px;
     }
 
-    .span9 .contact_list tr.contacts {
+    .span9 .flowimage_list tr.flowimages {
       border-top: none;
     }
 
@@ -192,24 +195,3 @@
 
     // keeps track if we are on a link or not
     var onLink = false;
-
-    {% if org_perms.contacts.contact_create %}
-    function showCreateContactModal() {
-      var modal = new Modax('{% trans "Create Contact" %}', '{% url "contacts.contact_create" %}')
-      modal.setIcon('icon-user')
-      modal.setListeners({
-        onSuccess: function() {
-          location.reload();
-        }
-      })
-      modal.show()
-    }
-    {% endif %}
-
-    $('.select-row').live('mouseover', function(){
-      url = '/contact/read/' + $(this).data('uuid');
-
-      $(this).find('td').not(':first-child').each(function(){
-        $(this).attr('onClick', "document.location.href=url;");
-      });
-    });
