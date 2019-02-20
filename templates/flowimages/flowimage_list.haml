@@ -98,7 +98,7 @@
                   - if object_list
                     -trans "Created On"
 
-              %tbody
+              %tbody.infinite-scroll
                 - for object in object_list
                   %tr.flowimage.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
 
@@ -150,6 +150,10 @@
       margin: 0px 0 0px 4px !important;
     }
 
+    .pagination {
+      display: none;
+    }
+
     tr.flowimages th {
       font-size:11px;
       height:10px;
@@ -186,6 +190,8 @@
 -block extra-script
   {{ block.super }}
 
+  %script{src:"{{ STATIC_URL }}js/jquery.ias.min.js"}
+
   :javascript
 
     $(document).on('click', '.search-query', function() {
@@ -195,3 +201,22 @@
 
     // keeps track if we are on a link or not
     var onLink = false;
+
+    $(document).ready(function () {
+      var ias = $.ias({
+        container: ".infinite-scroll",
+        item: "tr",
+        pagination: ".paginator .span9 .pagination",
+        next: "li.next a"
+      });
+      ias.extension(new IASSpinnerExtension());
+      ias.extension(new IASPagingExtension());
+        ias.on('next', function(url) {
+          if(url == '#'){
+            ias.destroy();
+            return false;
+          } else {
+            return true;
+          }
+        });
+    });
