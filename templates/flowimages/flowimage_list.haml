@@ -33,6 +33,10 @@
             %a{'href':'{% url "flows.flowimage_list" %}'}
               -trans "All Images"
               ({{ org_has_flowimages }})
+          %li{'class':'{% if request.path == "/flowimage/archived" %}active{% endif %}'}
+            %a{'href':'{% url "flows.flowimage_archived" %}'}
+              -trans "Archived"
+              ({{ org_has_flowimages_archived }})
 
           %li.nav-header
             -trans "Images by Flows"

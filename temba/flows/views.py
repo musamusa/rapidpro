@@ -376,7 +376,7 @@ class FlowRunCRUDL(SmartCRUDL):
 
 
 class FlowImageCRUDL(SmartCRUDL):
-    actions = ('list', 'read', 'filter',)
+    actions = ('list', 'read', 'filter', 'archived',)
 
     model = FlowImage
 
@@ -395,11 +395,14 @@ class FlowImageCRUDL(SmartCRUDL):
         default_template = 'flowimages/flowimage_list.html'
         default_order = ('-created_on',)
         search_fields = ('name__icontains',)
+        actions = ('download',)
 
         def get_context_data(self, **kwargs):
             context = super(FlowImageCRUDL.BaseList, self).get_context_data(**kwargs)
             context['org_has_flowimages'] = FlowImage.objects.filter(org=self.request.user.get_org(),
                                                                      is_active=True).count()
+            context['org_has_flowimages_archived'] = FlowImage.objects.filter(org=self.request.user.get_org(),
+                                                                              is_active=False).count()
             context['flows'] = Flow.objects.filter(org=self.request.user.get_org(),
                                                    is_active=True).only('name', 'uuid').order_by('name')
             context['groups'] = ContactGroup.user_groups.filter(org=self.request.user.get_org(),
@@ -410,25 +413,28 @@ class FlowImageCRUDL(SmartCRUDL):
             return context
 
         def derive_queryset(self, *args, **kwargs):
-            qs = super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
-            return qs.exclude(is_active=False)
+            return super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
+
+        def get_gear_links(self):
+            links = []
+            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+            return links
 
     class List(BaseList):
         title = _("Flow Images")
-        actions = ('download',)
 
-        def get_gear_links(self):
-            links = []
-            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
-            return links
+        def derive_queryset(self, *args, **kwargs):
+            qs = super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
+            return qs.exclude(is_active=False)
+
+    class Archived(BaseList):
+        title = _("Flow Images Archived")
+
+        def derive_queryset(self, *args, **kwargs):
+            qs = super(FlowImageCRUDL.Archived, self).derive_queryset(*args, **kwargs)
+            return qs.exclude(is_active=True)
 
     class Filter(BaseList):
-        actions = ('download',)
-
-        def get_gear_links(self):
-            links = []
-            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
-            return links
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowImageCRUDL.Filter, self).get_context_data(*args, **kwargs)

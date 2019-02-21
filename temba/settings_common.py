@@ -478,7 +478,8 @@ PERMISSIONS = {
                    ),
 
     'flows.flowimage': ('read',
-                        'filter',),
+                        'filter',
+                        'archived',),
 
     'flows.ruleset': ('analytics',
                       'choropleth',
@@ -898,6 +899,7 @@ GROUP_PERMISSIONS = {
         'flows.flowimage_list',
         'flows.flowimage_read',
         'flows.flowimage_filter',
+        'flows.flowimage_archived',
 
         'msgs.broadcast_schedule_list',
         'msgs.broadcast_schedule_read',
