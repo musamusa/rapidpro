@@ -2719,6 +2719,34 @@ class FlowImage(TembaModel):
 
     exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
 
+    @classmethod
+    def apply_action_archive(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.archive()
+            changed.append(item.pk)
+
+        return changed
+
+    @classmethod
+    def apply_action_restore(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.restore()
+            changed.append(item.pk)
+
+        return changed
+
+    def archive(self):
+        self.is_active = False
+        self.save(update_fields=['is_active'])
+
+    def restore(self):
+        self.is_active = True
+        self.save(update_fields=['is_active'])
+
     def get_exif(self):
         return json.loads(self.exif) if self.exif else dict()
 

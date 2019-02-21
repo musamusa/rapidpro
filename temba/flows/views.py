@@ -174,6 +174,36 @@ class FlowActionMixin(SmartListView):
         return response
 
 
+class FlowImageActionForm(BaseActionForm):
+    allowed_actions = (('archive', _("Archive Flow Images")),
+                       ('download', _("Download Flow Images")),
+                       ('restore', _("Restore Flows Images")))
+
+    model = FlowImage
+    has_is_active = False
+
+    class Meta:
+        fields = ('action', 'objects', 'label', 'add')
+
+
+class FlowImageActionMixin(SmartListView):
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super(FlowImageActionMixin, self).dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        user = self.request.user
+        org = user.get_org()
+
+        form = FlowImageActionForm(self.request.POST, org=org, user=user)
+        if form.is_valid():
+            form.execute()
+
+        response = self.get(request, *args, **kwargs)
+        return response
+
+
 class RuleCRUDL(SmartCRUDL):
     actions = ('results', 'analytics', 'choropleth')
     model = RuleSet
@@ -388,14 +418,13 @@ class FlowImageCRUDL(SmartCRUDL):
             else:
                 return queryset.filter(org=self.request.user.get_org())
 
-    class BaseList(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+    class BaseList(FlowImageActionMixin, OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         title = _("Flow Images")
         refresh = 10000
         fields = ('name', 'modified_on')
         default_template = 'flowimages/flowimage_list.html'
         default_order = ('-created_on',)
         search_fields = ('name__icontains',)
-        actions = ('download',)
 
         def get_context_data(self, **kwargs):
             context = super(FlowImageCRUDL.BaseList, self).get_context_data(**kwargs)
@@ -422,19 +451,22 @@ class FlowImageCRUDL(SmartCRUDL):
 
     class List(BaseList):
         title = _("Flow Images")
+        actions = ('download', 'archive',)
 
         def derive_queryset(self, *args, **kwargs):
-            qs = super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
+            qs = super(FlowImageCRUDL.List, self).derive_queryset(*args, **kwargs)
             return qs.exclude(is_active=False)
 
     class Archived(BaseList):
         title = _("Flow Images Archived")
+        actions = ('restore',)
 
         def derive_queryset(self, *args, **kwargs):
             qs = super(FlowImageCRUDL.Archived, self).derive_queryset(*args, **kwargs)
             return qs.exclude(is_active=True)
 
     class Filter(BaseList):
+        actions = ('download', 'archive',)
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowImageCRUDL.Filter, self).get_context_data(*args, **kwargs)
