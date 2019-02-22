@@ -66,9 +66,12 @@
                     .list-buttons
                       - if 'download' in actions
                         %span.btn-group
-                          %a.object-btn-download{href:'#'}
+                          %a.object-btn-download{href:'#', onclick:'submitDownloadImages()'}
                             %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Download" %}'}
                               .glyph.icon-cloud-download
+                        %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
+                          -csrf_token
+                          %input#objects{type:'hidden', name:'objects'}
 
                       - if 'restore' in actions
                         %span.btn-group
@@ -208,6 +211,12 @@
   %script{src:"{{ STATIC_URL }}js/jquery.ias.min.js"}
 
   :javascript
+
+    function submitDownloadImages() {
+      var objects = getCheckedIds();
+      $('input#objects').val(objects);
+      $('form#download-images').submit();
+    }
 
     var refresh = 0;
 

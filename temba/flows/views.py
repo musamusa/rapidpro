@@ -406,7 +406,7 @@ class FlowRunCRUDL(SmartCRUDL):
 
 
 class FlowImageCRUDL(SmartCRUDL):
-    actions = ('list', 'read', 'filter', 'archived',)
+    actions = ('list', 'read', 'filter', 'archived', 'download',)
 
     model = FlowImage
 
@@ -527,6 +527,22 @@ class FlowImageCRUDL(SmartCRUDL):
             flow_image = self.get_object()
             with open(flow_image.get_full_path(), 'r') as image:
                 return HttpResponse(image.read(), content_type='image/png')
+
+    class Download(OrgPermsMixin, SmartListView):
+        def post(self, request, *args, **kwargs):
+            user = self.request.user
+            org = user.get_org()
+
+            objects = self.request.POST.get('objects')
+            objects_list = objects.split(',')
+
+            flow_images = FlowImage.objects.filter(org=org, id__in=objects_list).order_by('-created_on')
+
+            messages.info(self.request,
+                          _("We are preparing your download file. We will e-mail you at %s when it is ready.")
+                          % self.request.user.username)
+
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
 class FlowCRUDL(SmartCRUDL):
