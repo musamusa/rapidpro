@@ -426,20 +426,33 @@ class FlowImageCRUDL(SmartCRUDL):
         default_order = ('-created_on',)
         search_fields = ('name__icontains',)
 
+        def get_counter(self):
+            query = FlowImage.objects.filter(org=self.request.user.get_org())
+            return query.filter(is_active=True).count(), query.filter(is_active=False).count()
+
         def get_context_data(self, **kwargs):
             context = super(FlowImageCRUDL.BaseList, self).get_context_data(**kwargs)
-            context['org_has_flowimages'] = FlowImage.objects.filter(org=self.request.user.get_org(),
-                                                                     is_active=True).count()
-            context['org_has_flowimages_archived'] = FlowImage.objects.filter(org=self.request.user.get_org(),
-                                                                              is_active=False).count()
+            folders = self.get_folders()
+            context['org_has_flowimages'] = folders[0].get('count')
+            context['org_has_flowimages_archived'] = folders[1].get('count')
             context['flows'] = Flow.objects.filter(org=self.request.user.get_org(),
                                                    is_active=True).only('name', 'uuid').order_by('name')
             context['groups'] = ContactGroup.user_groups.filter(org=self.request.user.get_org(),
                                                                 is_active=True).only('name', 'uuid').order_by('name')
+            context['folders'] = folders
             context['request_url'] = self.request.path
             context['actions'] = self.actions
 
             return context
+
+        def get_folders(self):
+            (active_count, archived_count) = self.get_counter()
+            return [
+                dict(label="Active", url=reverse('flows.flowimage_list'),
+                     count=active_count),
+                dict(label="Archived", url=reverse('flows.flowimage_archived'),
+                     count=archived_count)
+            ]
 
         def derive_queryset(self, *args, **kwargs):
             return super(FlowImageCRUDL.BaseList, self).derive_queryset(*args, **kwargs)
