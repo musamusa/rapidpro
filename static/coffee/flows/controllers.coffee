@@ -1217,6 +1217,12 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.updateLookupFields = () ->
     formData.isLookupQueriesVisible = true
 
+    try
+      if formData.lookup_db.id != ruleset.config.lookup_db.id
+        for item in formData.lookup_queries
+          $scope.removeLookupQuery(item)
+    catch e
+
     if formData.lookup_queries.length == 0
       $scope.addNewLookupQuery()
 
