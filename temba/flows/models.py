@@ -2769,6 +2769,9 @@ class FlowImage(TembaModel):
         self.is_active = False
         self.save(update_fields=('is_active'))
 
+    def __str__(self):
+        return self.name
+
 
 class FlowRun(models.Model):
     STATE_ACTIVE = 'A'
