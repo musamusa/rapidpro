@@ -35,7 +35,7 @@ from temba.ussd.models import USSDSession
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
 from temba.reports.models import Report
 from temba.flows.models import Flow, FlowRun, FlowRevision, FlowRunCount, FlowImage
-from temba.flows.tasks import export_flow_results_task
+from temba.flows.tasks import export_flow_results_task, download_flow_images_task
 from temba.locations.models import AdminBoundary
 from temba.msgs.models import Msg, PENDING
 from temba.triggers.models import Trigger
@@ -47,6 +47,7 @@ from temba.utils.views import BaseActionForm
 from temba.values.models import Value
 from uuid import uuid4
 from .models import FlowStep, RuleSet, ActionLog, ExportFlowResultsTask, FlowLabel, FlowStart, FlowPathRecentMessage
+from .models import ExportFlowImagesTask
 
 from simple_salesforce import Salesforce
 
@@ -536,11 +537,27 @@ class FlowImageCRUDL(SmartCRUDL):
             objects = self.request.POST.get('objects')
             objects_list = objects.split(',')
 
-            flow_images = FlowImage.objects.filter(org=org, id__in=objects_list).order_by('-created_on')
+            # is there already an export taking place?
+            existing = ExportFlowImagesTask.get_recent_unfinished(org)
+            if existing:
+                messages.info(self.request,
+                              _("There is already a download in progress, started by %s. You must wait "
+                                "for that download process to complete before starting another." % existing.created_by.username))
+            else:
+                export = ExportFlowImagesTask.create(org, user, files=objects_list)
+                on_transaction_commit(lambda: download_flow_images_task.delay(export.pk))
 
-            messages.info(self.request,
-                          _("We are preparing your download file. We will e-mail you at %s when it is ready.")
-                          % self.request.user.username)
+                if not getattr(settings, 'CELERY_ALWAYS_EAGER', False):  # pragma: needs cover
+                    messages.info(self.request,
+                                  _("We are preparing your download file. We will e-mail you at %s when it is ready.")
+                                  % self.request.user.username)
+
+                else:
+                    export = ExportFlowImagesTask.objects.get(id=export.pk)
+                    dl_url = reverse('assets.download', kwargs=dict(type='flowimages_download', pk=export.pk))
+                    messages.info(self.request,
+                                  _("Download complete, you can find it here: %s (production users will get an email)")
+                                  % dl_url)
 
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 

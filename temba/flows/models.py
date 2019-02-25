@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
+import os
 import json
 import logging
 import numbers
@@ -10,8 +11,10 @@ import six
 import time
 import urllib2
 import requests
+import zipfile
 
 from collections import OrderedDict, defaultdict
+from cStringIO import StringIO
 from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
@@ -4948,6 +4951,52 @@ class ResultsExportAssetStore(BaseExportAssetStore):
     directory = 'results_exports'
     permission = 'flows.flow_export_results'
     extensions = ('xlsx',)
+
+
+class ExportFlowImagesTask(BaseExportTask):
+    """
+    Container for managing our flow images download requests
+    """
+    analytics_key = 'flowimages_download'
+    email_subject = "Your download file is ready"
+    email_template = 'flowimages/email/flowimages_download'
+
+    files = models.TextField(help_text=_("Array as text of the files ID to download in a zip file"))
+
+    @classmethod
+    def create(cls, org, user, files):
+        dict_files = json.dumps(dict(files=files))
+        return cls.objects.create(org=org, created_by=user, modified_by=user, files=dict_files)
+
+    def write_export(self):
+        files = json.loads(self.files)
+        files_obj = FlowImage.objects.filter(id__in=files.get('files')).order_by('-created_on')
+
+        stream = StringIO()
+        zf = zipfile.ZipFile(stream, "w")
+
+        for file in files_obj:
+            fpath = file.get_full_path()
+            fdir, fname = os.path.split(fpath)
+
+            # Add file, at correct path
+            zf.write(fpath, arcname=fname)
+
+        zf.close()
+
+        temp = NamedTemporaryFile(delete=True)
+        temp.write(stream.getvalue())
+        temp.flush()
+        return temp, 'zip'
+
+
+@register_asset_store
+class FlowImagesExportAssetStore(BaseExportAssetStore):
+    model = ExportFlowImagesTask
+    key = 'flowimages_download'
+    directory = 'flowimages_download'
+    permission = 'flows.flowimage_download'
+    extensions = ('zip',)
 
 
 @six.python_2_unicode_compatible
