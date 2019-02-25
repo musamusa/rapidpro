@@ -4982,8 +4982,6 @@ class ExportFlowImagesTask(BaseExportTask):
         for file in files_obj:
             fpath = file.get_full_path()
             fdir, fname = os.path.split(fpath)
-
-            # Add file, at correct path
             zf.write(fpath, arcname=fname)
 
         zf.close()

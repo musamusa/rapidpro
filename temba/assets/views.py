@@ -56,7 +56,8 @@ class AssetDownloadView(SmartTemplateView):
             if type_ == 'flowimages_download':
                 task = ExportFlowImagesTask.objects.filter(pk=pk).first()
                 task.file_path = location
-                task.save(update_fields=['file_path'])
+                task.file_downloaded = True
+                task.save(update_fields=['file_path', 'file_downloaded'])
         except (AssetEntityNotFound, AssetFileNotFound):
             file_error = _("File not found")
         except AssetAccessDenied:  # pragma: needs cover
