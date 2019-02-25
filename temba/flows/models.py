@@ -4980,9 +4980,27 @@ class ExportFlowImagesTask(BaseExportTask):
         zf = zipfile.ZipFile(stream, "w")
 
         for file in files_obj:
-            fpath = file.get_full_path()
-            fdir, fname = os.path.split(fpath)
-            zf.write(fpath, arcname=fname)
+            file_path = file.path
+            if settings.AWS_BUCKET_DOMAIN in file_path:
+                temp_file = Org.get_temporary_file_from_url(file_path)
+
+                extension = file_path.split('.')[-1]
+
+                random_file = str(uuid4())
+                random_dir = random_file[0:4]
+                fname = '%s.%s' % (random_file, extension)
+                file_path = '%s/%s' % (random_dir, fname)
+
+                path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, self.org.id, file_path)
+                file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                location = file_storage.save(name=path, content=temp_file)
+                fpath = '%s/%s' % (settings.MEDIA_ROOT, location)
+                zf.write(fpath, arcname=fname)
+                os.remove(fpath)
+            else:
+                fpath = file.get_full_path()
+                fdir, fname = os.path.split(fpath)
+                zf.write(fpath, arcname=fname)
 
         zf.close()
 
