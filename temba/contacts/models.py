@@ -12,7 +12,6 @@ import time
 import uuid
 
 from collections import defaultdict
-from functools import reduce
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import models
