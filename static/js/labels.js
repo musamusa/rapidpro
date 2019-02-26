@@ -214,6 +214,36 @@ $(document)
             return false;
         });
 
+$(document)
+    .on('click', 'th.object-row-checkbox',
+        function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            $(".list-buttons-container").addClass('visible');
+
+            var btnCheck = $(this);
+            if (btnCheck.hasClass("checked")) {
+                btnCheck.removeClass("checked");
+                $('td.object-row-checkbox').each(function() {
+                    var row = $(this).parent('tr');
+                    row.removeClass("checked");
+                    var checks = $(".object-row.checked");
+                    if (checks.length == 0) {
+                        $('.list-buttons-container').removeClass('visible');
+                    }
+                });
+            } else {
+                btnCheck.addClass("checked");
+                $('td.object-row-checkbox').each(function() {
+                    var row = $(this).parent('tr');
+                    row.addClass("checked");
+                });
+            }
+            updateLabelMenu();
+            return false;
+        });
+
 $(document).ready(function() {
     $(".page-content").on('click', ".object-btn-label", function() {
         labelObjectRows($(this).data('id'));

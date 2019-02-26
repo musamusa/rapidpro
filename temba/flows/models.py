@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
+import os
 import json
 import logging
 import numbers
@@ -10,8 +11,10 @@ import six
 import time
 import urllib2
 import requests
+import zipfile
 
 from collections import OrderedDict, defaultdict
+from cStringIO import StringIO
 from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
@@ -2699,6 +2702,9 @@ class Flow(TembaModel):
         self.field_dependencies.clear()
         self.field_dependencies.add(*fields)
 
+    def get_images_count(self):
+        return self.flow_images.filter(is_active=True).count()
+
     def __str__(self):
         return self.name
 
@@ -2721,6 +2727,34 @@ class FlowImage(TembaModel):
 
     exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
 
+    @classmethod
+    def apply_action_archive(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.archive()
+            changed.append(item.pk)
+
+        return changed
+
+    @classmethod
+    def apply_action_restore(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.restore()
+            changed.append(item.pk)
+
+        return changed
+
+    def archive(self):
+        self.is_active = False
+        self.save(update_fields=['is_active'])
+
+    def restore(self):
+        self.is_active = True
+        self.save(update_fields=['is_active'])
+
     def get_exif(self):
         return json.loads(self.exif) if self.exif else dict()
 
@@ -2742,6 +2776,9 @@ class FlowImage(TembaModel):
     def set_deleted(self):
         self.is_active = False
         self.save(update_fields=('is_active'))
+
+    def __str__(self):
+        return self.name
 
 
 class FlowRun(models.Model):
@@ -4923,6 +4960,74 @@ class ResultsExportAssetStore(BaseExportAssetStore):
     directory = 'results_exports'
     permission = 'flows.flow_export_results'
     extensions = ('xlsx',)
+
+
+class ExportFlowImagesTask(BaseExportTask):
+    """
+    Container for managing our flow images download requests
+    """
+    analytics_key = 'flowimages_download'
+    email_subject = "Your download file is ready"
+    email_template = 'flowimages/email/flowimages_download'
+
+    files = models.TextField(help_text=_("Array as text of the files ID to download in a zip file"))
+
+    file_path = models.CharField(null=True, help_text=_('Path to downloadable file'), max_length=255)
+
+    file_downloaded = models.NullBooleanField(default=False, help_text=_('If the file was downloaded'))
+
+    cleaned = models.NullBooleanField(default=False, help_text=_('If the file was removed after downloaded'))
+
+    @classmethod
+    def create(cls, org, user, files):
+        dict_files = json.dumps(dict(files=files))
+        return cls.objects.create(org=org, created_by=user, modified_by=user, files=dict_files)
+
+    def write_export(self):
+        files = json.loads(self.files)
+        files_obj = FlowImage.objects.filter(id__in=files.get('files')).order_by('-created_on')
+
+        stream = StringIO()
+        zf = zipfile.ZipFile(stream, "w")
+
+        for file in files_obj:
+            file_path = file.path
+            if settings.AWS_BUCKET_DOMAIN in file_path:
+                temp_file = Org.get_temporary_file_from_url(file_path)
+
+                extension = file_path.split('.')[-1]
+
+                random_file = str(uuid4())
+                random_dir = random_file[0:4]
+                fname = '%s.%s' % (random_file, extension)
+                file_path = '%s/%s' % (random_dir, fname)
+
+                path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, self.org.id, file_path)
+                file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                location = file_storage.save(name=path, content=temp_file)
+                fpath = '%s/%s' % (settings.MEDIA_ROOT, location)
+                zf.write(fpath, arcname=fname)
+                os.remove(fpath)
+            else:
+                fpath = file.get_full_path()
+                fdir, fname = os.path.split(fpath)
+                zf.write(fpath, arcname=fname)
+
+        zf.close()
+
+        temp = NamedTemporaryFile(delete=True)
+        temp.write(stream.getvalue())
+        temp.flush()
+        return temp, 'zip'
+
+
+@register_asset_store
+class FlowImagesExportAssetStore(BaseExportAssetStore):
+    model = ExportFlowImagesTask
+    key = 'flowimages_download'
+    directory = 'flowimages_download'
+    permission = 'flows.flowimage_download'
+    extensions = ('zip',)
 
 
 @six.python_2_unicode_compatible
