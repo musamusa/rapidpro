@@ -425,7 +425,7 @@ class FlowImageCRUDL(SmartCRUDL):
         fields = ('name', 'modified_on')
         default_template = 'flowimages/flowimage_list.html'
         default_order = ('-created_on',)
-        search_fields = ('name__icontains',)
+        search_fields = ('name__icontains', 'contact__name__icontains', 'contact__urns__path__icontains')
 
         def get_counter(self):
             query = FlowImage.objects.filter(org=self.request.user.get_org())
