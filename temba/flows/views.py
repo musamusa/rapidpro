@@ -466,7 +466,7 @@ class FlowImageCRUDL(SmartCRUDL):
                 links.append(dict(title=_('Manage Fields'), js_class='manage-fields', href="#"))
 
             if self.has_org_perm('flows.flowimage_download'):
-                links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+                links.append(dict(title=_('Download all images'), js_class='download-all-images', href=''))
 
             return links
 
@@ -541,8 +541,34 @@ class FlowImageCRUDL(SmartCRUDL):
             user = self.request.user
             org = user.get_org()
 
-            objects = self.request.POST.get('objects')
-            objects_list = objects.split(',')
+            type_ = self.request.POST.get('type', None)
+            uuid_ = self.request.POST.get('uuid', None)
+
+            if type_ in ['list', 'archived', 'group', 'flow']:
+                if type_ == 'list':
+                    get_filter = dict(is_active=True, org=org)
+                elif type_ == 'archived':
+                    get_filter = dict(is_active=False, org=org)
+                elif (type_ == 'group' or type_ == 'flow') and uuid_:
+                    if type_ == 'group':
+                        group = ContactGroup.user_groups.filter(org=org, uuid=uuid_).only('id').first()
+                        contacts_id = group.contacts.all().exclude(is_active=False).order_by('id').\
+                            values_list('pk', flat=True).distinct()
+                        get_filter = dict(is_active=True, contact__id__in=contacts_id, org=org)
+                    else:
+                        flow = Flow.objects.filter(org=org, uuid=uuid_).first()
+                        get_filter = dict(is_active=True, flow=flow, org=org)
+                else:
+                    get_filter = None
+
+                if get_filter:
+                    objects_list = list(FlowImage.objects.filter(**get_filter).only('id').order_by('-created_on').\
+                        values_list('id', flat=True).distinct())
+                else:
+                    objects_list = []
+            else:
+                objects = self.request.POST.get('objects')
+                objects_list = objects.split(',')
 
             # is there already an export taking place?
             existing = ExportFlowImagesTask.get_recent_unfinished(org)

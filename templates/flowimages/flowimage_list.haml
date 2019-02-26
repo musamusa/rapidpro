@@ -61,6 +61,12 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
+                  %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
+                    -csrf_token
+                    %input#objects{type:'hidden', name:'objects'}
+                    %input#type{type:'hidden', name:'type'}
+                    %input#uuid{type:'hidden', name:'uuid'}
+
                 .list-buttons-container
                   .list-buttons
                     - if 'download' in actions and org_perms.flows.flowimage_download
@@ -68,9 +74,6 @@
                         %a.object-btn-download{href:'#', onclick:'submitDownloadImages()'}
                           %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Download" %}'}
                             .glyph.icon-cloud-download
-                      %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
-                        -csrf_token
-                        %input#objects{type:'hidden', name:'objects'}
 
                     - if 'restore' in actions
                       %span.btn-group
@@ -260,3 +263,19 @@
       modal.show();
     });
     {% endif %}
+
+    $('.page-content').on('click', ".download-all-images", function(e) {
+        e.preventDefault();
+        var href = $(this)[0].href;
+        splitted = href.split('/');
+        if (splitted[4] == 'filter') {
+            $('input#type').val(splitted[5]);
+            $('input#uuid').val(splitted[6]);
+        } else if (splitted[4] == 'archived') {
+            $('input#type').val('archived');
+        }
+        else {
+            $('input#type').val('list');
+        }
+        $('form#download-images').submit();
+    });
