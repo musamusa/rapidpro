@@ -443,6 +443,7 @@ class FlowImageCRUDL(SmartCRUDL):
             context['folders'] = folders
             context['request_url'] = self.request.path
             context['actions'] = self.actions
+            context['contact_fields'] = ContactField.objects.filter(org=self.request.user.get_org(), is_active=True).order_by('pk')
 
             return context
 
@@ -460,7 +461,13 @@ class FlowImageCRUDL(SmartCRUDL):
 
         def get_gear_links(self):
             links = []
-            links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+
+            if self.has_org_perm('contacts.contactfield_managefields'):
+                links.append(dict(title=_('Manage Fields'), js_class='manage-fields', href="#"))
+
+            if self.has_org_perm('flows.flowimage_download'):
+                links.append(dict(title=_('Download all images'), js_class='add-dynamic-group', href="#"))
+
             return links
 
     class List(BaseList):

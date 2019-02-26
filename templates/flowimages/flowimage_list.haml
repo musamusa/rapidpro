@@ -61,29 +61,28 @@
                     -block gear-menu
                       -include "gear_links_include.haml"
 
-                - if org_perms.contacts.contact_update
-                  .list-buttons-container
-                    .list-buttons
-                      - if 'download' in actions
-                        %span.btn-group
-                          %a.object-btn-download{href:'#', onclick:'submitDownloadImages()'}
-                            %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Download" %}'}
-                              .glyph.icon-cloud-download
-                        %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
-                          -csrf_token
-                          %input#objects{type:'hidden', name:'objects'}
+                .list-buttons-container
+                  .list-buttons
+                    - if 'download' in actions and org_perms.flows.flowimage_download
+                      %span.btn-group
+                        %a.object-btn-download{href:'#', onclick:'submitDownloadImages()'}
+                          %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Download" %}'}
+                            .glyph.icon-cloud-download
+                      %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
+                        -csrf_token
+                        %input#objects{type:'hidden', name:'objects'}
 
-                      - if 'restore' in actions
-                        %span.btn-group
-                          %a.object-btn-restore{href:'#'}
-                            %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Activate" %}'}
-                              .glyph.icon-photo
+                    - if 'restore' in actions
+                      %span.btn-group
+                        %a.object-btn-restore{href:'#'}
+                          %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Activate" %}'}
+                            .glyph.icon-photo
 
-                      - if 'archive' in actions
-                        %span.btn-group
-                          %a.object-btn-archive{href:'#'}
-                            %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Archive" %}'}
-                              .glyph.icon-box
+                    - if 'archive' in actions
+                      %span.btn-group
+                        %a.object-btn-archive{href:'#'}
+                          %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Archive" %}'}
+                            .glyph.icon-box
 
               .search-details
                 -if search_error
@@ -134,7 +133,7 @@
                         -for field in contact_fields
                           -if field.show_in_table
                             %td.field
-                              {{ object|contact_field:field.key }}
+                              {{ object.contact|contact_field:field.key }}
 
                         %td.value-received.field_received
                           %nobr
@@ -246,3 +245,18 @@
           }
         });
     });
+
+    {% if org_perms.contacts.contactfield_managefields %}
+    $('.page-content').on('click', ".manage-fields", function() {
+      lastChecked = getCheckedIds();
+      var modal = new Modax('{% trans "Manage Contact Fields" %}', '{% url "contacts.contactfield_managefields" %}');
+      modal.setIcon('icon-vcard');
+      modal.setListeners({
+        onFormLoaded:function() {
+          useFontCheckbox("input[type=checkbox]", false);
+        },
+        onSuccess: function() { location.reload(); }
+      });
+      modal.show();
+    });
+    {% endif %}
