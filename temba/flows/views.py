@@ -562,8 +562,7 @@ class FlowImageCRUDL(SmartCRUDL):
                     get_filter = None
 
                 if get_filter:
-                    objects_list = list(FlowImage.objects.filter(**get_filter).only('id').order_by('-created_on').\
-                        values_list('id', flat=True).distinct())
+                    objects_list = list(FlowImage.objects.filter(**get_filter).only('id').order_by('-created_on').values_list('id', flat=True).distinct())
                 else:
                     objects_list = []
             else:

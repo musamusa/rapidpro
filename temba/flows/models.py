@@ -4967,6 +4967,8 @@ class ExportFlowImagesTask(BaseExportTask):
 
     file_downloaded = models.NullBooleanField(default=False, help_text=_('If the file was downloaded'))
 
+    cleaned = models.NullBooleanField(default=False, help_text=_('If the file was removed after downloaded'))
+
     @classmethod
     def create(cls, org, user, files):
         dict_files = json.dumps(dict(files=files))

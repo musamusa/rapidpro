@@ -1055,6 +1055,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'refresh_salesforce_access_tokens',
         'schedule': timedelta(seconds=600),
     },
+    "delete-flowimage-downloaded-files": {
+        'task': 'delete_flowimage_downloaded_files',
+        'schedule': crontab(minute=0, hour=4)
+    }
 }
 
 # Mapping of task name to task function path, used when CELERY_ALWAYS_EAGER is set to True
