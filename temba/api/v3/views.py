@@ -223,8 +223,9 @@ class AuthenticateView(AuthenticateEndpointV2):
                     token = api_token(user)
                     if not token:
                         result = JsonResponse(dict(error=403,
-                                                   message=_('No organizations associated with this account. '
-                                                             'Please contact your administrator.')),
+                                                   message=_('No organizations associated with this account or your '
+                                                             'organization is inactive. Please contact your '
+                                                             'administrator.')),
                                               safe=False, status=status.HTTP_403_FORBIDDEN)
                     else:
                         result = JsonResponse(dict(token=token), safe=False)
