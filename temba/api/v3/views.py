@@ -221,7 +221,8 @@ class AuthenticateView(AuthenticateEndpointV2):
 
                 if role:
                     token = api_token(user)
-                    if not token:
+                    token_obj = APIToken.objects.filter(key=token).only('org', 'key').first() if token else None
+                    if (not token) or (token and token_obj.org.is_suspended()):
                         result = JsonResponse(dict(error=403,
                                                    message=_('No organizations associated with this account or your '
                                                              'organization is inactive. Please contact your '
