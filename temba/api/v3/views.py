@@ -2176,7 +2176,7 @@ class MeEndpoint(BaseAPIView):
 
         api_token = get_apitoken_from_auth(user.api_token)
         org = api_token.org if api_token else None
-        if not org:
+        if not org or not org.is_active or org.is_suspended():
             return HttpResponse(status=status.HTTP_404_NOT_FOUND)
 
         role = org.get_user_org_group(user)
