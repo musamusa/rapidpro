@@ -105,13 +105,14 @@
       .topup-credits
         {{ topup.get_used|intcomma }} {% trans "of" %} {{ topup.credits|intcomma }} {% trans "Credits Used" %}
 
-      .topup-expires
-        -if topup.expires_on < now
-          -trans "Expired on "
-          {{ topup.expires_on }}
-        -else
-          -trans "Expires on "
-          {{ topup.expires_on }}
+      -if credits_expiration
+        .topup-expires
+          -if topup.expires_on < now
+            -trans "Expired on "
+            {{ topup.expires_on }}
+          -else
+            -trans "Expires on "
+            {{ topup.expires_on }}
 
       .topup-history
         -if topup.comment
