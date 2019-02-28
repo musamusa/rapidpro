@@ -211,16 +211,33 @@ class AuthenticateView(AuthenticateEndpointV2):
         role_code = form.cleaned_data.get('role')
 
         user = authenticate(username=username, password=password)
-        if user and user.is_active:
-            role = APIToken.get_role_from_code(role_code)
+        if user:
+            if not user.is_active:
+                result = JsonResponse(dict(error=403,
+                                           message=_('This account is inactive. Please contact your administrator.')),
+                                      safe=False, status=status.HTTP_403_FORBIDDEN)
+            else:
+                role = APIToken.get_role_from_code(role_code)
 
-            if role:
-                token = api_token(user)
-                return JsonResponse(dict(token=token), safe=False)
-            else:  # pragma: needs cover
-                return HttpResponse(status=status.HTTP_403_FORBIDDEN)
+                if role:
+                    token = api_token(user)
+                    token_obj = APIToken.objects.filter(key=token).only('org', 'key').first() if token else None
+                    if (not token) or (token and token_obj.org.is_suspended()):
+                        result = JsonResponse(dict(error=403,
+                                                   message=_('No organizations associated with this account or your '
+                                                             'organization is inactive. Please contact your '
+                                                             'administrator.')),
+                                              safe=False, status=status.HTTP_403_FORBIDDEN)
+                    else:
+                        result = JsonResponse(dict(token=token), safe=False)
+                else:  # pragma: needs cover
+                    result = HttpResponse(status=status.HTTP_403_FORBIDDEN)
         else:  # pragma: needs cover
-            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
+            result = JsonResponse(dict(error=403,
+                                       message=_('Not able to authenticate, verify either the email and password '
+                                                 'are correct')),
+                                  safe=False, status=status.HTTP_403_FORBIDDEN)
+        return result
 
 
 class ExplorerView(ExplorerViewV2):
