@@ -233,12 +233,14 @@ $(document)
                         $('.list-buttons-container').removeClass('visible');
                     }
                 });
+                $('th.select-all-items-text').html('Select all items')
             } else {
                 btnCheck.addClass("checked");
                 $('td.object-row-checkbox').each(function() {
                     var row = $(this).parent('tr');
                     row.addClass("checked");
                 });
+                $('th.select-all-items-text').html('Deselect all items')
             }
             updateLabelMenu();
             return false;

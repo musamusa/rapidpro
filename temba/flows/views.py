@@ -177,6 +177,7 @@ class FlowActionMixin(SmartListView):
 
 class FlowImageActionForm(BaseActionForm):
     allowed_actions = (('archive', _("Archive Flow Images")),
+                       ('delete', _("Delete Flow Images")),
                        ('download', _("Download Flow Images")),
                        ('restore', _("Restore Flows Images")))
 
@@ -480,7 +481,7 @@ class FlowImageCRUDL(SmartCRUDL):
 
     class Archived(BaseList):
         title = _("Flow Images Archived")
-        actions = ('restore',)
+        actions = ('restore', 'delete',)
 
         def derive_queryset(self, *args, **kwargs):
             qs = super(FlowImageCRUDL.Archived, self).derive_queryset(*args, **kwargs)

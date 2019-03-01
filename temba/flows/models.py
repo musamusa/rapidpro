@@ -12,6 +12,7 @@ import time
 import urllib2
 import requests
 import zipfile
+import boto3
 
 from collections import OrderedDict, defaultdict
 from cStringIO import StringIO
@@ -25,6 +26,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
@@ -2747,6 +2749,15 @@ class FlowImage(TembaModel):
 
         return changed
 
+    @classmethod
+    def apply_action_delete(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            changed.append(item.pk)
+            item.delete()
+        return changed
+
     def archive(self):
         self.is_active = False
         self.save(update_fields=['is_active'])
@@ -2779,6 +2790,26 @@ class FlowImage(TembaModel):
 
     def __str__(self):
         return self.name
+
+
+# Removing images files for Flow Images
+@receiver(models.signals.post_delete, sender=FlowImage)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """
+    Deletes file from filesystem
+    when corresponding `MediaFile` object is deleted.
+    """
+    s3 = boto3.resource('s3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY) \
+        if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' else None
+    if instance.path:
+        if os.path.isfile(instance.get_full_path()):
+            os.remove(instance.get_full_path())
+        elif s3 and settings.AWS_BUCKET_DOMAIN in instance.path:
+            key = instance.path.replace('https://%s/' % settings.AWS_BUCKET_DOMAIN, '')
+            obj = s3.Object(settings.AWS_STORAGE_BUCKET_NAME, key)
+            obj.delete()
 
 
 class FlowRun(models.Model):
