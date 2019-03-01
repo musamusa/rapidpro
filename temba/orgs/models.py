@@ -1461,6 +1461,9 @@ class Org(SmartModel):
                                     self._calculate_credits_expiring_soon)
 
     def _calculate_credits_expiring_soon(self):
+        if not settings.CREDITS_EXPIRATION:
+            return 0
+
         now = timezone.now()
         one_month_period = now + timedelta(days=30)
         expiring_topups_qs = self.topups.filter(is_active=True,
@@ -1490,7 +1493,12 @@ class Org(SmartModel):
 
     def _calculate_low_credits_threshold(self):
         now = timezone.now()
-        last_topup_credits = self.topups.filter(is_active=True, expires_on__gte=now).aggregate(Sum('credits')).get('credits__sum')
+
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=now))
+
+        last_topup_credits = self.topups.filter(**filter_).aggregate(Sum('credits')).get('credits__sum')
         return int(last_topup_credits * 0.15) if last_topup_credits else 0
 
     def get_credits_total(self, force_dirty=False):
@@ -1513,13 +1521,19 @@ class Org(SmartModel):
         return purchased_credits if purchased_credits else 0
 
     def _calculate_credits_total(self):
-        active_credits = self.topups.filter(is_active=True, expires_on__gte=timezone.now()).aggregate(Sum('credits')).get('credits__sum')
-        active_credits = active_credits if active_credits else 0
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=timezone.now()))
 
-        # these are the credits that have been used in expired topups
-        expired_credits = TopUpCredits.objects.filter(
-            topup__org=self, topup__is_active=True, topup__expires_on__lte=timezone.now()
-        ).aggregate(Sum('used')).get('used__sum')
+            # these are the credits that have been used in expired topups
+            expired_credits = TopUpCredits.objects.filter(
+                topup__org=self, topup__is_active=True, topup__expires_on__lte=timezone.now()
+            ).aggregate(Sum('used')).get('used__sum')
+        else:
+            expired_credits = False
+
+        active_credits = self.topups.filter(**filter_).aggregate(Sum('credits')).get('credits__sum')
+        active_credits = active_credits if active_credits else 0
 
         expired_credits = expired_credits if expired_credits else 0
 
@@ -1644,7 +1658,10 @@ class Org(SmartModel):
         """
         Calculates the oldest non-expired topup that still has credits
         """
-        non_expired_topups = self.topups.filter(is_active=True, expires_on__gte=timezone.now()).order_by('expires_on', 'id')
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=timezone.now()))
+        non_expired_topups = self.topups.filter(**filter_).order_by('expires_on', 'id')
         active_topups = non_expired_topups.annotate(used_credits=Sum('topupcredits__used'))\
                                           .filter(credits__gt=0)\
                                           .filter(Q(used_credits__lt=F('credits')) | Q(used_credits=None))
@@ -1664,7 +1681,10 @@ class Org(SmartModel):
             all_uncredited = list(msg_uncredited)
 
             # get all topups that haven't expired
-            unexpired_topups = list(self.topups.filter(is_active=True, expires_on__gte=timezone.now()).order_by('-expires_on'))
+            filter_ = dict(is_active=True)
+            if settings.CREDITS_EXPIRATION:
+                filter_.update(dict(expires_on__gte=timezone.now()))
+            unexpired_topups = list(self.topups.filter(**filter_).order_by('-expires_on'))
 
             # dict of topups to lists of their newly assigned items
             new_topup_items = {topup: [] for topup in unexpired_topups}
@@ -2493,7 +2513,7 @@ class TopUp(SmartModel):
                           balance=balance))
 
         now = timezone.now()
-        expired = self.expires_on < now
+        expired = self.expires_on < now if settings.CREDITS_EXPIRATION else False
 
         # add a line for used message credits
         if active:

@@ -1318,3 +1318,5 @@ FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJE
 
 # FCM configuration from JSON file got from FCM Console
 FCM_CONFIG = dict()
+
+CREDITS_EXPIRATION = False
