@@ -480,7 +480,7 @@ class FlowImageCRUDL(SmartCRUDL):
 
     class Archived(BaseList):
         title = _("Flow Images Archived")
-        actions = ('restore',)
+        actions = ('restore', 'delete',)
 
         def derive_queryset(self, *args, **kwargs):
             qs = super(FlowImageCRUDL.Archived, self).derive_queryset(*args, **kwargs)

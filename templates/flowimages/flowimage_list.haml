@@ -87,6 +87,12 @@
                           %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Archive" %}'}
                             .glyph.icon-box
 
+                    - if 'delete' in actions
+                      %span.btn-group
+                        %a.object-btn-delete{href:'#'}
+                          %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Delete" %}'}
+                            .glyph.icon-remove-2
+
               .search-details
                 -if search_error
                   %span.search-error
@@ -102,9 +108,10 @@
                   %tr.flowimages
                     -if object_list
                       %th.checkbox.object-row-checkbox
-                        .glyph.icon-checkbox-unchecked.flowimage-checkbox.object-row-checkbox{'title':'Select/Diselect all items'}
+                        .glyph.icon-checkbox-unchecked.flowimage-checkbox.object-row-checkbox{'title':'Select/Deselect all items'}
 
-                    %th
+                    %th.select-all-items-text{'style': 'text-align: left'}
+                      -trans "Select all items"
 
                     -if object_list
                       %th{'style': 'text-align: left'}
