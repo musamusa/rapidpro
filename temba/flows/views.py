@@ -177,6 +177,7 @@ class FlowActionMixin(SmartListView):
 
 class FlowImageActionForm(BaseActionForm):
     allowed_actions = (('archive', _("Archive Flow Images")),
+                       ('delete', _("Delete Flow Images")),
                        ('download', _("Download Flow Images")),
                        ('restore', _("Restore Flows Images")))
 

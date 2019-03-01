@@ -89,9 +89,20 @@
 
                     - if 'delete' in actions
                       %span.btn-group
-                        %a.object-btn-delete{href:'#'}
+                        %a{href:'javascript:confirmRemoveItems("remove-items")'}
                           %button.btn{data-toggle:'tooltip', data-trigger:'hover', data-delay:"800", data-placement:'top', data-original-title:'{% trans "Delete" %}'}
                             .glyph.icon-remove-2
+
+                      %a.hide.object-btn-delete#remove-items-form
+                        -trans 'Delete items'
+
+                      .hide{'class': 'remove-items'}
+                        .title
+                          -trans "Delete selected images"
+                        .body
+                          -blocktrans
+                            Are you sure you want to delete the selected files? This action cannot be undone.
+                        %a.posterize
 
               .search-details
                 -if search_error
@@ -221,11 +232,22 @@
 
   :javascript
 
+    function confirmRemoveItems(name) {
+      removalConfirmation(name, "Delete");
+    }
+
     function submitDownloadImages() {
       var objects = getCheckedIds();
       $('input#objects').val(objects);
       $('form#download-images').submit();
     }
+
+    $(document).on('click', '#remove-items-form', function() {
+        var modal = $('#active-modal');
+        var modal_backdrop = $('.modal-backdrop');
+        modal.remove();
+        modal_backdrop.remove();
+    });
 
     var refresh = 0;
 

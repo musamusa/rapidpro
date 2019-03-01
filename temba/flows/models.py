@@ -2742,6 +2742,15 @@ class FlowImage(TembaModel):
 
         return changed
 
+    @classmethod
+    def apply_action_delete(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            changed.append(item.pk)
+            item.delete()
+        return changed
+
     def archive(self):
         self.is_active = False
         self.save(update_fields=['is_active'])
