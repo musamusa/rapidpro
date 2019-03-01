@@ -3098,12 +3098,12 @@ class TopUpCRUDL(SmartCRUDL):
             context = super(TopUpCRUDL.List, self).get_context_data(**kwargs)
             context['org'] = self.request.user.get_org()
 
-            now = timezone.now()
-            context['now'] = now
-
             if settings.CREDITS_EXPIRATION:
                 context['credits_expiration'] = True
-                context['expiration_period'] = now + timedelta(days=30)
+
+            now = timezone.now()
+            context['now'] = now
+            context['expiration_period'] = now + timedelta(days=30)
 
             # show our topups in a meaningful order
             topups = list(self.get_queryset())

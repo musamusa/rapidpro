@@ -98,7 +98,7 @@
           -trans "credits remaining. Top up early to prevent any disruption in your service."
 
   -for topup in object_list
-    .topup{ class:"{% if topup.expires_on < now %}expired{% elif topup.expires_on < expiration_period %}expiring{% endif %}" }
+    .topup{ class:"{% if credits_expiration %}{% if topup.expires_on < now %}expired{% elif topup.expires_on < expiration_period %}expiring{% endif %}{% endif %}" }
       .topup-price
         {{ topup.get_price_display }}
 
