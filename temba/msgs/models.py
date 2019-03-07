@@ -251,7 +251,7 @@ class Broadcast(models.Model):
         if quick_replies:
             metadata = json.dumps(dict(quick_replies=quick_replies))
 
-        elif apply_options:
+        elif apply_options and apply_options.get('options', []):
             metadata = json.dumps(dict(apply_options=apply_options))
 
         broadcast = cls.objects.create(org=org, channel=channel, send_all=send_all,
@@ -396,7 +396,7 @@ class Broadcast(models.Model):
         language_metadata = []
         if self.metadata:
             metadata = json.loads(self.metadata)
-            for item in metadata.get('quick_replies'):
+            for item in metadata.get('quick_replies', []):
                 text = Language.get_localized_text(text_translations=item, preferred_languages=preferred_languages)
                 language_metadata.append(text)
 
@@ -412,7 +412,7 @@ class Broadcast(models.Model):
             options = []
             metadata = json.loads(self.metadata)
             if 'apply_options' in metadata and 'options' in metadata.get('apply_options'):
-                apply_options = metadata.get('apply_options')
+                apply_options = metadata.get('apply_options', [])
                 for item in apply_options.get('options'):
                     text = Language.get_localized_text(text_translations=item, preferred_languages=preferred_languages)
                     options.append(text)
