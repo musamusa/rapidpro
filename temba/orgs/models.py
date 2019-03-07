@@ -2657,6 +2657,8 @@ class CreditAlert(SmartModel):
     org = models.ForeignKey(Org, help_text="The organization this alert was triggered for")
     alert_type = models.CharField(max_length=1, choices=ALERT_TYPES_CHOICES,
                                   help_text="The type of this alert")
+    admins = models.ManyToManyField(settings.AUTH_USER_MODEL, help_text=_('Administrators who will be alerted'),
+                                    related_name='admins')
 
     @classmethod
     def trigger_credit_alert(cls, org, alert_type):
@@ -2666,12 +2668,14 @@ class CreditAlert(SmartModel):
 
         print("triggering %s credits alert type for %s" % (alert_type, org.name))
 
-        admin = org.get_org_admins().first()
+        admins = org.get_org_admins()
 
-        if admin:
+        if admins:
             # Otherwise, create our alert objects and trigger our event
             alert = CreditAlert.objects.create(org=org, alert_type=alert_type,
-                                               created_by=admin, modified_by=admin)
+                                               created_by=admins.first(), modified_by=admins.first())
+            for admin in admins:
+                alert.admins.add(admin)
 
             alert.send_alert()
 
@@ -2680,16 +2684,18 @@ class CreditAlert(SmartModel):
         send_alert_email_task(self.id)
 
     def send_email(self):
-        email = self.created_by.email
-        if not email:  # pragma: needs cover
+        admins = self.admins.all()
+
+        emails = [admin.email for admin in admins if admin.email]
+        if not emails:
             return
 
         branding = self.org.get_branding()
         subject = _("%(name)s Credits Alert") % branding
         template = "orgs/email/alert_email"
-        to_email = email
+        to_email = emails
 
-        context = dict(org=self.org, now=timezone.now(), branding=branding, alert=self, customer=self.created_by)
+        context = dict(org=self.org, now=timezone.now(), branding=branding, alert=self)
         context['subject'] = subject
 
         send_template_email(to_email, subject, template, context, branding)
