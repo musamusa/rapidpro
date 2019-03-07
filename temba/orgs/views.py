@@ -3169,10 +3169,7 @@ class TopUpCRUDL(SmartCRUDL):
             return obj
 
     class Update(SmartUpdateView):
-        fields = ('is_active', 'price', 'credits')
-
-        if settings.CREDITS_EXPIRATION:
-            fields = fields + ('expires_on',)
+        fields = ('is_active', 'price', 'credits', 'expires_on')
 
         def get_success_url(self):
             return reverse('orgs.topup_manage') + ('?org=%d' % self.object.org.id)
