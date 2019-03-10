@@ -497,6 +497,13 @@ class Org(SmartModel):
 
         if needed_check:
             Org.validate_parse_import_header(headers, org)
+        else:
+            valid_field_regex = r"^[a-zA-Z][a-zA-Z0-9_ ]*$"
+            invalid_fields = [item for item in headers if not re.match(valid_field_regex, item)]
+            if invalid_fields:
+                raise Exception(
+                    ugettext('The column names in the CSV or XLS file should only contain spaces, underscores, '
+                             'and alphanumeric characters. They must begin with a letter and be unique.'))
 
         return [header.strip() for header in headers]
 

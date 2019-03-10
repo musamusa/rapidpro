@@ -606,7 +606,8 @@ class OrgCRUDL(SmartCRUDL):
 
                 try:
                     needed_check = True if collection_type == 'giftcard' else False
-                    Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org, needed_check=needed_check)
+                    Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org,
+                                                      needed_check=needed_check)
                 except Exception as e:
                     raise forms.ValidationError(str(e))
 
@@ -699,7 +700,7 @@ class OrgCRUDL(SmartCRUDL):
 
                 else:
                     purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection)
-                    response_purge = requests.delete(purge_url, headers=parse_headers)
+                    requests.delete(purge_url, headers=parse_headers)
 
                     for item in config.get(GIFTCARDS, []):
                         full_name = OrgCRUDL.Giftcards.get_collection_full_name(org.slug, org.id, item, GIFTCARDS.lower())
