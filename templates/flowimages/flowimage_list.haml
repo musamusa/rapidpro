@@ -56,16 +56,17 @@
 
               - block buttons
 
-                .pull-right
-                  -block buttons-right
-                    -block gear-menu
-                      -include "gear_links_include.haml"
+                -if object_list
+                  .pull-right
+                    -block buttons-right
+                      -block gear-menu
+                        -include "gear_links_include.haml"
 
-                  %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
-                    -csrf_token
-                    %input#objects{type:'hidden', name:'objects'}
-                    %input#type{type:'hidden', name:'type'}
-                    %input#uuid{type:'hidden', name:'uuid'}
+                    %form#download-images{method:'POST', action:'{% url "flows.flowimage_download" %}', style:'display:none'}
+                      -csrf_token
+                      %input#objects{type:'hidden', name:'objects'}
+                      %input#type{type:'hidden', name:'type'}
+                      %input#uuid{type:'hidden', name:'uuid'}
 
                 .list-buttons-container
                   .list-buttons
@@ -148,7 +149,7 @@
                           {{ object.contact|name:user_org }}
 
                         %td.value-text.field_name
-                          %a{'href':'{{ object.get_url }}', 'data-featherlight':'image'}
+                          %a{'href':'#', 'data-featherlight':'<img class="image-full" src="{{ object.get_url }}"/>'}
                             %img{'src':'{{ object.get_url }}', width:'40'}
 
                         -for field in contact_fields
@@ -293,6 +294,7 @@
     });
     {% endif %}
 
+    {% if object_list %}
     $('.page-content').on('click', ".download-all-images", function(e) {
         e.preventDefault();
         var href = $(this)[0].href;
@@ -308,3 +310,4 @@
         }
         $('form#download-images').submit();
     });
+    {% endif %}
