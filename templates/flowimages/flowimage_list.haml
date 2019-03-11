@@ -148,7 +148,7 @@
                           {{ object.contact|name:user_org }}
 
                         %td.value-text.field_name
-                          %a{'href':'{{ object.get_url }}', 'data-featherlight':'image'}
+                          %a{'href':'#', 'data-featherlight':'<img class="image-full" src="{{ object.get_url }}"/>'}
                             %img{'src':'{{ object.get_url }}', width:'40'}
 
                         -for field in contact_fields
