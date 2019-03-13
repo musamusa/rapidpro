@@ -2331,7 +2331,7 @@ class OrgCRUDL(SmartCRUDL):
             fields = []
             if response.status_code == 200 and 'fields' in response.json():
                 fields = response.json().get('fields')
-                fields = [item for item in fields.keys() if item not in ['ACL', 'createdAt']]
+                fields = [item for item in fields.keys() if item not in ['ACL', 'createdAt', 'order']]
 
             return tuple(fields)
 
@@ -2350,7 +2350,7 @@ class OrgCRUDL(SmartCRUDL):
             register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
 
             factory = Object.factory(collection)
-            results = factory.Query.all().limit(1000).order_by('createdAt')
+            results = factory.Query.all().limit(1000).order_by('order')
             return results
 
         def derive_title(self):
