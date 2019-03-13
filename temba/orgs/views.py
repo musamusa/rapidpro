@@ -2331,7 +2331,7 @@ class OrgCRUDL(SmartCRUDL):
             fields = []
             if response.status_code == 200 and 'fields' in response.json():
                 fields = response.json().get('fields')
-                fields = [item for item in fields.keys() if item not in ['ACL', 'createdAt', 'order']]
+                fields = [item for item in sorted(fields.keys()) if item not in ['ACL', 'createdAt', 'order']]
 
             return tuple(fields)
 
