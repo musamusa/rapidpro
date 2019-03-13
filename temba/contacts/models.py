@@ -1701,6 +1701,7 @@ class Contact(TembaModel):
             Contact.NAME: self.name or '',
             Contact.FIRST_NAME: self.first_name(org),
             Contact.LANGUAGE: self.language,
+            EMAIL_SCHEME: self.get_urn_display(scheme=EMAIL_SCHEME, org=org, formatted=False) or '',
             'tel_e164': self.get_urn_display(scheme=TEL_SCHEME, org=org, formatted=False),
             'groups': ",".join([_.name for _ in self.user_groups.all()]),
             'uuid': self.uuid
@@ -1718,14 +1719,14 @@ class Contact(TembaModel):
         if context[TWITTERID_SCHEME] and not context[TWITTER_SCHEME]:
             context[TWITTER_SCHEME] = context[TWITTERID_SCHEME]
 
-        active_ids = ContactField.objects.filter(org_id=self.org_id, is_active=True).values_list('id', flat=True)
+        active_ids = ContactField.objects.filter(org_id=self.org_id, is_active=True).exclude(key=EMAIL_SCHEME).values_list('id', flat=True)
         field_values = Value.objects.filter(contact=self, contact_field_id__in=active_ids).select_related('contact_field')
 
         # get all the values for this contact
         contact_values = {v.contact_field.key: v for v in field_values}
 
         # add all active fields to our context
-        for field in ContactField.objects.filter(org_id=self.org_id, is_active=True).select_related('org'):
+        for field in ContactField.objects.filter(org_id=self.org_id, is_active=True).exclude(key=EMAIL_SCHEME).select_related('org'):
             field_value = Contact.get_field_display_for_value(field, contact_values.get(field.key, None))
             context[field.key] = field_value if field_value is not None else ''
 
