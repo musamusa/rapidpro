@@ -524,8 +524,9 @@ class Org(SmartModel):
                                      'should be included.' % string_possible_headers))
 
         if blank_headers:
-            raise Exception(ugettext('The file you provided is missing a column header. Edit the file and add the '
-                                     'missing header before re-uploading.'))
+            raise Exception(ugettext('Upload error: The file you are trying to upload has a missing or invalid column '
+                                     'header name. The column names should only contain spaces, underscores, and '
+                                     'alphanumeric characters. They must begin with a letter and be unique.'))
 
     def config_json(self):
         if self.config:
