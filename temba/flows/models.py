@@ -6482,11 +6482,7 @@ class SaveToContactAction(Action):
                 urns = [six.text_type(urn) for urn in contact.urns.all()]
                 urns += [new_urn]
 
-                # don't really update URNs on test contacts
-                if contact.is_test:
-                    ActionLog.info(run, _("Added %s as @contact.%s - skipped in simulator" % (new_value, scheme)))
-                else:
-                    contact.update_urns(user, urns)
+                contact.update_urns(user, urns)
 
         else:
             new_value = value[:Value.MAX_VALUE_LEN]
