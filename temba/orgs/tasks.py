@@ -144,7 +144,8 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                         except Exception:
                             field_value = None
                     else:
-                        field_value = field_value.encode('utf-8', errors='ignore').strip()
+                        field_value = str(field_value) if field_value.__class__.__name__ == 'int' \
+                            else field_value.encode('utf-8', errors='ignore').strip()
 
                     payload[fields_map[item].get('name')] = field_value
                 except Exception:
