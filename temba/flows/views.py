@@ -438,7 +438,8 @@ class FlowImageCRUDL(SmartCRUDL):
             context['org_has_flowimages'] = folders[0].get('count')
             context['org_has_flowimages_archived'] = folders[1].get('count')
             context['flows'] = Flow.objects.filter(org=self.request.user.get_org(),
-                                                   is_active=True).only('name', 'uuid').order_by('name')
+                                                   is_active=True,
+                                                   flow_type=Flow.FLOW).only('name', 'uuid').order_by('name')
             context['groups'] = ContactGroup.user_groups.filter(org=self.request.user.get_org(),
                                                                 is_active=True).only('name', 'uuid').order_by('name')
             context['folders'] = folders
@@ -1247,7 +1248,7 @@ class FlowCRUDL(SmartCRUDL):
                                   href='javascript:;',
                                   js_class='pdf_export_submit'))
 
-            if self.has_org_perm('flows.flow_results'):
+            if flow.flow_type == Flow.FLOW and self.has_org_perm('flows.flow_results'):
                 links.append(dict(title=_("Download Images"),
                                   style='btn-primary',
                                   href=reverse('flows.flowimage_filter', args=['flow', flow.uuid])))

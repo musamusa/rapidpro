@@ -2788,6 +2788,25 @@ class FlowImage(TembaModel):
         self.is_active = False
         self.save(update_fields=('is_active'))
 
+    def is_playable(self):
+        extension = self.path.split('.')[-1]
+        return True if extension in ['avi', 'flv', 'wmv', 'mp4', 'mov', '3gp'] else False
+
+    def get_content_type(self):
+        if self.is_playable():
+            extension = self.path.split('.')[-1]
+            mime_types = {
+                'avi': 'video/x-msvideo',
+                'flv': 'video/x-flv',
+                'wmv': 'video/x-ms-wmv',
+                'mp4': 'video/mp4',
+                'mov': 'video/quicktime',
+                '3gp': 'video/3gpp'
+            }
+            return mime_types.get(extension, 'video/mp4')
+        else:
+            return None
+
     def __str__(self):
         return self.name
 

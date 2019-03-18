@@ -7,11 +7,11 @@ Hi there!
 
 Your download file is ready
 
-Download your file here:
+Download your .zip file here:
 
 {{ link }}
 
-Note: After download your file, it will be removed from the server.
+Note: The file will be removed from the server after it has been downloaded.
 
 Thanks,
 
