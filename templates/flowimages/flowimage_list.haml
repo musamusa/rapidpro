@@ -120,7 +120,7 @@
                       Found {{ results_count }} contacts matching <i>{{search}}</i>.
 
               .list-container
-                %table.list-table.flowimage_list.table.object-list.table.table-condensed{style: '{% if not org_perms.contacts.contact_update %}margin-top:10px{% endif %}'}
+                %table.list-table.flowimage_list.table.object-list.table.table-condensed{style: '{% if not org_perms.flows.flowimage_list %}margin-top:10px{% endif %}'}
                   %tr.flowimages
                     -if object_list
                       %th.checkbox.object-row-checkbox
@@ -149,7 +149,7 @@
                     - for object in object_list
                       %tr.flowimage.select-row.object-row{'class':'{% cycle row1 row2 %}', 'data-uuid': '{{object.uuid}}', 'data-object-id':'{{object.id}}'}
 
-                        - if org_perms.contacts.contact_update
+                        - if org_perms.flows.flowimage_archived
                           %td.flowimage.checkbox.object-row-checkbox
                             .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
 
