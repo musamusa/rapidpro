@@ -150,7 +150,7 @@
                             .glyph.icon-checkbox-unchecked.contact-checkbox.object-row-checkbox
 
                         %td.value-text.field_name
-                          {{ object.contact|name:user_org }}
+                          {{ object.contact|name_or_urn:user_org }}
 
                         -if not current_object.flow_type
                           %td.value-text.field_name{'style': 'text-align: center'}
