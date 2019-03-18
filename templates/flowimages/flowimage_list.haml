@@ -125,6 +125,10 @@
                     %th.select-all-items-text{'style': 'text-align: left'}
                       -trans "Select all items"
 
+                    -if not current_object.flow_type
+                      %th
+                        -trans "Flow"
+
                     -if object_list
                       %th{'style': 'text-align: left'}
                         -trans "Image"
@@ -147,6 +151,10 @@
 
                         %td.value-text.field_name
                           {{ object.contact|name:user_org }}
+
+                        -if not current_object.flow_type
+                          %td.value-text.field_name{'style': 'text-align: center'}
+                            {{ object.flow.name }}
 
                         %td.value-text.field_name
                           %a{'href':'#', 'data-featherlight':'<img class="image-full" src="{{ object.get_url }}"/>'}
