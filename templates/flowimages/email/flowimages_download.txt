@@ -7,7 +7,7 @@ Hi there!
 
 Your download file is ready
 
-Download your file here:
+Download your .zip file here:
 
 {{ link }}
 
