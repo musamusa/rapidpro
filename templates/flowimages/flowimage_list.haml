@@ -7,7 +7,11 @@
     %span.glyph.icon-photo
 
 -block page-title
-  -trans "Flow Images"
+  -if current_object
+    -trans "Flow Images - "
+    {{current_object.name}}
+  -else
+    {{title}}
 
 -block page-top
   {% render as page_top %}
