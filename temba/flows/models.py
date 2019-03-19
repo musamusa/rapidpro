@@ -34,6 +34,7 @@ from django_redis import get_redis_connection
 from enum import Enum
 from six.moves import range
 from smartmin.models import SmartModel
+from sorl.thumbnail import get_thumbnail
 from temba.airtime.models import AirtimeTransfer
 from temba.assets.models import register_asset_store
 from temba.contacts.models import Contact, ContactGroup, ContactField, ContactURN, URN, TEL_SCHEME, NEW_CONTACT_VARIABLE
@@ -2721,6 +2722,8 @@ class FlowImage(TembaModel):
     name = models.CharField(help_text='Image name', max_length=255)
 
     path = models.CharField(help_text='Image URL', max_length=255)
+
+    path_thumbnail = models.CharField(help_text='Image thumbnail URL', max_length=255, null=True)
 
     exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
 
@@ -6800,10 +6803,15 @@ class PhotoTest(Test):
                 media_path = image
                 image = Org.get_temporary_file_from_url(media_url=image)
                 image_path = image.file.name
+                thumbnail_path = media_path
             else:
                 media_path = image.split('media', 1)[1]
                 image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
                 media_path = media_path.replace('/', '', 1)
+                thumbnail_path = image_path
+
+            media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99)
+            media_thumbnail_path = media_thumbnail.url
 
             try:
                 img = Image.open(image_path)
@@ -6820,7 +6828,8 @@ class PhotoTest(Test):
             file_name = media_path.split('/', -1)[-1]
 
             image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
-                              name=file_name, created_by=run.flow.created_by, modified_by=run.flow.created_by)
+                              path_thumbnail=media_thumbnail_path, name=file_name, created_by=run.flow.created_by,
+                              modified_by=run.flow.created_by)
             flow_image = FlowImage.objects.create(**image_args)
             image_url = flow_image.get_url()
         elif is_image:
