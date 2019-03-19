@@ -12,6 +12,7 @@ import time
 import uuid
 
 from collections import defaultdict
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import models
@@ -1706,7 +1707,6 @@ class Contact(TembaModel):
             Contact.NAME: self.name or '',
             Contact.FIRST_NAME: self.first_name(org),
             Contact.LANGUAGE: self.language,
-            EMAIL_SCHEME: self.get_urn_display(scheme=EMAIL_SCHEME, org=org, formatted=False) or '',
             'tel_e164': self.get_urn_display(scheme=TEL_SCHEME, org=org, formatted=False),
             'groups': ",".join([_.name for _ in self.user_groups.all()]),
             'uuid': self.uuid
@@ -1718,7 +1718,9 @@ class Contact(TembaModel):
 
         # add all URNs
         for scheme, label in ContactURN.SCHEME_CHOICES:
-            context[scheme] = self.get_urn_display(scheme=scheme, org=org) or ''
+            email_value = settings.DEFAULT_FROM_EMAIL if self.is_test else ''
+            empty_value = email_value if scheme == EMAIL_SCHEME else ''
+            context[scheme] = self.get_urn_display(scheme=scheme, org=org) or empty_value
 
         # populate twitter address if we have a twitter id
         if context[TWITTERID_SCHEME] and not context[TWITTER_SCHEME]:
