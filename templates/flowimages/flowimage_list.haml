@@ -134,7 +134,7 @@
                         -trans "Flow"
 
                     -if object_list
-                      %th{'style': 'text-align: left'}
+                      %th
                         -trans "Image"
 
                     -for field in contact_fields
@@ -171,7 +171,10 @@
                               .attachment-icon.icon-videocam{'style': 'font-size: 18px;'}
                           -else
                             %a{'href':'#', 'data-featherlight':'<img class="image-full" src="{{ object.get_url }}"/>'}
-                              %img{'src':'{{ object.get_url }}', width:'40'}
+                              -if object.path_thumbnail
+                                %img{'src':'{{ object.path_thumbnail }}'}
+                              -else
+                                .attachment-icon.icon-photo{'style': 'font-size: 18px;'}
 
                         -for field in contact_fields
                           -if field.show_in_table
