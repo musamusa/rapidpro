@@ -6792,13 +6792,14 @@ class PhotoTest(Test):
     def evaluate(self, run, sms, context, text):
         image_url = None
         image = None
+        text_split = []
         org = run.flow.org
         has_attachment = 1 if sms.attachments and len(sms.attachments) > 0 else 0
 
         if has_attachment:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
-            is_image = 1 if 'image' in text_split[0] else 0
+            is_image = 1 if 'image' in text_split[0] or 'mp4' in text_split[0] else 0
         else:
             is_image = 0
 
@@ -6814,8 +6815,11 @@ class PhotoTest(Test):
                 media_path = media_path.replace('/', '', 1)
                 thumbnail_path = image_path
 
-            media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99, format='PNG')
-            media_thumbnail_path = media_thumbnail.url
+            if text_split and 'image' in text_split[0]:
+                media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99, format='PNG')
+                media_thumbnail_path = media_thumbnail.url
+            else:
+                media_thumbnail_path = None
 
             try:
                 img = Image.open(image_path)
