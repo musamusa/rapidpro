@@ -6791,14 +6791,18 @@ class PhotoTest(Test):
 
     def evaluate(self, run, sms, context, text):
         image_url = None
-        is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
+        image = None
         org = run.flow.org
+        has_attachment = 1 if sms.attachments and len(sms.attachments) > 0 else 0
 
-        if is_image and not run.contact.is_test:
+        if has_attachment:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
             is_image = 1 if 'image' in text_split[0] else 0
+        else:
+            is_image = 0
 
+        if is_image and not run.contact.is_test:
             if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
                 media_path = image
                 image = Org.get_temporary_file_from_url(media_url=image)
@@ -6810,7 +6814,7 @@ class PhotoTest(Test):
                 media_path = media_path.replace('/', '', 1)
                 thumbnail_path = image_path
 
-            media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99)
+            media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99, format='PNG')
             media_thumbnail_path = media_thumbnail.url
 
             try:
