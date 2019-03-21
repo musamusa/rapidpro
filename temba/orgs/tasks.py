@@ -102,6 +102,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
     batch_size = 1000
     batch_package = []
     batch_counter = 0
+    order = 1
 
     for i, row in enumerate(iterator):
         if i == 0:
@@ -143,17 +144,20 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
                         except Exception:
                             field_value = None
                     else:
-                        field_value = field_value.encode('utf-8', errors='ignore').strip()
+                        field_value = str(field_value) if field_value.__class__.__name__ == 'int' \
+                            else field_value.encode('utf-8', errors='ignore').strip()
 
                     payload[fields_map[item].get('name')] = field_value
                 except Exception:
                     if str(i) not in failures:
                         failures.append(str(i))
 
+            payload['order'] = order
             real_collection = Object.factory(collection)
             new_item = real_collection(**payload)
             batch_package.append(new_item)
             batch_counter += 1
+            order += 1
 
         if batch_counter >= batch_size:
             methods = list([m.save for m in batch_package])

@@ -606,7 +606,8 @@ class OrgCRUDL(SmartCRUDL):
 
                 try:
                     needed_check = True if collection_type == 'giftcard' else False
-                    Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org, needed_check=needed_check)
+                    Org.get_parse_import_file_headers(ContentFile(self.cleaned_data['import_file'].read()), self.org,
+                                                      needed_check=needed_check)
                 except Exception as e:
                     raise forms.ValidationError(str(e))
 
@@ -699,7 +700,7 @@ class OrgCRUDL(SmartCRUDL):
 
                 else:
                     purge_url = '%s/purge/%s' % (settings.PARSE_URL, collection)
-                    response_purge = requests.delete(purge_url, headers=parse_headers)
+                    requests.delete(purge_url, headers=parse_headers)
 
                     for item in config.get(GIFTCARDS, []):
                         full_name = OrgCRUDL.Giftcards.get_collection_full_name(org.slug, org.id, item, GIFTCARDS.lower())
@@ -2330,7 +2331,7 @@ class OrgCRUDL(SmartCRUDL):
             fields = []
             if response.status_code == 200 and 'fields' in response.json():
                 fields = response.json().get('fields')
-                fields = [item for item in fields.keys() if item not in ['ACL', 'createdAt']]
+                fields = [item for item in sorted(fields.keys()) if item not in ['ACL', 'createdAt', 'order']]
 
             return tuple(fields)
 
@@ -2349,7 +2350,7 @@ class OrgCRUDL(SmartCRUDL):
             register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
 
             factory = Object.factory(collection)
-            results = factory.Query.all().limit(1000).order_by('createdAt')
+            results = factory.Query.all().limit(1000).order_by('order')
             return results
 
         def derive_title(self):

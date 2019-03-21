@@ -497,6 +497,14 @@ class Org(SmartModel):
 
         if needed_check:
             Org.validate_parse_import_header(headers, org)
+        else:
+            valid_field_regex = r"^[a-zA-Z][a-zA-Z0-9_ -]*$"
+            invalid_fields = [item for item in headers if not re.match(valid_field_regex, item)]
+            if invalid_fields:
+                raise Exception(
+                    ugettext('Upload error: The file you are trying to upload has a missing or invalid column header '
+                             'name. The column names should only contain spaces, underscores, and alphanumeric '
+                             'characters. They must begin with a letter and be unique.'))
 
         return [header.strip() for header in headers]
 
@@ -506,6 +514,7 @@ class Org(SmartModel):
 
         not_found_headers = [h for h in PARSE_GIFTCARDS_IMPORT_HEADERS if h not in headers]
         string_possible_headers = '", "'.join([h for h in PARSE_GIFTCARDS_IMPORT_HEADERS])
+        blank_headers = [h for h in headers if h is None or h == '']
 
         if ('Identifier' in headers or 'identifier' in headers) or ('Active' in headers or 'active' in headers):
             raise Exception(ugettext('Please remove the "identifier" and/or "active" column from your file.'))
@@ -513,6 +522,11 @@ class Org(SmartModel):
         if not_found_headers:
             raise Exception(ugettext('The file you provided is missing a required header. All these fields: "%s" '
                                      'should be included.' % string_possible_headers))
+
+        if blank_headers:
+            raise Exception(ugettext('Upload error: The file you are trying to upload has a missing or invalid column '
+                                     'header name. The column names should only contain spaces, underscores, and '
+                                     'alphanumeric characters. They must begin with a letter and be unique.'))
 
     def config_json(self):
         if self.config:
