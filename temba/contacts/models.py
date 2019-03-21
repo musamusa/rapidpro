@@ -12,6 +12,7 @@ import time
 import uuid
 
 from collections import defaultdict
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import models
@@ -505,7 +506,7 @@ class Contact(TembaModel):
 
     # reserved contact fields
     RESERVED_FIELDS = [
-        NAME, FIRST_NAME, PHONE, LANGUAGE, GROUPS, UUID, CONTACT_UUID, ID, 'created_by', 'modified_by', 'org', 'is', 'has', 'tel', 'tel_e164',
+        NAME, FIRST_NAME, PHONE, LANGUAGE, GROUPS, UUID, CONTACT_UUID, ID, 'created_by', 'modified_by', 'org', 'is', 'has', 'tel', 'tel_e164', 'mailto',
     ] + [c[0] for c in IMPORT_HEADERS]
 
     @property
@@ -1712,20 +1713,22 @@ class Contact(TembaModel):
 
         # add all URNs
         for scheme, label in ContactURN.SCHEME_CHOICES:
-            context[scheme] = self.get_urn_display(scheme=scheme, org=org) or ''
+            email_value = settings.DEFAULT_FROM_EMAIL if self.is_test else ''
+            empty_value = email_value if scheme == EMAIL_SCHEME else ''
+            context[scheme] = self.get_urn_display(scheme=scheme, org=org) or empty_value
 
         # populate twitter address if we have a twitter id
         if context[TWITTERID_SCHEME] and not context[TWITTER_SCHEME]:
             context[TWITTER_SCHEME] = context[TWITTERID_SCHEME]
 
-        active_ids = ContactField.objects.filter(org_id=self.org_id, is_active=True).values_list('id', flat=True)
+        active_ids = ContactField.objects.filter(org_id=self.org_id, is_active=True).exclude(key=EMAIL_SCHEME).values_list('id', flat=True)
         field_values = Value.objects.filter(contact=self, contact_field_id__in=active_ids).select_related('contact_field')
 
         # get all the values for this contact
         contact_values = {v.contact_field.key: v for v in field_values}
 
         # add all active fields to our context
-        for field in ContactField.objects.filter(org_id=self.org_id, is_active=True).select_related('org'):
+        for field in ContactField.objects.filter(org_id=self.org_id, is_active=True).exclude(key=EMAIL_SCHEME).select_related('org'):
             field_value = Contact.get_field_display_for_value(field, contact_values.get(field.key, None))
             context[field.key] = field_value if field_value is not None else ''
 
