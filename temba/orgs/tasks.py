@@ -99,7 +99,7 @@ def import_data_to_parse(branding, user_email, iterator, parse_url, parse_header
     failures = []
     success = 0
 
-    batch_size = 1000
+    batch_size = 500
     batch_package = []
     batch_counter = 0
     order = 1
