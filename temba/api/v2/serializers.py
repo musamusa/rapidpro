@@ -245,6 +245,9 @@ class CampaignEventWriteSerializer(WriteSerializer):
     embedded_data = serializers.JSONField(required=False)
 
     def validate_embedded_data(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Embedded data is not a dict")
+
         if not value:  # pragma: needs cover
             return None
         else:
