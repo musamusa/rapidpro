@@ -472,16 +472,16 @@ class EventFire(Model):
         Actually fires this event for the passed in contact and flow
         """
         self.fired = timezone.now()
-        self.event.flow.start([], [self.contact], restart_participants=True)
+        self.event.flow.start([], [self.contact], restart_participants=True, extra=json.loads(self.event.embedded_data))
         self.save(update_fields=('fired',))
 
     @classmethod
-    def batch_fire(cls, fires, flow):
+    def batch_fire(cls, fires, flow, embedded_data=None):
         """
         Starts a batch of event fires that are for events which use the same flow
         """
         fired = timezone.now()
-        flow.start([], [f.contact for f in fires], restart_participants=True)
+        flow.start([], [f.contact for f in fires], restart_participants=True, extra=json.loads(embedded_data))
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod
