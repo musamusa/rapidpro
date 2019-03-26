@@ -40,6 +40,10 @@
         Start the
         %a.href{ href: "{% url 'flows.flow_editor' object.flow.uuid %}" }= object.flow.name
         Flow
+        -if object.embedded_data
+          -trans " with embedded data"
+          {{ object.embedded_data }}
+
 
 -block content
   -if not scheduled_event_fires

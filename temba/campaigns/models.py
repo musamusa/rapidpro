@@ -275,6 +275,9 @@ class CampaignEvent(TembaModel):
 
     delivery_hour = models.IntegerField(default=-1, help_text="The hour to send the message or flow at.")
 
+    embedded_data = models.TextField(verbose_name=_("Embedded Data"), null=True,
+                                     help_text=_("Extra data about this campaign event"))
+
     @classmethod
     def create_message_event(cls, org, user, campaign, relative_to, offset, unit, message, delivery_hour=-1, base_language=None):
         if campaign.org != org:  # pragma: no cover
@@ -291,13 +294,20 @@ class CampaignEvent(TembaModel):
                                   created_by=user, modified_by=user)
 
     @classmethod
-    def create_flow_event(cls, org, user, campaign, relative_to, offset, unit, flow, delivery_hour=-1):
+    def create_flow_event(cls, org, user, campaign, relative_to, offset, unit, flow, delivery_hour=-1,
+                          embedded_data=None):
         if campaign.org != org:  # pragma: no cover
             raise ValueError("Org mismatch")
 
+        if embedded_data:
+            try:
+                embedded_data = json.dumps(embedded_data)
+            except Exception:
+                raise ValueError(_("Embedded data is not JSON"))
+
         return cls.objects.create(campaign=campaign, relative_to=relative_to, offset=offset, unit=unit,
                                   event_type=cls.TYPE_FLOW, flow=flow, delivery_hour=delivery_hour,
-                                  created_by=user, modified_by=user)
+                                  embedded_data=embedded_data, created_by=user, modified_by=user)
 
     @classmethod
     def get_hour_choices(cls):
@@ -462,16 +472,16 @@ class EventFire(Model):
         Actually fires this event for the passed in contact and flow
         """
         self.fired = timezone.now()
-        self.event.flow.start([], [self.contact], restart_participants=True)
+        self.event.flow.start([], [self.contact], restart_participants=True, extra=json.loads(self.event.embedded_data))
         self.save(update_fields=('fired',))
 
     @classmethod
-    def batch_fire(cls, fires, flow):
+    def batch_fire(cls, fires, flow, embedded_data=None):
         """
         Starts a batch of event fires that are for events which use the same flow
         """
         fired = timezone.now()
-        flow.start([], [f.contact for f in fires], restart_participants=True)
+        flow.start([], [f.contact for f in fires], restart_participants=True, extra=json.loads(embedded_data))
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod

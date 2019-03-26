@@ -209,6 +209,7 @@ class CampaignEventReadSerializer(ReadSerializer):
     flow = serializers.SerializerMethodField()
     relative_to = fields.ContactFieldField()
     unit = serializers.SerializerMethodField()
+    embedded_data = serializers.SerializerMethodField()
 
     def get_flow(self, obj):
         if obj.event_type == CampaignEvent.TYPE_FLOW:
@@ -219,9 +220,16 @@ class CampaignEventReadSerializer(ReadSerializer):
     def get_unit(self, obj):
         return self.UNITS.get(obj.unit)
 
+    def get_embedded_data(self, obj):
+        if not obj.embedded_data:
+            return None
+        else:
+            return json.loads(obj.embedded_data)
+
     class Meta:
         model = CampaignEvent
-        fields = ('uuid', 'campaign', 'relative_to', 'offset', 'unit', 'delivery_hour', 'flow', 'message', 'created_on')
+        fields = ('uuid', 'campaign', 'relative_to', 'offset', 'unit', 'delivery_hour', 'flow', 'message', 'created_on',
+                  'embedded_data')
 
 
 class CampaignEventWriteSerializer(WriteSerializer):
@@ -234,6 +242,16 @@ class CampaignEventWriteSerializer(WriteSerializer):
     relative_to = fields.ContactFieldField(required=True)
     message = fields.TranslatableField(required=False, max_length=Msg.MAX_TEXT_LEN)
     flow = fields.FlowField(required=False)
+    embedded_data = serializers.JSONField(required=False)
+
+    def validate_embedded_data(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Embedded data is not a dict")
+
+        if not value:  # pragma: needs cover
+            return None
+        else:
+            return FlowRun.normalize_fields(value)[0]
 
     def validate_unit(self, value):
         return self.UNITS[value]
@@ -264,6 +282,7 @@ class CampaignEventWriteSerializer(WriteSerializer):
         relative_to = self.validated_data.get('relative_to')
         message = self.validated_data.get('message')
         flow = self.validated_data.get('flow')
+        embedded_data = self.validated_data.get('embedded_data', None)
 
         if self.instance:
             # we are being set to a flow
@@ -271,6 +290,7 @@ class CampaignEventWriteSerializer(WriteSerializer):
                 self.instance.flow = flow
                 self.instance.event_type = CampaignEvent.TYPE_FLOW
                 self.instance.message = None
+                self.instance.embedded_data = json.dumps(dict(embedded_data))
 
             # we are being set to a message
             else:
@@ -299,7 +319,8 @@ class CampaignEventWriteSerializer(WriteSerializer):
         else:
             if flow:
                 self.instance = CampaignEvent.create_flow_event(self.context['org'], self.context['user'], campaign,
-                                                                relative_to, offset, unit, flow, delivery_hour)
+                                                                relative_to, offset, unit, flow, delivery_hour,
+                                                                embedded_data=embedded_data)
             else:
                 translations, base_language = message
                 self.instance = CampaignEvent.create_message_event(self.context['org'], self.context['user'], campaign,

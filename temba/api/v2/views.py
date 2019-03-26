@@ -847,6 +847,7 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
      * **message** - the message to send to the contact if this is a message event (string or translations object)
      * **flow** - the UUID and name of the flow if this is a flow event (object).
      * **created_on** - when the event was created (datetime).
+     * **embedded_data** - the dictionary of extra parameters passed to the flow start of the campaign event (object)
 
     Example:
 
@@ -867,7 +868,8 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
                 "delivery_hour": 9,
                 "flow": {"uuid": "09d23a05-47fe-11e4-bfe9-b8f6b119e9ab", "name": "Survey"},
                 "message": null,
-                "created_on": "2013-08-19T19:11:21.088Z"
+                "created_on": "2013-08-19T19:11:21.088Z",
+                "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
             },
             ...
         }
@@ -884,6 +886,7 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
     * **delivery_hour** - the hour of the day to deliver the message (integer 0-24, -1 indicates send at the same hour as the field)
     * **message** - the message to send to the contact (string, required if flow is not specified)
     * **flow** - the UUID of the flow to start the contact down (string, required if message is not specified)
+    * **embedded_data** - the dictionary of extra parameters passed to the flow start of the campaign event (object)
 
     Example:
 
@@ -894,7 +897,8 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "offset": 160,
             "unit": "weeks",
             "delivery_hour": -1,
-            "message": "Feeling sick and helpless, lost the compass where self is."
+            "message": "Feeling sick and helpless, lost the compass where self is.",
+            "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
         }
 
     You will receive an event object as a response if successful:
@@ -908,7 +912,8 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "delivery_hour": -1,
             "message": {"eng": "Feeling sick and helpless, lost the compass where self is."},
             "flow": null,
-            "created_on": "2013-08-19T19:11:21.088453Z"
+            "created_on": "2013-08-19T19:11:21.088453Z",
+            "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
         }
 
     ## Updating Campaign Events
@@ -923,7 +928,8 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "offset": 100,
             "unit": "weeks",
             "delivery_hour": -1,
-            "message": "Feeling sick and helpless, lost the compass where self is."
+            "message": "Feeling sick and helpless, lost the compass where self is.",
+            "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
         }
 
     ## Deleting Campaign Events
@@ -1003,7 +1009,8 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
                 {'name': "unit", 'required': True, 'help': 'The unit of the offset (one of "minutes, "hours", "days", "weeks")'},
                 {'name': "delivery_hour", 'required': True, 'help': "The hour this event should be triggered, or -1 if the event should be sent at the same hour as our date (integer, -1 or 0-23)"},
                 {'name': "message", 'required': False, 'help': "The message that should be sent to the contact when this event is triggered (string)"},
-                {'name': "flow", 'required': False, 'help': "The UUID of the flow that the contact should start when this event is triggered (string)"}
+                {'name': "flow", 'required': False, 'help': "The UUID of the flow that the contact should start when this event is triggered (string)"},
+                {'name': "embedded_data", 'required': False, 'help': "Any extra parameters to pass to the campaign event"}
             ]
         }
 
