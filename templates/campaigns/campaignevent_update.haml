@@ -1,6 +1,6 @@
 -extends "smartmin/form.html"
 
--load smartmin
+-load smartmin i18n
 
 -block extra-script
   {{ block.super }}
@@ -102,7 +102,8 @@
 
     .modal-body {
       overflow-x: hidden;
-      overflow-y: hidden;
+      overflow-y: auto;
+      max-height: 375px !important;
     }
 
     .smartmin-form textarea {
@@ -216,4 +217,25 @@
     .delivered
       Delivered
     -render_field 'delivery_hour'
+
+  #embedded-data
+    .add-new-embed
+      %a{href:'javascript:;'}
+        -trans "Add embedded data"
+    .embed-row.embed-header
+      .embed-field
+        %label
+          -trans "Embedded field"
+      .embed-value
+        %label
+          -trans "Embedded value"
+
+    .embed-row.embed-body
+      .embed-field
+        %input{name:'field'}
+      .embed-value
+        %input{name:'value'}
+      .embed-remove
+        .icon.icon-close
+
 
