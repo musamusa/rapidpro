@@ -219,10 +219,15 @@
     -render_field 'delivery_hour'
 
   #embedded-data
-    .add-new-embed
-      %a{href:'javascript:;'}
-        -trans "Add embedded data"
-    .embed-row.embed-header
+    .embed-row.embed-template
+      .embed-field
+        %input{name:'field', type:'text'}
+      .embed-value
+        %input{name:'value', type:'text'}
+      .embed-remove
+        .icon.icon-close
+
+    .embed-row.embed-header.inactive
       .embed-field
         %label
           -trans "Embedded field"
@@ -230,12 +235,10 @@
         %label
           -trans "Embedded value"
 
-    .embed-row.embed-body
-      .embed-field
-        %input{name:'field'}
-      .embed-value
-        %input{name:'value'}
-      .embed-remove
-        .icon.icon-close
+    .embed-container
+
+    .add-new-embed
+      %a{href:'javascript:;'}
+        -trans "Add embedded data"
 
 

@@ -179,18 +179,48 @@ td.created_on {
 
   .embed-row {
     width: 100%;
+    display: table;
 
-    .embed-header {
-      margin: 0 0 10px 0;
+    &:hover {
+      .embed-remove {
+        color: #CCCCCC;
+        display: inline-block;
+      }
+    }
+
+    &.embed-template {
+      display: none;
+    }
+
+    &.embed-header {
+      margin: 10px 0 0 0;
+
+      &.inactive {
+        display: none;
+      }
     }
 
     .embed-field, .embed-value {
       float: left;
-      width: 46%;
+      width: 48%;
+
+      label {
+        display: inline-block;
+        color: #666;
+        font-size: 14px;
+        font-weight: 200;
+      }
+
+      input {
+        width: 92%;
+      }
     }
     .embed-remove {
       float: right;
       width: auto;
+      line-height: 36px;
+      cursor: pointer;
+      display: none;
     }
   }
 }
