@@ -1428,7 +1428,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
         _base: categoryName
 
   $scope.isVisibleOperator = (operator) ->
-    return flow.flow_type in operator.filter
+    is_visible = flow.flow_type in operator.filter
+    if $scope.formData.rulesetConfig.type == 'wait_date'
+      return is_visible and operator.type in ['date', 'date_before', 'date_equal', 'date_after']
+    else
+      return is_visible
 
   $scope.isVisibleRulesetType = (rulesetConfig) ->
     valid = flow.flow_type in rulesetConfig.filter
