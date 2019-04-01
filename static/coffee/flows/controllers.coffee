@@ -1332,7 +1332,6 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.checkDateRules = () ->
     $scope.isDateStepInvalid = true
     for rule in $scope.ruleset.rules
-      console.log(rule)
       if rule._config.type in ['date', 'date_before', 'date_after', 'date_equal']
         $scope.isDateStepInvalid = false
         break
