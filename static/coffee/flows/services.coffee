@@ -443,6 +443,7 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       @rulesets = [
 
         { type: 'wait_message', name:'Wait for Response', verbose_name: 'Wait for response', split:'message response', filter:[TEXT,SURVEY] },
+        { type: 'wait_date', name:'Wait for Date', verbose_name: 'Wait for date', split:'message date response', filter:[SURVEY] },
         { type: 'wait_menu', name:'Wait for USSD Menu', verbose_name: 'Wait for USSD Menu', split:'USSD Menu response', filter:USSD },
         { type: 'wait_ussd', name:'Wait for USSD Response', verbose_name: 'Wait for USSD response', split:'USSD response', filter:USSD },
 
@@ -517,7 +518,8 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
 
       @supportsRules = [
         'wait_message', 'wait_menu', 'wait_ussd', 'wait_digits',
-        'expression', 'flow_field', 'contact_field', 'form_field'
+        'expression', 'flow_field', 'contact_field', 'form_field',
+        'wait_date'
       ]
 
       @operators = [

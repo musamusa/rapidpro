@@ -587,6 +587,9 @@
               -trans "Wait for "
               [[ruleset.label]]
 
+            .title.wait-message{ng-show:'ruleset.ruleset_type=="wait_date"'}
+              -trans "Wait for Date"
+
             .title.wait-ussd{ng-show:'ruleset.ruleset_type=="wait_menu"'}
               -trans "Wait for USSD Menu"
 
