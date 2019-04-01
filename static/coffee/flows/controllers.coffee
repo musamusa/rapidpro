@@ -1308,11 +1308,22 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.rulesetTypeChanged = () ->
     # when our ruleset form changes clear our invalid fields
     $scope.invalidFields = null
+    $scope.isDateStepInvalid = false
 
     if $scope.formData.rulesetConfig.type == "random"
       if not formData.buckets
         formData.buckets = 2
       $scope.updateRandomBuckets()
+    else if $scope.formData.rulesetConfig.type == 'wait_date'
+      $scope.checkDateRules()
+
+  $scope.checkDateRules = () ->
+    $scope.isDateStepInvalid = true
+    for rule in $scope.ruleset.rules
+      console.log(rule)
+      if rule._config.type in ['date', 'date_before', 'date_after', 'date_equal']
+        $scope.isDateStepInvalid = false
+        break
 
   $scope.updateRandomBuckets = () ->
 
@@ -1352,6 +1363,9 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.removed.push(rule)
     index = $scope.ruleset.rules.indexOf(rule)
     $scope.ruleset.rules.splice(index, 1)
+
+    if $scope.formData.rulesetConfig.type == 'wait_date'
+      $scope.checkDateRules()
 
   $scope.numericRule =
     test:
@@ -1426,6 +1440,9 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     else
       rule.category =
         _base: categoryName
+
+    if $scope.formData.rulesetConfig.type == 'wait_date'
+      $scope.isDateStepInvalid = false
 
   $scope.isVisibleOperator = (operator) ->
     is_visible = flow.flow_type in operator.filter
