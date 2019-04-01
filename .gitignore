@@ -46,6 +46,7 @@ media/tmp
 media/attachments
 media/flow_pdf
 media/flows_images
+media/cache
 
 # External projects
 fabconfig.py
