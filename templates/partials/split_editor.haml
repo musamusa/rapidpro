@@ -35,7 +35,7 @@
     .wait-ussd{ng-if:'formData.rulesetConfig.type == "wait_menu"', ussd:0}
     .wait-ussd{ng-if:'formData.rulesetConfig.type == "wait_ussd"', ussd:1}
 
-    .response{ng-if:'formData.rulesetConfig.type == "wait_message"'}><
+    .response{ng-if:'formData.rulesetConfig.type == "wait_message" || formData.rulesetConfig.type == "wait_date"'}><
       #split-on
         -trans "If the message response..."
 
@@ -323,5 +323,5 @@
   <!--[[splitEditor]]-->
   %button{ng-click:"cancel()",class:"btn btn-secondary"}
     -trans "Cancel"
-  %button{ng-disabled:'variable.$invalid || (hasRules() && ruleForm.$invalid) || splitEditor.$invalid || (characters && characters < 0)',ng-click:"okRules(splitEditor)",class:"btn btn-primary"}
+  %button{ng-disabled:'variable.$invalid || (hasRules() && ruleForm.$invalid) || splitEditor.$invalid || (characters && characters < 0) || isDateStepInvalid',ng-click:"okRules(splitEditor)",class:"btn btn-primary"}
     -trans "Ok"
