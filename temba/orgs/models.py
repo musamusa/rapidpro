@@ -504,6 +504,14 @@ class Org(SmartModel):
 
         if needed_check:
             Org.validate_parse_import_header(headers, org)
+        else:
+            valid_field_regex = r"^[a-zA-Z][a-zA-Z0-9_ -]*$"
+            invalid_fields = [item for item in headers if not re.match(valid_field_regex, item)]
+            if invalid_fields:
+                raise Exception(
+                    ugettext('Upload error: The file you are trying to upload has a missing or invalid column header '
+                             'name. The column names should only contain spaces, underscores, and alphanumeric '
+                             'characters. They must begin with a letter and be unique.'))
 
         return [header.strip() for header in headers]
 
@@ -513,6 +521,7 @@ class Org(SmartModel):
 
         not_found_headers = [h for h in PARSE_GIFTCARDS_IMPORT_HEADERS if h not in headers]
         string_possible_headers = '", "'.join([h for h in PARSE_GIFTCARDS_IMPORT_HEADERS])
+        blank_headers = [h for h in headers if h is None or h == '']
 
         if ('Identifier' in headers or 'identifier' in headers) or ('Active' in headers or 'active' in headers):
             raise Exception(ugettext('Please remove the "identifier" and/or "active" column from your file.'))
@@ -520,6 +529,11 @@ class Org(SmartModel):
         if not_found_headers:
             raise Exception(ugettext('The file you provided is missing a required header. All these fields: "%s" '
                                      'should be included.' % string_possible_headers))
+
+        if blank_headers:
+            raise Exception(ugettext('Upload error: The file you are trying to upload has a missing or invalid column '
+                                     'header name. The column names should only contain spaces, underscores, and '
+                                     'alphanumeric characters. They must begin with a letter and be unique.'))
 
     def config_json(self):
         if self.config:
@@ -1461,6 +1475,9 @@ class Org(SmartModel):
                                     self._calculate_credits_expiring_soon)
 
     def _calculate_credits_expiring_soon(self):
+        if not settings.CREDITS_EXPIRATION:
+            return 0
+
         now = timezone.now()
         one_month_period = now + timedelta(days=30)
         expiring_topups_qs = self.topups.filter(is_active=True,
@@ -1490,7 +1507,12 @@ class Org(SmartModel):
 
     def _calculate_low_credits_threshold(self):
         now = timezone.now()
-        last_topup_credits = self.topups.filter(is_active=True, expires_on__gte=now).aggregate(Sum('credits')).get('credits__sum')
+
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=now))
+
+        last_topup_credits = self.topups.filter(**filter_).aggregate(Sum('credits')).get('credits__sum')
         return int(last_topup_credits * 0.15) if last_topup_credits else 0
 
     def get_credits_total(self, force_dirty=False):
@@ -1513,13 +1535,19 @@ class Org(SmartModel):
         return purchased_credits if purchased_credits else 0
 
     def _calculate_credits_total(self):
-        active_credits = self.topups.filter(is_active=True, expires_on__gte=timezone.now()).aggregate(Sum('credits')).get('credits__sum')
-        active_credits = active_credits if active_credits else 0
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=timezone.now()))
 
-        # these are the credits that have been used in expired topups
-        expired_credits = TopUpCredits.objects.filter(
-            topup__org=self, topup__is_active=True, topup__expires_on__lte=timezone.now()
-        ).aggregate(Sum('used')).get('used__sum')
+            # these are the credits that have been used in expired topups
+            expired_credits = TopUpCredits.objects.filter(
+                topup__org=self, topup__is_active=True, topup__expires_on__lte=timezone.now()
+            ).aggregate(Sum('used')).get('used__sum')
+        else:
+            expired_credits = False
+
+        active_credits = self.topups.filter(**filter_).aggregate(Sum('credits')).get('credits__sum')
+        active_credits = active_credits if active_credits else 0
 
         expired_credits = expired_credits if expired_credits else 0
 
@@ -1644,7 +1672,10 @@ class Org(SmartModel):
         """
         Calculates the oldest non-expired topup that still has credits
         """
-        non_expired_topups = self.topups.filter(is_active=True, expires_on__gte=timezone.now()).order_by('expires_on', 'id')
+        filter_ = dict(is_active=True)
+        if settings.CREDITS_EXPIRATION:
+            filter_.update(dict(expires_on__gte=timezone.now()))
+        non_expired_topups = self.topups.filter(**filter_).order_by('expires_on', 'id')
         active_topups = non_expired_topups.annotate(used_credits=Sum('topupcredits__used'))\
                                           .filter(credits__gt=0)\
                                           .filter(Q(used_credits__lt=F('credits')) | Q(used_credits=None))
@@ -1664,7 +1695,10 @@ class Org(SmartModel):
             all_uncredited = list(msg_uncredited)
 
             # get all topups that haven't expired
-            unexpired_topups = list(self.topups.filter(is_active=True, expires_on__gte=timezone.now()).order_by('-expires_on'))
+            filter_ = dict(is_active=True)
+            if settings.CREDITS_EXPIRATION:
+                filter_.update(dict(expires_on__gte=timezone.now()))
+            unexpired_topups = list(self.topups.filter(**filter_).order_by('-expires_on'))
 
             # dict of topups to lists of their newly assigned items
             new_topup_items = {topup: [] for topup in unexpired_topups}
@@ -2493,7 +2527,7 @@ class TopUp(SmartModel):
                           balance=balance))
 
         now = timezone.now()
-        expired = self.expires_on < now
+        expired = self.expires_on < now if settings.CREDITS_EXPIRATION else False
 
         # add a line for used message credits
         if active:
@@ -2637,6 +2671,8 @@ class CreditAlert(SmartModel):
     org = models.ForeignKey(Org, help_text="The organization this alert was triggered for")
     alert_type = models.CharField(max_length=1, choices=ALERT_TYPES_CHOICES,
                                   help_text="The type of this alert")
+    admins = models.ManyToManyField(settings.AUTH_USER_MODEL, help_text=_('Administrators who will be alerted'),
+                                    related_name='admins')
 
     @classmethod
     def trigger_credit_alert(cls, org, alert_type):
@@ -2646,12 +2682,14 @@ class CreditAlert(SmartModel):
 
         print("triggering %s credits alert type for %s" % (alert_type, org.name))
 
-        admin = org.get_org_admins().first()
+        admins = org.get_org_admins()
 
-        if admin:
+        if admins:
             # Otherwise, create our alert objects and trigger our event
             alert = CreditAlert.objects.create(org=org, alert_type=alert_type,
-                                               created_by=admin, modified_by=admin)
+                                               created_by=admins.first(), modified_by=admins.first())
+            for admin in admins:
+                alert.admins.add(admin)
 
             alert.send_alert()
 
@@ -2660,16 +2698,18 @@ class CreditAlert(SmartModel):
         send_alert_email_task(self.id)
 
     def send_email(self):
-        email = self.created_by.email
-        if not email:  # pragma: needs cover
+        admins = self.admins.all()
+
+        emails = [admin.email for admin in admins if admin.email]
+        if not emails:
             return
 
         branding = self.org.get_branding()
         subject = _("%(name)s Credits Alert") % branding
         template = "orgs/email/alert_email"
-        to_email = email
+        to_email = emails
 
-        context = dict(org=self.org, now=timezone.now(), branding=branding, alert=self, customer=self.created_by)
+        context = dict(org=self.org, now=timezone.now(), branding=branding, alert=self)
         context['subject'] = subject
 
         send_template_email(to_email, subject, template, context, branding)

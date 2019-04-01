@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
+import os
 import json
 import logging
 import numbers
@@ -10,8 +11,11 @@ import six
 import time
 import urllib2
 import requests
+import zipfile
+import boto3
 
 from collections import OrderedDict, defaultdict
+from cStringIO import StringIO
 from datetime import timedelta, datetime
 from decimal import Decimal
 from django.conf import settings
@@ -22,6 +26,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group
 from django.db import models, connection as db_connection
 from django.db.models import Q, Count, QuerySet, Sum, Max
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _, ungettext_lazy as _n
 from django.utils.html import escape
@@ -29,6 +34,7 @@ from django_redis import get_redis_connection
 from enum import Enum
 from six.moves import range
 from smartmin.models import SmartModel
+from sorl.thumbnail import get_thumbnail
 from temba.airtime.models import AirtimeTransfer
 from temba.assets.models import register_asset_store
 from temba.contacts.models import Contact, ContactGroup, ContactField, ContactURN, URN, TEL_SCHEME, NEW_CONTACT_VARIABLE
@@ -2699,6 +2705,9 @@ class Flow(TembaModel):
         self.field_dependencies.clear()
         self.field_dependencies.add(*fields)
 
+    def get_images_count(self):
+        return self.flow_images.filter(is_active=True).count()
+
     def __str__(self):
         return self.name
 
@@ -2719,7 +2728,46 @@ class FlowImage(TembaModel):
 
     path = models.CharField(help_text='Image URL', max_length=255)
 
+    path_thumbnail = models.CharField(help_text='Image thumbnail URL', max_length=255, null=True)
+
     exif = models.TextField(blank=True, null=True, help_text=_("A JSON representation the exif"))
+
+    @classmethod
+    def apply_action_archive(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.archive()
+            changed.append(item.pk)
+
+        return changed
+
+    @classmethod
+    def apply_action_restore(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            item.restore()
+            changed.append(item.pk)
+
+        return changed
+
+    @classmethod
+    def apply_action_delete(cls, user, objects):
+        changed = []
+
+        for item in objects:
+            changed.append(item.pk)
+            item.delete()
+        return changed
+
+    def archive(self):
+        self.is_active = False
+        self.save(update_fields=['is_active'])
+
+    def restore(self):
+        self.is_active = True
+        self.save(update_fields=['is_active'])
 
     def get_exif(self):
         return json.loads(self.exif) if self.exif else dict()
@@ -2742,6 +2790,48 @@ class FlowImage(TembaModel):
     def set_deleted(self):
         self.is_active = False
         self.save(update_fields=('is_active'))
+
+    def is_playable(self):
+        extension = self.path.split('.')[-1]
+        return True if extension in ['avi', 'flv', 'wmv', 'mp4', 'mov', '3gp'] else False
+
+    def get_content_type(self):
+        if self.is_playable():
+            extension = self.path.split('.')[-1]
+            mime_types = {
+                'avi': 'video/x-msvideo',
+                'flv': 'video/x-flv',
+                'wmv': 'video/x-ms-wmv',
+                'mp4': 'video/mp4',
+                'mov': 'video/quicktime',
+                '3gp': 'video/3gpp'
+            }
+            return mime_types.get(extension, 'video/mp4')
+        else:
+            return None
+
+    def __str__(self):
+        return self.name
+
+
+# Removing images files for Flow Images
+@receiver(models.signals.post_delete, sender=FlowImage)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """
+    Deletes file from filesystem
+    when corresponding `MediaFile` object is deleted.
+    """
+    s3 = boto3.resource('s3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY) \
+        if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage' else None
+    if instance.path:
+        if os.path.isfile(instance.get_full_path()):
+            os.remove(instance.get_full_path())
+        elif s3 and settings.AWS_BUCKET_DOMAIN in instance.path:
+            key = instance.path.replace('https://%s/' % settings.AWS_BUCKET_DOMAIN, '')
+            obj = s3.Object(settings.AWS_STORAGE_BUCKET_NAME, key)
+            obj.delete()
 
 
 class FlowRun(models.Model):
@@ -4925,6 +5015,74 @@ class ResultsExportAssetStore(BaseExportAssetStore):
     extensions = ('xlsx',)
 
 
+class ExportFlowImagesTask(BaseExportTask):
+    """
+    Container for managing our flow images download requests
+    """
+    analytics_key = 'flowimages_download'
+    email_subject = "Your download file is ready"
+    email_template = 'flowimages/email/flowimages_download'
+
+    files = models.TextField(help_text=_("Array as text of the files ID to download in a zip file"))
+
+    file_path = models.CharField(null=True, help_text=_('Path to downloadable file'), max_length=255)
+
+    file_downloaded = models.NullBooleanField(default=False, help_text=_('If the file was downloaded'))
+
+    cleaned = models.NullBooleanField(default=False, help_text=_('If the file was removed after downloaded'))
+
+    @classmethod
+    def create(cls, org, user, files):
+        dict_files = json.dumps(dict(files=files))
+        return cls.objects.create(org=org, created_by=user, modified_by=user, files=dict_files)
+
+    def write_export(self):
+        files = json.loads(self.files)
+        files_obj = FlowImage.objects.filter(id__in=files.get('files')).order_by('-created_on')
+
+        stream = StringIO()
+        zf = zipfile.ZipFile(stream, "w")
+
+        for file in files_obj:
+            file_path = file.path
+            if settings.AWS_BUCKET_DOMAIN in file_path:
+                temp_file = Org.get_temporary_file_from_url(file_path)
+
+                extension = file_path.split('.')[-1]
+
+                random_file = str(uuid4())
+                random_dir = random_file[0:4]
+                fname = '%s.%s' % (random_file, extension)
+                file_path = '%s/%s' % (random_dir, fname)
+
+                path = '%s/%d/media/%s' % (settings.STORAGE_ROOT_DIR, self.org.id, file_path)
+                file_storage = FileSystemStorage(location=settings.MEDIA_ROOT)
+                location = file_storage.save(name=path, content=temp_file)
+                fpath = '%s/%s' % (settings.MEDIA_ROOT, location)
+                zf.write(fpath, arcname=fname)
+                os.remove(fpath)
+            else:
+                fpath = file.get_full_path()
+                fdir, fname = os.path.split(fpath)
+                zf.write(fpath, arcname=fname)
+
+        zf.close()
+
+        temp = NamedTemporaryFile(delete=True)
+        temp.write(stream.getvalue())
+        temp.flush()
+        return temp, 'zip'
+
+
+@register_asset_store
+class FlowImagesExportAssetStore(BaseExportAssetStore):
+    model = ExportFlowImagesTask
+    key = 'flowimages_download'
+    directory = 'flowimages_download'
+    permission = 'flows.flowimage_download'
+    extensions = ('zip',)
+
+
 @six.python_2_unicode_compatible
 class ActionLog(models.Model):
     """
@@ -6345,11 +6503,7 @@ class SaveToContactAction(Action):
                 urns = [six.text_type(urn) for urn in contact.urns.all()]
                 urns += [new_urn]
 
-                # don't really update URNs on test contacts
-                if contact.is_test:
-                    ActionLog.info(run, _("Added %s as @contact.%s - skipped in simulator" % (new_value, scheme)))
-                else:
-                    contact.update_urns(user, urns)
+                contact.update_urns(user, urns)
 
         else:
             new_value = value[:Value.MAX_VALUE_LEN]
@@ -6655,22 +6809,35 @@ class PhotoTest(Test):
 
     def evaluate(self, run, sms, context, text):
         image_url = None
-        is_image = 1 if sms.attachments and len(sms.attachments) > 0 else 0
+        image = None
+        text_split = []
         org = run.flow.org
+        has_attachment = 1 if sms.attachments and len(sms.attachments) > 0 else 0
 
-        if is_image and not run.contact.is_test:
+        if has_attachment:
             text_split = sms.attachments[0].split(':', 1)
             image = text_split[1]
-            is_image = 1 if 'image' in text_split[0] else 0
+            is_image = 1 if 'image' in text_split[0] or 'mp4' in text_split[0] else 0
+        else:
+            is_image = 0
 
+        if is_image and not run.contact.is_test:
             if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
                 media_path = image
                 image = Org.get_temporary_file_from_url(media_url=image)
                 image_path = image.file.name
+                thumbnail_path = media_path
             else:
                 media_path = image.split('media', 1)[1]
                 image_path = '%s%s' % (settings.MEDIA_ROOT, media_path)
                 media_path = media_path.replace('/', '', 1)
+                thumbnail_path = image_path
+
+            if text_split and 'image' in text_split[0]:
+                media_thumbnail = get_thumbnail(thumbnail_path, '50x50', crop='center', quality=99, format='PNG')
+                media_thumbnail_path = media_thumbnail.url
+            else:
+                media_thumbnail_path = None
 
             try:
                 img = Image.open(image_path)
@@ -6687,7 +6854,8 @@ class PhotoTest(Test):
             file_name = media_path.split('/', -1)[-1]
 
             image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
-                              name=file_name, created_by=run.flow.created_by, modified_by=run.flow.created_by)
+                              path_thumbnail=media_thumbnail_path, name=file_name, created_by=run.flow.created_by,
+                              modified_by=run.flow.created_by)
             flow_image = FlowImage.objects.create(**image_args)
             image_url = flow_image.get_url()
         elif is_image:

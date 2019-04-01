@@ -220,6 +220,9 @@ INSTALLED_APPS = (
     # django-timezone-field
     'timezone_field',
 
+    # sort-thumbnail
+    'sorl.thumbnail',
+
     # temba apps
     'temba.assets',
     'temba.auth_tweaks',
@@ -477,7 +480,10 @@ PERMISSIONS = {
                    'giftcards_api',
                    ),
 
-    'flows.flowimage': ('read',),
+    'flows.flowimage': ('read',
+                        'filter',
+                        'archived',
+                        'download',),
 
     'flows.ruleset': ('analytics',
                       'choropleth',
@@ -689,7 +695,6 @@ GROUP_PERMISSIONS = {
         'flows.flowlabel.*',
         'flows.ruleset.*',
         'flows.flowrun_delete',
-
         'flows.flowimage.*',
 
         'schedules.schedule.*',
@@ -812,7 +817,6 @@ GROUP_PERMISSIONS = {
         'flows.flowstart_api',
         'flows.flowlabel.*',
         'flows.ruleset.*',
-
         'flows.flowimage.*',
 
         'schedules.schedule.*',
@@ -896,6 +900,11 @@ GROUP_PERMISSIONS = {
         'flows.ruleset_analytics',
         'flows.ruleset_results',
         'flows.ruleset_choropleth',
+        'flows.flowimage_list',
+        'flows.flowimage_read',
+        'flows.flowimage_filter',
+        'flows.flowimage_archived',
+        'flows.flowimage_download',
 
         'msgs.broadcast_schedule_list',
         'msgs.broadcast_schedule_read',
@@ -1049,6 +1058,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'refresh_salesforce_access_tokens',
         'schedule': timedelta(seconds=600),
     },
+    "delete-flowimage-downloaded-files": {
+        'task': 'delete_flowimage_downloaded_files',
+        'schedule': crontab(minute=0, hour=4)
+    }
 }
 
 # Mapping of task name to task function path, used when CELERY_ALWAYS_EAGER is set to True
@@ -1308,3 +1321,5 @@ FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJE
 
 # FCM configuration from JSON file got from FCM Console
 FCM_CONFIG = dict()
+
+CREDITS_EXPIRATION = False
