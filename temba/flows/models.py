@@ -3564,6 +3564,7 @@ class FlowStep(models.Model):
 @six.python_2_unicode_compatible
 class RuleSet(models.Model):
     TYPE_WAIT_MESSAGE = 'wait_message'
+    TYPE_WAIT_DATE = 'wait_date'
 
     # Ussd
     TYPE_WAIT_USSD_MENU = 'wait_menu'
@@ -3603,11 +3604,12 @@ class RuleSet(models.Model):
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
 
     TYPE_WAIT = (TYPE_WAIT_MESSAGE, TYPE_WAIT_RECORDING, TYPE_WAIT_DIGIT, TYPE_WAIT_DIGITS, TYPE_WAIT_USSD_MENU,
-                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS)
+                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS, TYPE_WAIT_DATE)
 
     TYPE_USSD = (TYPE_WAIT_USSD_MENU, TYPE_WAIT_USSD)
 
     TYPE_CHOICES = ((TYPE_WAIT_MESSAGE, "Wait for message"),
+                    (TYPE_WAIT_DATE, "Wait for date"),
                     (TYPE_WAIT_USSD_MENU, "Wait for USSD menu"),
                     (TYPE_WAIT_USSD, "Wait for USSD message"),
                     (TYPE_WAIT_RECORDING, "Wait for recording"),
