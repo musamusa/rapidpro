@@ -194,6 +194,9 @@ class Flow(TembaModel):
     RULES_ENTRY = 'R'
     ACTIONS_ENTRY = 'A'
 
+    STATUS_DEMO = 'D'
+    STATUS_PRODUCTION = 'P'
+
     FLOW_TYPES = ((FLOW, _("Message flow")),
                   (MESSAGE, _("Single Message Flow")),
                   (VOICE, _("Phone call flow")),
@@ -202,6 +205,9 @@ class Flow(TembaModel):
 
     ENTRY_TYPES = ((RULES_ENTRY, "Rules"),
                    (ACTIONS_ENTRY, "Actions"))
+
+    LAUNCH_STATUS = ((STATUS_DEMO, _("Demo")),
+                     (STATUS_PRODUCTION, _("Production")))
 
     START_MSG_FLOW_BATCH = 'start_msg_flow_batch'
 
@@ -259,11 +265,17 @@ class Flow(TembaModel):
     field_dependencies = models.ManyToManyField(ContactField, related_name='dependent_flows', verbose_name=_(''), blank=True,
                                                 help_text=('Any fields this flow depends on'))
 
+    launch_status = models.CharField(max_length=1, choices=LAUNCH_STATUS, null=True,
+                                     help_text=_("The launch status of this flow"))
+
     @classmethod
     def create(cls, org, user, name, flow_type=FLOW, expires_after_minutes=FLOW_DEFAULT_EXPIRES_AFTER, base_language=None):
+        launch_status = Flow.STATUS_DEMO if flow_type == Flow.SURVEY else None
+
         flow = Flow.objects.create(org=org, name=name, flow_type=flow_type,
                                    expires_after_minutes=expires_after_minutes, base_language=base_language,
-                                   saved_by=user, created_by=user, modified_by=user)
+                                   saved_by=user, created_by=user, modified_by=user,
+                                   launch_status=launch_status)
 
         analytics.track(user.username, 'nyaruka.flow_created', dict(name=name))
         return flow
