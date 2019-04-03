@@ -42,6 +42,15 @@
         modal.show();
       });
 
+  -if org_perms.flows.flow_launch_surveyor
+    :javascript
+      $(".surveyor-launch").live('click', function() {
+        var modal = new Modax('{% trans "Launch Flow" %}', '{% url "flows.flow_launch_surveyor" flow.id %}');
+        modal.addClass("alert");
+        modal.setRedirectOnSuccess(true);
+        modal.show();
+      });
+
   -compress js
     %script{type:'text/javascript', src:'{{ STATIC_URL }}bower/jsPlumb/dist/js/dom.jsPlumb-1.7.5.js'}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/jquery-autosize/jquery.autosize.js"}
