@@ -305,6 +305,12 @@
         -elif flow.flow_type == 'S'
           .icon-mobile
         {{ flow.name }}
+        -if flow.flow_type == 'S'
+          %span{style:'font-size: 14px'}
+            -if flow.launch_status == 'D'
+              -trans "Demo"
+            -elif flow.launch_status == 'P'
+              -trans "Launched"
 
       #pending{ng-show:'pending == "S" || pending == "P"'}
         %div{class:"alert alert-info"}
