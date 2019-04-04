@@ -68,8 +68,8 @@
                 %a.href{ href: "{% url 'flows.flow_editor' event.flow.uuid %}" }= event.flow.name
                 flow
                 -if event.embedded_data
-                  -trans " with embedded data"
-                  {{ event.embedded_data }}
+                  |
+                  -trans "Contains embedded data"
 
         -if not forloop.last
           %tr.break

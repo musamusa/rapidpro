@@ -41,8 +41,9 @@
         %a.href{ href: "{% url 'flows.flow_editor' object.flow.uuid %}" }= object.flow.name
         Flow
         -if object.embedded_data
-          -trans " with embedded data"
-          {{ object.embedded_data }}
+          |
+          %a.href{href: "#", data-success-url: "", class: "update-event", data-original-title: "", title: ""}
+            -trans "Contains embedded data"
 
 
 -block content
