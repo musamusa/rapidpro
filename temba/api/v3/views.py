@@ -5,7 +5,7 @@ import string
 import itertools
 
 from django import forms
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
