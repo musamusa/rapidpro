@@ -1173,6 +1173,8 @@ class FlowsEndpoint(FlowsEndpointV2):
      * **created_on** - when this flow was created (datetime)
      * **modified_on** - when this flow was last modified (datetime), filterable as `before` and `after`.
      * **runs** - the counts of completed, interrupted and expired runs (object)
+     * **revision** - the number of the flow's revision (integer)
+     * **launch_status** - launch status for surveyor flows, it can be "D" (Demo) or "P" (Production) (string)
 
     Example:
 
@@ -1197,7 +1199,9 @@ class FlowsEndpoint(FlowsEndpointV2):
                         "completed": 123,
                         "interrupted": 2,
                         "expired": 34
-                    }
+                    },
+                    "revision": 1,
+                    "launch_status": "P"
                 },
                 ...
             ]
@@ -1228,6 +1232,14 @@ class FlowsEndpoint(FlowsEndpointV2):
         flow_type = params.get('type')
         if flow_type:  # pragma: needs cover
             queryset = queryset.filter(flow_type__in=flow_type)
+
+            # If the flow is survey, we'll apply a filter to show only launched flows for non-admin users
+            if flow_type == Flow.SURVEY:
+                user_org = self.request.user.get_org()
+
+                # if user is not an administrator
+                if user_org.id not in self.request.user.org_admins.filter(is_active=True).only('id').values_list('id', flat=True):
+                    queryset = queryset.filter(launch_status=Flow.STATUS_PRODUCTION)
 
         queryset = queryset.prefetch_related('labels')
 

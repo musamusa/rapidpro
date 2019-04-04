@@ -21,4 +21,4 @@ class FlowReadSerializer(FlowReadSerializerV2):
 
     class Meta:
         model = Flow
-        fields = FlowReadSerializerV2.Meta.fields + ('revision',)
+        fields = FlowReadSerializerV2.Meta.fields + ('revision', 'launch_status')
