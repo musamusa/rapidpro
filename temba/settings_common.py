@@ -466,6 +466,7 @@ PERMISSIONS = {
                    'launch',
                    'launch_keyword',
                    'launch_schedule',
+                   'launch_surveyor',
                    'read',
                    'recent_messages',
                    'results',

@@ -42,6 +42,15 @@
         modal.show();
       });
 
+  -if org_perms.flows.flow_launch_surveyor
+    :javascript
+      $(".surveyor-launch").live('click', function() {
+        var modal = new Modax('{% trans "Launch Flow" %}', '{% url "flows.flow_launch_surveyor" flow.id %}');
+        modal.addClass("alert");
+        modal.setRedirectOnSuccess(true);
+        modal.show();
+      });
+
   -compress js
     %script{type:'text/javascript', src:'{{ STATIC_URL }}bower/jsPlumb/dist/js/dom.jsPlumb-1.7.5.js'}
     %script{type:'text/javascript', src:"{{ STATIC_URL }}bower/jquery-autosize/jquery.autosize.js"}
@@ -296,6 +305,12 @@
         -elif flow.flow_type == 'S'
           .icon-mobile
         {{ flow.name }}
+        -if flow.flow_type == 'S'
+          %span{style:'font-size: 14px'}
+            -if flow.launch_status == 'D'
+              -trans "Demo"
+            -elif flow.launch_status == 'P'
+              -trans "Launched"
 
       #pending{ng-show:'pending == "S" || pending == "P"'}
         %div{class:"alert alert-info"}

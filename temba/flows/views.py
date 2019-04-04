@@ -601,7 +601,7 @@ class FlowCRUDL(SmartCRUDL):
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
                'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule',
-               'lookups_api', 'giftcards_api', 'salesforce_fields')
+               'lookups_api', 'giftcards_api', 'salesforce_fields', 'launch_surveyor')
 
     model = Flow
 
@@ -766,6 +766,28 @@ class FlowCRUDL(SmartCRUDL):
             flow.release()
 
             # we can't just redirect so as to make our modal do the right thing
+            response = self.render_to_response(self.get_context_data(success_url=self.get_success_url(),
+                                                                     success_script=getattr(self, 'success_script', None)))
+            response['Temba-Success'] = self.get_success_url()
+
+            return response
+
+    class LaunchSurveyor(ModalMixin, OrgObjPermsMixin, SmartDeleteView):
+        fields = ('id',)
+        cancel_url = 'uuid@flows.flow_editor'
+        success_message = ''
+
+        def get_success_url(self):
+            uuid = self.get_object().uuid
+            return reverse("flows.flow_editor", args=[uuid])
+
+        def post(self, request, *args, **kwargs):
+            flow = self.get_object()
+            self.object = flow
+
+            flow.launch_status = Flow.STATUS_PRODUCTION
+            flow.save(update_fields=['launch_status'])
+
             response = self.render_to_response(self.get_context_data(success_url=self.get_success_url(),
                                                                      success_script=getattr(self, 'success_script', None)))
             response['Temba-Success'] = self.get_success_url()
@@ -1222,6 +1244,26 @@ class FlowCRUDL(SmartCRUDL):
                                   js_class='broadcast-launch',
                                   href='#'))
 
+            elif flow.flow_type == Flow.SURVEY \
+                    and self.has_org_perm('flows.flow_launch_surveyor') \
+                    and not flow.is_archived\
+                    and flow.launch_status != Flow.STATUS_PRODUCTION:
+
+                links.append(dict(title=_("Launch Flow"),
+                                  style='btn-primary',
+                                  js_class='surveyor-launch',
+                                  href='#'))
+
+            elif flow.flow_type == Flow.SURVEY \
+                    and self.has_org_perm('flows.flow_copy') \
+                    and not flow.is_archived \
+                    and flow.launch_status == Flow.STATUS_PRODUCTION:
+
+                links.append(dict(title=_("Make a copy"),
+                                  posterize=True,
+                                  style='btn-primary',
+                                  href=reverse('flows.flow_copy', args=[flow.id])))
+
             if self.has_org_perm('flows.flow_results'):
                 links.append(dict(title=_("Results"),
                                   style='btn-primary',
@@ -1234,7 +1276,8 @@ class FlowCRUDL(SmartCRUDL):
                                   js_class='update-rulesflow',
                                   href='#'))
 
-            if self.has_org_perm('flows.flow_copy'):
+            if self.has_org_perm('flows.flow_copy') and \
+                    not (flow.flow_type == Flow.SURVEY and flow.launch_status == Flow.STATUS_PRODUCTION):
                 links.append(dict(title=_("Copy"),
                                   posterize=True,
                                   href=reverse('flows.flow_copy', args=[flow.id])))
@@ -1277,14 +1320,17 @@ class FlowCRUDL(SmartCRUDL):
             start = self.object.starts.all().order_by('-created_on')
             if start.exists() and start[0].status in [FlowStart.STATUS_STARTING, FlowStart.STATUS_PENDING]:  # pragma: needs cover
                 starting = True
+
+            flow = self.get_object()
+
             context['starting'] = starting
             context['mutable'] = False
-            if self.has_org_perm('flows.flow_update') and not self.request.user.is_superuser:
+            if self.has_org_perm('flows.flow_update') and not self.request.user.is_superuser and \
+                    not (flow.flow_type == Flow.SURVEY and flow.launch_status == Flow.STATUS_PRODUCTION):
                 context['mutable'] = True
 
             context['has_airtime_service'] = bool(self.object.org.is_connected_to_transferto())
 
-            flow = self.get_object()
             can_start = True
             if flow.flow_type == Flow.VOICE and not flow.org.supports_ivr():  # pragma: needs cover
                 can_start = False
@@ -1357,10 +1403,9 @@ class FlowCRUDL(SmartCRUDL):
             start = self.object.starts.all().order_by('-created_on')
             if start.exists() and start[0].status in [FlowStart.STATUS_STARTING, FlowStart.STATUS_PENDING]:  # pragma: needs cover
                 starting = True
+
             context['starting'] = starting
             context['mutable'] = False
-            if self.has_org_perm('flows.flow_update') and not self.request.user.is_superuser:
-                context['mutable'] = True
 
             context['has_airtime_service'] = bool(self.object.org.is_connected_to_transferto())
 
