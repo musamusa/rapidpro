@@ -10,6 +10,8 @@
 -block modal-script
   {{ block.super }}
 
+  %script{src:"{{ STATIC_URL }}js/embedded-data.js"}
+
   :javascript
     $(document).ready(function() {
 
@@ -55,10 +57,12 @@
       $("#id_event_type").on('change', function() {
         if ($("#id_event_type").data('select2').val() == 'F') {
           $("#flow-section").show();
+          $("#embedded-data").show();
           $("#message-section").hide();
           $(".modal-body").css('min-height', '150px');
         } else {
           $("#flow-section").hide();
+          $("#embedded-data").hide();
           $("#message-section").show();
           $(".modal-body").css('min-height', '220px');
         }
@@ -218,13 +222,13 @@
       Delivered
     -render_field 'delivery_hour'
 
-  #embedded-data
+  #embedded-data.hide
     .embed-row.embed-template
       .embed-field
-        %input{name:'field', type:'text'}
+        %input{type:'text'}
       .embed-value
-        %input{name:'value', type:'text'}
-      .embed-remove
+        %input{type:'text'}
+      .embed-remove{onclick:'removeEmbed($(this))'}
         .icon.icon-close
 
     .embed-row.embed-header.inactive
@@ -238,7 +242,7 @@
     .embed-container
 
     .add-new-embed
-      %a{href:'javascript:;'}
+      %a{href:'javascript:;', onclick:'addEmbed()'}
         -trans "Add embedded data"
 
 
