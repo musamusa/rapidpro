@@ -1245,6 +1245,7 @@ CHANNEL_TYPES = [
     'temba.channels.types.vumi_ussd.VumiUSSDType',
     'temba.channels.types.yo.YoType',
     'temba.channels.types.zenvia.ZenviaType',
+    'temba.channels.types.ws.WsType',
 ]
 
 # -----------------------------------------------------------------------------------

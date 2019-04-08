@@ -1,0 +1,33 @@
+-extends "channels/channel_claim_form.html"
+-load i18n compress temba
+
+-block title
+  .medium-help.float-left{class:"{{ view.channel_type.icon }}"}
+
+  %h2.font_normalize.header-margin
+    {{ title }}
+
+-block pre-form
+  .info
+    %p
+      -blocktrans with name=brand.name
+        You can connect a WebSocket Server to your {{ name}} account
+        to automate sending and receiving Widget messages.
+
+-block extra-style
+  {{ block.super }}
+
+  :css
+
+    .info {
+      width: 800px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom:15px;
+    }
+
+    #id_url {
+      width: 340px;
+    }
