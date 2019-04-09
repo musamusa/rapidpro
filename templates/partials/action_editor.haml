@@ -329,7 +329,7 @@
         .modal-webhook-body
           %label
             -trans "JSON body"
-          %textarea{auto-complete:"", ng-model:"action.webhook_body"}
+          %textarea{auto-complete:"", ng-model:"action.action_webhook_body"}
           %button.btn.btn-primary{ng-click:"actionValidBodyJSON()"}
             -trans "Check JSON"
           .validation-alert.notok{ng-show:"action_webhook_body_valid == false"}
@@ -368,7 +368,7 @@
           In this example @extra.product and @extra.stock_level
           would be added for all future steps.
 
-      %button{ng-click:"saveWebhook(action.action, action.webhook, action.webhook_body)",class:"submit hide"}
+      %button{ng-click:"saveWebhook(action.action, action.webhook, action.action_webhook_body)",class:"submit hide"}
         -trans "Ok"
     </ng-form>
 .modal-footer

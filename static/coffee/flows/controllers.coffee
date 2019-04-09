@@ -2029,6 +2029,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   if $scope.action.webhook_body
     $scope.action_webhook_body_valid = true
+    $scope.action.action_webhook_body = $scope.action.webhook_body
 
   if $scope.action.salesforce_fields
     item_counter = 0
@@ -2067,11 +2068,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
   $scope.actionValidBodyJSON = () ->
     try
-      if $scope.action.webhook_body in [undefined, ' ', '', null]
+      if $scope.action.action_webhook_body in [undefined, ' ', '', null]
         $scope.action_webhook_body_valid = null
       else
-        parsedJson = JSON.parse($scope.action.webhook_body)
-        $scope.action.webhook_body = JSON.stringify(parsedJson, undefined, 4)
+        parsedJson = JSON.parse($scope.action.action_webhook_body)
+        $scope.action.action_webhook_body = JSON.stringify(parsedJson, undefined, 4)
         $scope.action_webhook_body_valid = true
     catch e
       $scope.action_webhook_body_valid = false
@@ -2333,10 +2334,12 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.action.webhook = url
 
     $scope.actionValidBodyJSON()
-    if $scope.action_webhook_body_valid == null
-      body = null
+    if $scope.action_webhook_body_valid == true
+      $scope.action.webhook_body = body
+    else if $scope.action_webhook_body_valid == null
+      $scope.action.webhook_body = null
 
-    $scope.action.webhook_body = body
+    delete $scope.action.action_webhook_body
 
     webhook_headers = []
     item_counter = 0

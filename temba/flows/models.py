@@ -5569,23 +5569,25 @@ class WebhookAction(Action):
     TYPE = 'api'
     ACTION = 'action'
 
-    def __init__(self, uuid, webhook, action='POST', webhook_headers=None):
+    def __init__(self, uuid, webhook, action='POST', webhook_headers=None, webhook_body=None):
         super(WebhookAction, self).__init__(uuid)
 
         self.webhook = webhook
         self.action = action
         self.webhook_headers = webhook_headers
+        self.webhook_body = webhook_body
 
     @classmethod
     def from_json(cls, org, json_obj):
         return cls(json_obj.get(cls.UUID),
                    json_obj.get('webhook', org.get_webhook_url()),
                    json_obj.get('action', 'POST'),
-                   json_obj.get('webhook_headers', []))
+                   json_obj.get('webhook_headers', []),
+                   json_obj.get('webhook_body', None))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, webhook=self.webhook, action=self.action,
-                    webhook_headers=self.webhook_headers)
+                    webhook_headers=self.webhook_headers, webhook_body=self.webhook_body)
 
     def execute(self, run, context, actionset_uuid, msg, offline_on=None):
         from temba.api.models import WebHookEvent
