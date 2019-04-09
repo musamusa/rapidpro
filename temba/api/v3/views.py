@@ -5,7 +5,7 @@ import string
 import itertools
 
 from django import forms
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
@@ -52,7 +52,7 @@ from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool, splitting_getlist
 
-from .serializers import FlowRunReadSerializer, FlowReadSerializer
+from .serializers import FlowRunReadSerializer, FlowReadSerializer, FlowRunWriteSerializer
 from ..tasks import send_account_manage_email_task, send_recovery_mail, push_notification_to_fcm
 from ..support import InvalidQueryError
 
@@ -1393,6 +1393,7 @@ class FlowStepEndpoint(FlowStepEndpointV1):
     Response is the updated or created flow run.
     """
     permission = 'flows.flow_api'
+    write_serializer_class = FlowRunWriteSerializer
 
     @classmethod
     def get_write_explorer(cls):
