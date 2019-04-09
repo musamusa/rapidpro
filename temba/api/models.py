@@ -212,7 +212,8 @@ class WebHookEvent(SmartModel):
         on_transaction_commit(lambda: deliver_event_task.delay(self.id))
 
     @classmethod
-    def trigger_flow_event(cls, run, webhook_url, node_uuid, msg, action='POST', resthook=None, headers=None):
+    def trigger_flow_event(cls, run, webhook_url, node_uuid, msg, action='POST', resthook=None, headers=None,
+                           webhook_body=None):
         flow = run.flow
         org = flow.org
         contact = run.contact
@@ -271,6 +272,9 @@ class WebHookEvent(SmartModel):
 
         if not action:  # pragma: needs cover
             action = 'POST'
+
+        if webhook_body:
+            data.update(webhook_body)
 
         webhook_event = cls.objects.create(org=org, event=cls.TYPE_FLOW, channel=channel, data=json.dumps(data),
                                            run=run, try_count=1, action=action, resthook=resthook,
