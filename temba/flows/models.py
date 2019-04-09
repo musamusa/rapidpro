@@ -3598,6 +3598,7 @@ class RuleSet(models.Model):
     CONFIG_WEBHOOK = 'webhook'
     CONFIG_WEBHOOK_ACTION = 'webhook_action'
     CONFIG_WEBHOOK_HEADERS = 'webhook_headers'
+    CONFIG_WEBHOOK_BODY = 'webhook_body'
     CONFIG_RESTHOOK = 'resthook'
 
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
@@ -3878,6 +3879,7 @@ class RuleSet(models.Model):
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}
+            urls = []
 
             # figure out which URLs will be called
             if self.ruleset_type == RuleSet.TYPE_WEBHOOK:
@@ -3890,6 +3892,20 @@ class RuleSet(models.Model):
                     for item in headers:
                         header[item.get('name')] = item.get('value')
 
+                try:
+                    config_webhook_body = self.config_json()[RuleSet.CONFIG_WEBHOOK_BODY]
+                except Exception:
+                    config_webhook_body = None
+
+                webhook_body = None
+                if config_webhook_body:
+                    (body, errors) = Msg.evaluate_template(str(config_webhook_body), context, org=run.flow.org,
+                                                           url_encode=False)
+                    try:
+                        webhook_body = json.loads(body)
+                    except Exception:
+                        pass
+
             elif self.ruleset_type == RuleSet.TYPE_RESTHOOK:
                 from temba.api.models import Resthook
 
@@ -3897,6 +3913,7 @@ class RuleSet(models.Model):
                 resthook_slug = self.config_json()[RuleSet.CONFIG_RESTHOOK]
                 resthook = Resthook.get_or_create(run.org, resthook_slug, run.flow.created_by)
                 urls = resthook.get_subscriber_urls()
+                webhook_body = None
 
                 # no urls? use None, as our empty case
                 if not urls:
@@ -3914,7 +3931,7 @@ class RuleSet(models.Model):
                 (value, errors) = Msg.evaluate_template(url, context, org=run.flow.org, url_encode=True)
 
                 result = WebHookEvent.trigger_flow_event(run, value, self, msg, action, resthook=resthook,
-                                                         headers=header)
+                                                         headers=header, webhook_body=webhook_body)
 
                 # we haven't recorded any status yet, do so
                 if not status_code:
