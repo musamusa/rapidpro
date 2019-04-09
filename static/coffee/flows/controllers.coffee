@@ -1999,6 +1999,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   $scope.action_webhook_headers_value = []
   $scope.action_salesforce_fields = []
   $scope.action_salesforce_values = []
+  $scope.action_webhook_body_valid = null
 
   $scope.showAttachOptions = false
   $scope.showAttachVariable = false
@@ -2026,6 +2027,9 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   else
     $scope.action.webhook_headers = []
 
+  if $scope.action.webhook_body
+    $scope.action_webhook_body_valid = true
+
   if $scope.action.salesforce_fields
     item_counter = 0
     for item in $scope.action.salesforce_fields
@@ -2036,7 +2040,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.action.salesforce_fields = []
     $scope.action.salesforce_fields.push({field: '', value: ''})
 
-  formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0
+  formData.isActionWebhookAdditionalOptionsVisible = $scope.action.webhook_headers.length > 0 or $scope.action.webhook_body
 
   $scope.actionWebhookAdditionalOptions = () ->
     if formData.isActionWebhookAdditionalOptionsVisible == true
@@ -2060,6 +2064,17 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
     if $scope.action.webhook_headers.length == 0
       $scope.addNewActionWebhookHeader()
+
+  $scope.actionValidBodyJSON = () ->
+    try
+      if $scope.action.webhook_body in [undefined, ' ', '', null]
+        $scope.action_webhook_body_valid = null
+      else
+        parsedJson = JSON.parse($scope.action.webhook_body)
+        $scope.action.webhook_body = JSON.stringify(parsedJson, undefined, 4)
+        $scope.action_webhook_body_valid = true
+    catch e
+      $scope.action_webhook_body_valid = false
 
   $scope.addNewQuickReply = ->
     $scope.showQuickReplyButton = false
@@ -2308,7 +2323,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $modalInstance.close()
 
   # save a webhook action
-  $scope.saveWebhook = (method, url) ->
+  $scope.saveWebhook = (method, url, body) ->
 
     if $scope.hasInvalidFields([url])
       return
@@ -2316,6 +2331,12 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.action.type = 'api'
     $scope.action.action = method
     $scope.action.webhook = url
+
+    $scope.actionValidBodyJSON()
+    if $scope.action_webhook_body_valid == null
+      body = null
+
+    $scope.action.webhook_body = body
 
     webhook_headers = []
     item_counter = 0
