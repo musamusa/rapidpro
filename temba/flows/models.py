@@ -5602,7 +5602,15 @@ class WebhookAction(Action):
             for item in self.webhook_headers:
                 headers[item.get('name')] = item.get('value')
 
-        WebHookEvent.trigger_flow_event(run, value, actionset_uuid, msg, self.action, headers=headers)
+        (body, errors) = Msg.evaluate_template(str(self.webhook_body), context, org=run.flow.org, url_encode=False)
+        try:
+            body = json.loads(body)
+        except Exception as e:
+            body = {}
+            ActionLog.warn(run, _(e.message))
+
+        WebHookEvent.trigger_flow_event(run, value, actionset_uuid, msg, self.action, headers=headers,
+                                        webhook_body=body)
         return []
 
 
