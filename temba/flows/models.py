@@ -5625,7 +5625,7 @@ class WebhookAction(Action):
             try:
                 body = json.loads(body)
             except Exception as e:
-                body = {}
+                body = None
                 ActionLog.warn(run, _(e.message))
 
         WebHookEvent.trigger_flow_event(run, value, actionset_uuid, msg, self.action, headers=headers,
