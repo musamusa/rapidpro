@@ -1118,6 +1118,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       formData.timeout = option
 
   formData.webhook_action = 'GET'
+  formData.webhook_body_valid = null
   $scope.webhook_headers_name = []
   $scope.webhook_headers_value = []
 
@@ -1130,7 +1131,11 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     formData.webhook = ruleset.config.webhook
     formData.webhook_action = ruleset.config.webhook_action
     formData.webhook_headers = ruleset.config.webhook_headers or []
-    formData.isWebhookAdditionalOptionsVisible = formData.webhook_headers.length > 0
+    formData.webhook_body = ruleset.config.webhook_body
+    formData.isWebhookAdditionalOptionsVisible = formData.webhook_headers.length > 0 or formData.webhook_body
+
+    if formData.webhook_body
+      formData.webhook_body_valid = true
 
     item_counter = 0
     for item in formData.webhook_headers
@@ -1183,6 +1188,17 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
 
     if formData.webhook_headers.length == 0
       $scope.addNewWebhookHeader()
+
+  $scope.validBodyJSON = () ->
+    try
+      if formData.webhook_body in [undefined, ' ', '', null]
+        formData.webhook_body_valid = null
+      else
+        parsedJson = JSON.parse(formData.webhook_body)
+        formData.webhook_body = JSON.stringify(parsedJson, undefined, 4)
+        formData.webhook_body_valid = true
+    catch e
+      formData.webhook_body_valid = false
 
   $scope.updateOperator = (option, i, reset=false) ->
     typesDict = {
@@ -1867,10 +1883,19 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
               webhook_headers.push({name: item_name, value: item_value})
             item_counter++
 
+        $scope.validBodyJSON()
+        if formData.webhook_body_valid == null
+          webhook_body = null
+        else if formData.webhook_body_valid == true
+          webhook_body = formData.webhook_body
+        else
+          webhook_body = ruleset.config.webhook_body
+
         ruleset.config =
           webhook: formData.webhook
           webhook_action: formData.webhook_action
           webhook_headers: webhook_headers
+          webhook_body: webhook_body
 
       else if rulesetConfig.type == 'lookup'
         lookup_queries = []

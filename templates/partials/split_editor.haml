@@ -200,7 +200,7 @@
           -trans "Additional options"
 
         .webhook-headers{ng-show:"formData.isWebhookAdditionalOptionsVisible"}
-          .modal-webhook-header-pair
+          .modal-webhook-header-pair{ng-show:"formData.webhook_headers.length > 0"}
             .modal-webhook-header.modal-webhook-header-name
               .message
                 -trans "Header Name"
@@ -217,6 +217,17 @@
 
           %a.add-header{href:"javascript:;",ng-click:"addNewWebhookHeader()"}
             -trans "Add header"
+
+          .modal-webhook-body
+            %label
+              -trans "JSON body"
+            %textarea{auto-complete:"", ng-model:"formData.webhook_body"}
+            %button.btn.btn-primary{ng-click:"validBodyJSON()"}
+              -trans "Check JSON"
+            .validation-alert.notok{ng-show:"formData.webhook_body_valid == false"}
+              -trans "Does not conform to JSON format"
+            .validation-alert{ng-show:"formData.webhook_body_valid == true"}
+              -trans "Valid JSON body"
 
         .help-text
           -blocktrans
