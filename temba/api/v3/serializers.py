@@ -1,4 +1,4 @@
-from temba.flows.models import FlowRun, Flow
+from temba.flows.models import FlowRun, Flow, FlowStep
 from ..v1.serializers import FlowRunWriteSerializer as FlowRunWriteSerializerV1
 from ..v2.serializers import FlowRunReadSerializer as FlowRunReadSerializerV2
 from ..v2.serializers import FlowReadSerializer as FlowReadSerializerV2
