@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import json
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
@@ -266,6 +268,17 @@ class EventForm(forms.ModelForm):
         # otherwise, it's an event that runs an existing flow
         else:
             obj.flow = Flow.objects.get(org=org, id=self.cleaned_data['flow_to_start'])
+
+            embedded_fields = request.POST.getlist('embedded_field', [])
+            embedded_values = request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if embedded_values:
+                    embedded_data[field] = embedded_values[i]
+
+            if embedded_data:
+                obj.embedded_data = json.dumps(embedded_data)
 
     def __init__(self, user, *args, **kwargs):
         from temba.values.models import Value
