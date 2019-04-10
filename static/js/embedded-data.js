@@ -1,7 +1,7 @@
-function addEmbed() {
+function addEmbed(field, value) {
     var template = $('.embed-template').clone();
-    template.find('.embed-field').find('input').attr('name', 'embedded_field');
-    template.find('.embed-value').find('input').attr('name', 'embedded_value');
+    template.find('.embed-field').find('input').attr('name', 'embedded_field').attr('value', field);
+    template.find('.embed-value').find('input').attr('name', 'embedded_value').attr('value', value);
     template.toggleClass('embed-template');
     template.addClass('embed-counter');
     $('.embed-container').append(template);

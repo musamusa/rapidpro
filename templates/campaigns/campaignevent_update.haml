@@ -91,6 +91,12 @@
       }
     }
 
+    {% if embedded_data %}
+        {% for embed in embedded_data %}
+            addEmbed('{{ embed.field }}', '{{ embed.value }}');
+        {% endfor %}
+    {% endif %}
+
 
 -block modal-extra-style
   {{ block.super }}
