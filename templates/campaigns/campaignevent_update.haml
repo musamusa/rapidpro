@@ -1,6 +1,6 @@
 -extends "smartmin/form.html"
 
--load smartmin
+-load smartmin i18n
 
 -block extra-script
   {{ block.super }}
@@ -9,6 +9,8 @@
 
 -block modal-script
   {{ block.super }}
+
+  %script{src:"{{ STATIC_URL }}js/embedded-data.js"}
 
   :javascript
     $(document).ready(function() {
@@ -55,10 +57,12 @@
       $("#id_event_type").on('change', function() {
         if ($("#id_event_type").data('select2').val() == 'F') {
           $("#flow-section").show();
+          $("#embedded-data").show();
           $("#message-section").hide();
           $(".modal-body").css('min-height', '150px');
         } else {
           $("#flow-section").hide();
+          $("#embedded-data").hide();
           $("#message-section").show();
           $(".modal-body").css('min-height', '220px');
         }
@@ -71,6 +75,7 @@
       {% if form.event_type.value == 'F' %}
         $("#flow-section").show();
         $("#message-section").hide();
+        $("#embedded-data").show();
         $(".modal-body").css('min-height', '150px');
       {% endif %}
 
@@ -85,6 +90,12 @@
         $("#send-at").hide();
       }
     }
+
+    {% if embedded_data %}
+        {% for embed in embedded_data %}
+            addEmbed('{{ embed.field }}', '{{ embed.value }}');
+        {% endfor %}
+    {% endif %}
 
 
 -block modal-extra-style
@@ -102,7 +113,8 @@
 
     .modal-body {
       overflow-x: hidden;
-      overflow-y: hidden;
+      overflow-y: auto;
+      max-height: 375px !important;
     }
 
     .smartmin-form textarea {
@@ -216,4 +228,28 @@
     .delivered
       Delivered
     -render_field 'delivery_hour'
+
+  #embedded-data.hide
+    .embed-row.embed-template
+      .embed-field
+        %input{type:'text'}
+      .embed-value
+        %input{type:'text'}
+      .embed-remove{onclick:'removeEmbed($(this))'}
+        .icon.icon-close
+
+    .embed-row.embed-header.inactive
+      .embed-field
+        %label
+          -trans "Embedded field"
+      .embed-value
+        %label
+          -trans "Embedded value"
+
+    .embed-container
+
+    .add-new-embed
+      %a{href:'javascript:;', onclick:'addEmbed()'}
+        -trans "Add embedded data"
+
 

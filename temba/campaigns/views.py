@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+import json
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
@@ -267,6 +269,16 @@ class EventForm(forms.ModelForm):
         else:
             obj.flow = Flow.objects.get(org=org, id=self.cleaned_data['flow_to_start'])
 
+            embedded_fields = request.POST.getlist('embedded_field', [])
+            embedded_values = request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            obj.embedded_data = json.dumps(embedded_data) if embedded_data else None
+
     def __init__(self, user, *args, **kwargs):
         from temba.values.models import Value
 
@@ -414,7 +426,11 @@ class CampaignEventCRUDL(SmartCRUDL):
             return kwargs
 
         def get_context_data(self, **kwargs):
-            return super(CampaignEventCRUDL.Update, self).get_context_data(**kwargs)
+            context = super(CampaignEventCRUDL.Update, self).get_context_data(**kwargs)
+            if self.object.embedded_data:
+                embedded_data = json.loads(self.object.embedded_data)
+                context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in embedded_data.keys()]
+            return context
 
         def derive_fields(self):
 
