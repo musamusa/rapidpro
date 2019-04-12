@@ -82,6 +82,29 @@
               %label{ for:"id_include_active" }
                 -trans "Interrupt contacts currently active in flows"
 
+    #embedded-data
+      .embed-row.embed-template
+        .embed-field
+          %input{type:'text'}
+        .embed-value
+          %input{type:'text'}
+        .embed-remove{onclick:'removeEmbed($(this))'}
+          .icon.icon-close
+
+      .embed-row.embed-header.inactive
+        .embed-field
+          %label
+            -trans "Embedded field"
+        .embed-value
+          %label
+            -trans "Embedded value"
+
+      .embed-container
+
+      .add-new-embed
+        %a{href:'javascript:;', onclick:'addEmbed()'}
+          -trans "Add embedded data"
+
 -block form-buttons
   -if send_channel
     .form-actions
@@ -114,6 +137,7 @@
 
 -block modal-script
   {{block.super}}
+  %script{src:"{{ STATIC_URL }}js/embedded-data.js"}
   :javascript
     $(document).ready(function () {
       useFontCheckbox("#id_restart_participants");

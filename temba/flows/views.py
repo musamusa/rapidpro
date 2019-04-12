@@ -1955,11 +1955,22 @@ class FlowCRUDL(SmartCRUDL):
             analytics.track(self.request.user.username, 'temba.flow_broadcast',
                             dict(contacts=len(omnibox['contacts']), groups=len(omnibox['groups'])))
 
+            embedded_fields = self.request.POST.getlist('embedded_field', [])
+            embedded_values = self.request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            embedded_data = json.dumps(embedded_data) if embedded_data else None
+
             # activate all our contacts
             flow.async_start(self.request.user,
                              list(omnibox['groups']), list(omnibox['contacts']),
                              restart_participants=form.cleaned_data['restart_participants'],
-                             include_active=form.cleaned_data['include_active'])
+                             include_active=form.cleaned_data['include_active'],
+                             extra=embedded_data)
             return flow
 
     class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):

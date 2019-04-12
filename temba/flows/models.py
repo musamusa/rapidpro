@@ -1517,7 +1517,7 @@ class Flow(TembaModel):
         results = sorted(results, reverse=True, key=lambda result: result['first_seen'] if result['first_seen'] else now)
         return results
 
-    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True):
+    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True, extra=None):
         """
         Causes us to schedule a flow to start in a background thread.
         """
@@ -1527,7 +1527,7 @@ class Flow(TembaModel):
         flow_start = FlowStart.objects.create(flow=self,
                                               restart_participants=restart_participants,
                                               include_active=include_active,
-                                              created_by=user, modified_by=user)
+                                              created_by=user, modified_by=user, extra=extra)
 
         contact_ids = [c.id for c in contacts]
         flow_start.contacts.add(*contact_ids)
