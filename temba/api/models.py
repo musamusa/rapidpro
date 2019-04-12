@@ -300,7 +300,12 @@ class WebHookEvent(SmartModel):
                 if action == 'GET':
                     response = requests.get(webhook_url, headers=requests_headers, timeout=10)
                 else:
-                    response = requests.post(webhook_url, data=data, headers=requests_headers, timeout=10)
+                    post_args = dict(url=webhook_url, headers=requests_headers, timeout=10)
+                    if webhook_body:
+                        post_args.update(dict(json=data))
+                    else:
+                        post_args.update(dict(data=data))
+                    response = requests.post(**post_args)
 
                 body = response.text
                 if body:
