@@ -274,7 +274,7 @@ class WebHookEvent(SmartModel):
             action = 'POST'
 
         if webhook_body:
-            data.update(webhook_body)
+            data = webhook_body
 
         webhook_event = cls.objects.create(org=org, event=cls.TYPE_FLOW, channel=channel, data=json.dumps(data),
                                            run=run, try_count=1, action=action, resthook=resthook,
