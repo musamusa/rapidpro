@@ -481,7 +481,8 @@ class EventFire(Model):
         Starts a batch of event fires that are for events which use the same flow
         """
         fired = timezone.now()
-        flow.start([], [f.contact for f in fires], restart_participants=True, extra=json.loads(embedded_data))
+        flow.start([], [f.contact for f in fires], restart_participants=True,
+                   extra=json.loads(embedded_data) if embedded_data else None)
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod
