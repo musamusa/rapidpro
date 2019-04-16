@@ -2224,12 +2224,23 @@ class FlowCRUDL(SmartCRUDL):
 
             recipients = self.form.cleaned_data['omnibox']
 
+            embedded_fields = self.request.POST.getlist('embedded_field', [])
+            embedded_values = self.request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            embedded_data = json.dumps(embedded_data) if embedded_data else None
+
             trigger = Trigger.objects.create(flow=flow,
                                              org=org,
                                              schedule=schedule,
                                              trigger_type=Trigger.TYPE_SCHEDULE,
                                              created_by=self.request.user,
-                                             modified_by=self.request.user)
+                                             modified_by=self.request.user,
+                                             embedded_data=embedded_data)
 
             for group in recipients['groups']:
                 trigger.groups.add(group)
