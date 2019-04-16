@@ -290,7 +290,7 @@ class CampaignEventWriteSerializer(WriteSerializer):
                 self.instance.flow = flow
                 self.instance.event_type = CampaignEvent.TYPE_FLOW
                 self.instance.message = None
-                self.instance.embedded_data = json.dumps(dict(embedded_data))
+                self.instance.embedded_data = json.dumps(dict(embedded_data)) if embedded_data else None
 
             # we are being set to a message
             else:

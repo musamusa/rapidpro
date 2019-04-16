@@ -472,7 +472,8 @@ class EventFire(Model):
         Actually fires this event for the passed in contact and flow
         """
         self.fired = timezone.now()
-        self.event.flow.start([], [self.contact], restart_participants=True, extra=json.loads(self.event.embedded_data))
+        self.event.flow.start([], [self.contact], restart_participants=True,
+                              extra=json.loads(self.event.embedded_data) if self.event.embedded_data else None)
         self.save(update_fields=('fired',))
 
     @classmethod
