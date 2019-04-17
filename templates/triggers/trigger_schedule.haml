@@ -22,13 +22,14 @@
       width: 430px;
     }
 
-    #start-datetime {
-
+    #embedded-data {
+      width: 520px;
     }
 
 
 -block extra-script
   {{ block.super }}
+  %script{src:"{{ STATIC_URL }}js/embedded-data.js"}
   %script{src:"{{ STATIC_URL }}js/schedules-ui.js?v=3"}
 
   <script src="{% url 'django.views.i18n.javascript_catalog' %}"></script>
@@ -89,6 +90,29 @@
           -trans "Sun"
 
       %input#repeat-days-value{name:'repeat_days', type:'hidden'}
+
+  #embedded-data
+    .embed-row.embed-template
+      .embed-field
+        %input{type:'text'}
+      .embed-value
+        %input{type:'text'}
+      .embed-remove{onclick:'removeEmbed($(this))'}
+        .icon.icon-close
+
+    .embed-row.embed-header.inactive
+      .embed-field
+        %label
+          -trans "Embedded field"
+      .embed-value
+        %label
+          -trans "Embedded value"
+
+    .embed-container
+
+    .add-new-embed
+      %a{href:'javascript:;', onclick:'addEmbed()'}
+        -trans "Add embedded data"
 
 -load humanize
 
