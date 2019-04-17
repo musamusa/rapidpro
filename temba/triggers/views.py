@@ -454,6 +454,11 @@ class TriggerCRUDL(SmartCRUDL):
                 context['days'] = self.get_object().schedule.explode_bitmask()
             context['user_tz'] = get_current_timezone_name()
             context['user_tz_offset'] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() / 60)
+
+            if self.object.embedded_data:
+                embedded_data = json.loads(self.object.embedded_data)
+                context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in embedded_data.keys()]
+
             return context
 
         def form_invalid(self, form):
@@ -480,6 +485,16 @@ class TriggerCRUDL(SmartCRUDL):
         def form_valid(self, form):
             trigger = self.object
             trigger_type = trigger.trigger_type
+
+            embedded_fields = self.request.POST.getlist('embedded_field', [])
+            embedded_values = self.request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            trigger.embedded_data = json.dumps(embedded_data) if embedded_data else None
 
             if trigger_type == Trigger.TYPE_SCHEDULE:
                 schedule = trigger.schedule

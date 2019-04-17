@@ -100,6 +100,30 @@
     -else
       {{block.super}}
 
+  -if object.trigger_type == 'K' or object.trigger_type == 'S'
+    #embedded-data
+      .embed-row.embed-template
+        .embed-field
+          %input{type:'text'}
+        .embed-value
+          %input{type:'text'}
+        .embed-remove{onclick:'removeEmbed($(this))'}
+          .icon.icon-close
+
+      .embed-row.embed-header.inactive
+        .embed-field
+          %label
+            -trans "Embedded field"
+        .embed-value
+          %label
+            -trans "Embedded value"
+
+      .embed-container
+
+      .add-new-embed
+        %a{href:'javascript:;', onclick:'addEmbed()'}
+          -trans "Add embedded data"
+
 
 -block extra-style
   {{block.super}}
@@ -114,6 +138,7 @@
 
 -block modal-script
   {{block.super}}
+  %script{src:"{{ STATIC_URL }}js/embedded-data.js"}
   %script{src:"{{ STATIC_URL }}js/schedules-ui.js"}
 
   :javascript
@@ -180,4 +205,10 @@
       setNextFireText({{ object.schedule.next_fire|date:"U" }})
       {% endif %}
     });
+
+    {% if embedded_data %}
+        {% for embed in embedded_data %}
+            addEmbed('{{ embed.field }}', '{{ embed.value }}');
+        {% endfor %}
+    {% endif %}
 
