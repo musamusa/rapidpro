@@ -347,7 +347,8 @@ class Trigger(SmartModel):
         contact.ensure_unstopped()
 
         # if we have an associated flow, start this contact in it
-        trigger.flow.start([], [contact], start_msg=msg, restart_participants=True)
+        trigger.flow.start([], [contact], start_msg=msg, restart_participants=True,
+                           extra=json.loads(trigger.embedded_data) if trigger.embedded_data else None)
 
         return True
 

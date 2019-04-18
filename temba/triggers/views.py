@@ -617,6 +617,17 @@ class TriggerCRUDL(SmartCRUDL):
         def pre_save(self, obj, *args, **kwargs):
             obj = super(TriggerCRUDL.CreateTrigger, self).pre_save(obj, *args, **kwargs)
             obj.org = self.request.user.get_org()
+
+            embedded_fields = self.request.POST.getlist('embedded_field_keyword', [])
+            embedded_values = self.request.POST.getlist('embedded_value_keyword', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            obj.embedded_data = json.dumps(embedded_data) if embedded_data else None
+
             return obj
 
         def form_valid(self, form):
