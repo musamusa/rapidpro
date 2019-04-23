@@ -2015,13 +2015,13 @@ class Org(SmartModel):
                                                       include_archived=include_archived)
 
         primary_components = set(itertools.chain(flows, campaigns))
-        all_components = set()
+        all_components = list()
 
         def add_component(c):
             if c in all_components:
                 return
 
-            all_components.add(c)
+            all_components.append(c)
             if c in primary_components:
                 primary_components.remove(c)
 
