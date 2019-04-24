@@ -55,28 +55,36 @@
     .field.keyword_triggers
       {% render_field 'keyword_triggers' %}
 
-    #embedded-data
-      .embed-row.embed-template
-        .embed-field
-          %input{type:'text'}
-        .embed-value
-          %input{type:'text'}
-        .embed-remove{onclick:'removeEmbed($(this))'}
-          .icon.icon-close
-
-      .embed-row.embed-header.inactive
-        .embed-field
+    #embedded-data.launch-flow-keyword
+      .embed-row-keyword
+        .embed-row-keyword-field
           %label
-            -trans "Embedded field"
-        .embed-value
-          %label
-            -trans "Embedded value"
+            -trans "Keyword"
+        %select#embedded_keyword{name:'embedded_keyword'}
+          %option{value:'default'}
+            -trans "Default"
+      .embed-row-content
+        .embed-row.embed-template
+          .embed-field
+            %input{type:'text'}
+          .embed-value
+            %input{type:'text'}
+          .embed-remove{onclick:'removeEmbed($(this))'}
+            .icon.icon-close
 
-      .embed-container
+        .embed-row.embed-header.inactive
+          .embed-field
+            %label
+              -trans "Embedded field"
+          .embed-value
+            %label
+              -trans "Embedded value"
 
-      .add-new-embed
-        %a{href:'javascript:;', onclick:'addEmbed()'}
-          -trans "Add embedded data"
+        .embed-container
+
+        .add-new-embed
+          %a{href:'javascript:;', onclick:'addEmbed()'}
+            -trans "Add embedded data"
 
 -block form-buttons
   -if send_channel
@@ -99,5 +107,15 @@
         placeholder: "Add a keyword to begin this flow",
         containerCssClass: "select2-temba-field"
       });
-
+      $('#id_keyword_triggers').on('change', function (e) {
+        if (e.added) {
+          console.log(e.added);
+        } else if (e.removed) {
+          console.log(e.removed);
+        }
+      });
+      $('#embedded_keyword').select2({
+        containerCssClass: "select2-temba-field"
+      });
+      addEmbed();
     });
