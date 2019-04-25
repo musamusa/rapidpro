@@ -1,4 +1,4 @@
-function addEmbed(field, value, is_on_keyword_trigger) {
+function addEmbed(field, value, is_on_keyword_trigger, trigger_flow_keyword) {
     var template;
     if (is_on_keyword_trigger) {
         template = $('.embed-template-keyword').clone();
@@ -8,6 +8,15 @@ function addEmbed(field, value, is_on_keyword_trigger) {
         template.addClass('embed-counter-keyword');
         $('.embed-container-keyword').append(template);
         $('.embed-header-keyword').removeClass('inactive');
+    } else if (trigger_flow_keyword) {
+        template = $('.embed-template-' + trigger_flow_keyword).clone();
+        template.find('.embed-field-' + trigger_flow_keyword).find('input').attr('name', 'embedded_field_' + trigger_flow_keyword).attr('value', field);
+        template.find('.embed-value-' + trigger_flow_keyword).find('input').attr('name', 'embedded_value_' + trigger_flow_keyword).attr('value', value);
+        template.toggleClass('embed-template');
+        template.toggleClass('embed-template-' + trigger_flow_keyword);
+        template.addClass('embed-counter-' + trigger_flow_keyword);
+        $('.embed-container-' + trigger_flow_keyword).append(template);
+        $('.embed-header-' + trigger_flow_keyword).removeClass('inactive');
     } else {
         template = $('.embed-template').clone();
         template.find('.embed-field').find('input').attr('name', 'embedded_field').attr('value', field);
@@ -19,13 +28,19 @@ function addEmbed(field, value, is_on_keyword_trigger) {
     }
 }
 
-function removeEmbed(el, is_on_keyword_trigger) {
+function removeEmbed(el, is_on_keyword_trigger, trigger_flow_keyword) {
     el.parent().remove();
     var length_embed;
     if (is_on_keyword_trigger) {
         length_embed = $('.embed-counter-keyword');
         if (length_embed.length == 0) {
             $('.embed-header-keyword').addClass('inactive');
+        }
+    } else if (trigger_flow_keyword) {
+        length_embed = $('.embed-counter-' + trigger_flow_keyword);
+        console.log(length_embed);
+        if (length_embed.length == 0) {
+            $('.embed-header-' + trigger_flow_keyword).addClass('inactive');
         }
     } else {
         length_embed = $('.embed-counter');

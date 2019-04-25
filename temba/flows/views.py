@@ -2078,6 +2078,8 @@ class FlowCRUDL(SmartCRUDL):
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowCRUDL.LaunchKeyword, self).get_context_data(*args, **kwargs)
+            current_keywords = self.form.fields.get('keyword_triggers')
+            context['current_keywords'] = str(current_keywords.initial).split(',')
             return context
 
         def get_form_kwargs(self):

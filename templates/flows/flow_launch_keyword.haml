@@ -63,16 +63,20 @@
         %select#embedded_keyword{name:'embedded_keyword'}
           %option{value:'default'}
             -trans "Default"
-      .embed-row-content
-        .embed-row.embed-template
-          .embed-field
+          -for keyword in current_keywords
+            %option{value:"{{ keyword }}"}
+              {{ keyword }}
+
+      %div.embed-row-content.embed-row-content-default.active
+        .embed-row.embed-template.embed-template-default
+          .embed-field.embed-field-default
             %input{type:'text'}
-          .embed-value
+          .embed-value.embed-value-default
             %input{type:'text'}
-          .embed-remove{onclick:'removeEmbed($(this))'}
+          .embed-remove{onclick:'removeEmbed($(this), "", "default")'}
             .icon.icon-close
 
-        .embed-row.embed-header.inactive
+        .embed-row.embed-header.embed-header-default.inactive
           .embed-field
             %label
               -trans "Embedded field"
@@ -80,11 +84,35 @@
             %label
               -trans "Embedded value"
 
-        .embed-container
+        .embed-container.embed-container-default
 
         .add-new-embed
-          %a{href:'javascript:;', onclick:'addEmbed()'}
+          %a{href:'javascript:;', onclick:'addEmbed("", "", "", "default")'}
             -trans "Add embedded data"
+
+      -for keyword in current_keywords
+        %div{class:"embed-row-content embed-row-content-{{ keyword }}"}
+          %div{class:"embed-row embed-template embed-template-{{ keyword }}"}
+            %div{class:"embed-field embed-field-{{ keyword }}"}
+              %input{type:'text'}
+            %div{class:"embed-value embed-value-{{ keyword }}"}
+              %input{type:'text'}
+            .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword }}")'}
+              .icon.icon-close
+
+          %div{class:"embed-row embed-header embed-header-{{ keyword }} inactive"}
+            .embed-field
+              %label
+                -trans "Embedded field"
+            .embed-value
+              %label
+                -trans "Embedded value"
+
+          %div{class:"embed-container embed-container-{{ keyword }}"}
+
+          .add-new-embed
+            %a{href:'javascript:;', onclick:'addEmbed("", "", "", "{{ keyword }}")'}
+              -trans "Add embedded data"
 
 -block form-buttons
   -if send_channel
@@ -114,8 +142,17 @@
           console.log(e.removed);
         }
       });
+
       $('#embedded_keyword').select2({
         containerCssClass: "select2-temba-field"
       });
-      addEmbed();
+      $('#embedded_keyword').on('change', function (e) {
+        $('.embed-row-content-' + e.added.id).addClass('active');
+        $('.embed-row-content-' + e.removed.id).removeClass('active');
+      });
+
+      addEmbed("", "", "", "default");
+      {% for keyword in current_keywords %}
+        addEmbed("", "", "", "{{ keyword }}");
+      {% endfor %}
     });
