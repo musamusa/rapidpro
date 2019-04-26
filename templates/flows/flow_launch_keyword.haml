@@ -135,20 +135,85 @@
         placeholder: "Add a keyword to begin this flow",
         containerCssClass: "select2-temba-field"
       });
-      $('#id_keyword_triggers').on('change', function (e) {
-        if (e.added) {
-          console.log(e.added);
-        } else if (e.removed) {
-          console.log(e.removed);
-        }
-      });
 
       $('#embedded_keyword').select2({
         containerCssClass: "select2-temba-field"
       });
       $('#embedded_keyword').on('change', function (e) {
-        $('.embed-row-content-' + e.added.id).addClass('active');
-        $('.embed-row-content-' + e.removed.id).removeClass('active');
+        if (e.added && e.removed) {
+          $('.embed-row-content-' + e.added.id).addClass('active');
+          $('.embed-row-content-' + e.removed.id).removeClass('active');
+        }
+      });
+
+      $('#id_keyword_triggers').on('change', function (e) {
+        var keyword;
+        if (e.added) {
+          keyword = e.added;
+
+          // Adding new option to select2 of the keywords
+          var newOption = new Option(keyword.text, keyword.id, false, false);
+          $('#embedded_keyword').append(newOption).trigger('change');
+
+          // Cloning default template to set the configs for new keyword inserted
+          var content = $('.embed-row-content-default').clone();
+          content.removeClass('embed-row-content-default').removeClass('active');
+          content.addClass('embed-row-content-' + keyword.id);
+
+          var template = content.find('.embed-template-default');
+          template.removeClass('embed-template-default');
+          template.addClass('embed-template-' + keyword.id);
+
+          var field = template.find('.embed-field-default');
+          field.removeClass('embed-field-default').addClass('embed-field-' + keyword.id);
+
+          var value = template.find('.embed-value-default');
+          value.removeClass('embed-value-default').addClass('embed-value-' + keyword.id);
+
+          field.find('input').attr('name', 'embedded_field_' + keyword.id);
+          value.find('input').attr('name', 'embedded_value_' + keyword.id);
+
+          template.find('.embed-remove').attr('onclick', 'removeEmbed($(this), "", "' + keyword.id + '")');
+
+          var header = content.find('.embed-header-default');
+          header.removeClass('embed-header-default').addClass('embed-header-' + keyword.id);
+
+          var container = content.find('.embed-container-default');
+          container.removeClass('embed-container-default').addClass('embed-container-' + keyword.id);
+
+          var containerCounter = container.find('.embed-counter-default');
+          containerCounter.removeClass('embed-counter-default');
+          containerCounter.addClass('embed-counter-' + keyword.id);
+
+          var containerField = containerCounter.find('.embed-field-default');
+          containerField.removeClass('embed-field-default');
+          containerField.addClass('embed-field-' + keyword.id);
+          containerField.find('input').attr('name', 'embedded_field_' + keyword.id);
+
+          var containerValue = containerCounter.find('.embed-value-default');
+          containerValue.removeClass('embed-value-default');
+          containerValue.addClass('embed-value-' + keyword.id);
+          containerValue.find('input').attr('name', 'embedded_value_' + keyword.id);
+
+          containerCounter.find('.embed-remove').attr('onclick', 'removeEmbed($(this), "", "' + keyword.id + '")');
+
+          var linkAdd = content.find('.add-new-embed').find('a');
+          linkAdd.attr('onclick', 'addEmbed("", "", "", "' + keyword.id + '")');
+
+          $('.launch-flow-keyword').append(content);
+
+        } else if (e.removed) {
+          // Deleting keyword configs removed
+          keyword = e.removed;
+          var keywordContent = $('.embed-row-content-' + keyword.id);
+          if (keywordContent.hasClass('active')) {
+            $('.embed-row-content-default').addClass('active');
+            $('#embedded_keyword').val('default');
+            $('#embedded_keyword').trigger('change');
+          }
+          keywordContent.remove();
+          $('select#embedded_keyword').find('option[value="' + keyword.id + '"]').remove();
+        }
       });
 
       addEmbed("", "", "", "default");
