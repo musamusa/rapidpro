@@ -38,7 +38,6 @@ function removeEmbed(el, is_on_keyword_trigger, trigger_flow_keyword) {
         }
     } else if (trigger_flow_keyword) {
         length_embed = $('.embed-counter-' + trigger_flow_keyword);
-        console.log(length_embed);
         if (length_embed.length == 0) {
             $('.embed-header-' + trigger_flow_keyword).addClass('inactive');
         }
