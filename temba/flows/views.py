@@ -2095,6 +2095,13 @@ class FlowCRUDL(SmartCRUDL):
             user = self.request.user
             org = user.get_org()
 
+            def build_embedded_data(fields, values):
+                data = {}
+                for i, field in enumerate(fields):
+                    if field and values[i]:
+                        data[field] = embedded_values[i]
+                return data
+
             if flow.flow_type != Flow.SURVEY:
                 keyword_triggers = form.cleaned_data['keyword_triggers']
 
@@ -2114,11 +2121,37 @@ class FlowCRUDL(SmartCRUDL):
                     archived_keywords = [t.keyword for t in flow.triggers.filter(org=org, flow=flow, trigger_type=Trigger.TYPE_KEYWORD,
                                                                                  is_archived=True, groups=None)]
                     for keyword in added_keywords:
+                        embedded_fields = self.request.POST.getlist('embedded_field_%s' % keyword, [])
+                        if embedded_fields and not embedded_fields[0]:
+                            embedded_fields = self.request.POST.getlist('embedded_field_default', [])
+
+                        embedded_values = self.request.POST.getlist('embedded_value_%s' % keyword, [])
+                        if embedded_values and not embedded_values[0]:
+                            embedded_values = self.request.POST.getlist('embedded_value_default', [])
+
+                        embedded_data = build_embedded_data(embedded_fields, embedded_values)
+
                         if keyword in archived_keywords:  # pragma: needs cover
-                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(is_archived=False)
+                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(
+                                is_archived=False, embedded_data=json.dumps(embedded_data) if embedded_data else None)
                         else:
                             Trigger.objects.create(org=org, keyword=keyword, trigger_type=Trigger.TYPE_KEYWORD,
-                                                   flow=flow, created_by=user, modified_by=user)
+                                                   flow=flow, created_by=user, modified_by=user,
+                                                   embedded_data=json.dumps(embedded_data) if embedded_data else None)
+
+                    for existing in existing_keywords:
+                        embedded_fields = self.request.POST.getlist('embedded_field_%s' % existing, [])
+                        if embedded_fields and not embedded_fields[0]:
+                            embedded_fields = self.request.POST.getlist('embedded_field_default', [])
+
+                        embedded_values = self.request.POST.getlist('embedded_value_%s' % existing, [])
+                        if embedded_values and not embedded_values[0]:
+                            embedded_values = self.request.POST.getlist('embedded_value_default', [])
+
+                        embedded_data = build_embedded_data(embedded_fields, embedded_values)
+
+                        Trigger.objects.filter(keyword=existing, org=org, flow=flow).update(
+                            embedded_data=json.dumps(embedded_data) if embedded_data else None)
 
             return flow
 
