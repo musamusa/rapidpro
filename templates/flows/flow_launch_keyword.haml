@@ -170,8 +170,8 @@
           var value = template.find('.embed-value-default');
           value.removeClass('embed-value-default').addClass('embed-value-' + keyword.id);
 
-          field.find('input').attr('name', 'embedded_field_' + keyword.id);
-          value.find('input').attr('name', 'embedded_value_' + keyword.id);
+          field.find('input').attr('name', 'embedded_field');
+          value.find('input').attr('name', 'embedded_value');
 
           template.find('.embed-remove').attr('onclick', 'removeEmbed($(this), "", "' + keyword.id + '")');
 
