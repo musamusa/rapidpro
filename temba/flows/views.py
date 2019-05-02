@@ -2083,7 +2083,8 @@ class FlowCRUDL(SmartCRUDL):
 
             current_keywords = self.form.fields.get('keyword_triggers')
             keywords_list = str(current_keywords.initial).split(',')
-            keywords = Trigger.objects.filter(trigger_type=Trigger.TYPE_KEYWORD, keyword__in=keywords_list, org=org)
+            keywords = Trigger.objects.filter(trigger_type=Trigger.TYPE_KEYWORD, keyword__in=keywords_list, org=org)\
+                .order_by('keyword')
             context['current_keywords'] = keywords
             return context
 
