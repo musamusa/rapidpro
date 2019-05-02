@@ -1,6 +1,6 @@
 -extends 'smartmin/update.html'
 
-{% load smartmin temba compress i18n %}
+{% load smartmin temba compress i18n flows %}
 
 -block pre-form
   :css
@@ -64,8 +64,8 @@
           %option{value:'default'}
             -trans "Default"
           -for keyword in current_keywords
-            %option{value:"{{ keyword }}"}
-              {{ keyword }}
+            %option{value:"{{ keyword.keyword }}"}
+              {{ keyword.keyword }}
 
       %div.embed-row-content.embed-row-content-default.active
         .embed-row.embed-template.embed-template-default
@@ -91,16 +91,16 @@
             -trans "Add embedded data"
 
       -for keyword in current_keywords
-        %div{class:"embed-row-content embed-row-content-{{ keyword }}"}
-          %div{class:"embed-row embed-template embed-template-{{ keyword }}"}
-            %div{class:"embed-field embed-field-{{ keyword }}"}
+        %div{class:"embed-row-content embed-row-content-{{ keyword.keyword }}"}
+          %div{class:"embed-row embed-template embed-template-{{ keyword.keyword }}"}
+            %div{class:"embed-field embed-field-{{ keyword.keyword }}"}
               %input{type:'text'}
-            %div{class:"embed-value embed-value-{{ keyword }}"}
+            %div{class:"embed-value embed-value-{{ keyword.keyword }}"}
               %input{type:'text'}
-            .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword }}")'}
+            .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword.keyword }}")'}
               .icon.icon-close
 
-          %div{class:"embed-row embed-header embed-header-{{ keyword }} inactive"}
+          %div{class:"embed-row embed-header embed-header-{{ keyword.keyword }} inactive"}
             .embed-field
               %label
                 -trans "Embedded field"
@@ -108,10 +108,10 @@
               %label
                 -trans "Embedded value"
 
-          %div{class:"embed-container embed-container-{{ keyword }}"}
+          %div{class:"embed-container embed-container-{{ keyword.keyword }}"}
 
           .add-new-embed
-            %a{href:'javascript:;', onclick:'addEmbed("", "", "", "{{ keyword }}")'}
+            %a{href:'javascript:;', onclick:'addEmbed("", "", "", "{{ keyword.keyword }}")'}
               -trans "Add embedded data"
 
 -block form-buttons
@@ -218,6 +218,12 @@
 
       addEmbed("", "", "", "default");
       {% for keyword in current_keywords %}
-        addEmbed("", "", "", "{{ keyword }}");
+        {% if keyword|list_embedded_data %}
+          {% for item in keyword|list_embedded_data %}
+            addEmbed("{{ item.field }}", "{{ item.value }}", "", "{{ keyword.keyword }}");
+          {% endfor %}
+        {% else %}
+          addEmbed("", "", "", "{{ keyword.keyword }}");
+        {% endif %}
       {% endfor %}
     });

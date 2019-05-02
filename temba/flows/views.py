@@ -2078,8 +2078,13 @@ class FlowCRUDL(SmartCRUDL):
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowCRUDL.LaunchKeyword, self).get_context_data(*args, **kwargs)
+            user = self.request.user
+            org = user.get_org()
+
             current_keywords = self.form.fields.get('keyword_triggers')
-            context['current_keywords'] = str(current_keywords.initial).split(',')
+            keywords_list = str(current_keywords.initial).split(',')
+            keywords = Trigger.objects.filter(trigger_type=Trigger.TYPE_KEYWORD, keyword__in=keywords_list, org=org)
+            context['current_keywords'] = keywords
             return context
 
         def get_form_kwargs(self):
