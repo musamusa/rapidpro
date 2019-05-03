@@ -71,7 +71,7 @@ def process_fire_events(fire_ids):
             print("E[%s][%s] Batch firing %d events..." % (flow.org.name, flow.name, len(fires)))
 
             start = time.time()
-            EventFire.batch_fire(fires, flow, embedded_data=single_fire.event.embedded_data)
+            EventFire.batch_fire(fires, flow)
 
             print("E[%s][%s] Finished batch firing events in %.3f s" % (flow.org.name, flow.name, time.time() - start))
 

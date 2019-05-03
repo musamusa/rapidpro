@@ -477,13 +477,20 @@ class EventFire(Model):
         self.save(update_fields=('fired',))
 
     @classmethod
-    def batch_fire(cls, fires, flow, embedded_data=None):
+    def batch_fire(cls, fires, flow):
         """
         Starts a batch of event fires that are for events which use the same flow
         """
         fired = timezone.now()
-        flow.start([], [f.contact for f in fires], restart_participants=True,
-                   extra=json.loads(embedded_data) if embedded_data else None)
+
+        try:
+            fire = fires[0]
+            embedded_data = json.loads(fire.event.embedded_data) if fire.event.embedded_data else {}
+        except Exception as e:
+            print('Error when it was getting embedded data to fire the flow "%s": %s' % (flow.name, e.message))
+            embedded_data = {}
+
+        flow.start([], [f.contact for f in fires], restart_participants=True, extra=embedded_data)
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod
