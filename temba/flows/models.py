@@ -1519,7 +1519,7 @@ class Flow(TembaModel):
         results = sorted(results, reverse=True, key=lambda result: result['first_seen'] if result['first_seen'] else now)
         return results
 
-    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True, extra=None):
+    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True, extra=None, embed=None):
         """
         Causes us to schedule a flow to start in a background thread.
         """
@@ -1529,7 +1529,8 @@ class Flow(TembaModel):
         flow_start = FlowStart.objects.create(flow=self,
                                               restart_participants=restart_participants,
                                               include_active=include_active,
-                                              created_by=user, modified_by=user, extra=extra)
+                                              created_by=user, modified_by=user, extra=extra,
+                                              embedded_data=embed)
 
         contact_ids = [c.id for c in contacts]
         flow_start.contacts.add(*contact_ids)
@@ -5209,6 +5210,9 @@ class FlowStart(SmartModel):
     extra = models.TextField(null=True,
                              help_text=_("Any extra parameters to pass to the flow start (json)"))
 
+    embedded_data = models.TextField(null=True,
+                                     help_text=_("Embedded data passed to the flow start (json)"))
+
     @classmethod
     def create(cls, flow, user, groups=None, contacts=None, restart_participants=True, extra=None, include_active=True):
         if contacts is None:  # pragma: needs cover
@@ -5245,9 +5249,11 @@ class FlowStart(SmartModel):
 
             # load up our extra if any
             extra = json.loads(self.extra) if self.extra else None
+            embed = json.loads(self.embedded_data) if self.embedded_data else None
 
             return self.flow.start(groups, contacts, flow_start=self, extra=extra,
-                                   restart_participants=self.restart_participants, include_active=self.include_active)
+                                   restart_participants=self.restart_participants, include_active=self.include_active,
+                                   embed=embed)
 
         except Exception as e:  # pragma: no cover
             import traceback

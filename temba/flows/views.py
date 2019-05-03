@@ -1970,7 +1970,7 @@ class FlowCRUDL(SmartCRUDL):
                              list(omnibox['groups']), list(omnibox['contacts']),
                              restart_participants=form.cleaned_data['restart_participants'],
                              include_active=form.cleaned_data['include_active'],
-                             extra=embedded_data)
+                             embed=embedded_data)
             return flow
 
     class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):
