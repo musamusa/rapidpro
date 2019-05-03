@@ -348,7 +348,7 @@ class Trigger(SmartModel):
 
         # if we have an associated flow, start this contact in it
         trigger.flow.start([], [contact], start_msg=msg, restart_participants=True,
-                           extra=json.loads(trigger.embedded_data) if trigger.embedded_data else None)
+                           embed=json.loads(trigger.embedded_data) if trigger.embedded_data else None)
 
         return True
 
@@ -451,12 +451,12 @@ class Trigger(SmartModel):
         # for single contacts, we just start directly
         if not groups and contacts:
             self.flow.start(groups, contacts, restart_participants=True,
-                            extra=json.loads(self.embedded_data) if self.embedded_data else None)
+                            embed=json.loads(self.embedded_data) if self.embedded_data else None)
 
         # we have groups of contacts to start, create a flow start
         else:
             start = FlowStart.create(self.flow, self.created_by, groups=groups, contacts=contacts,
-                                     extra=self.embedded_data if self.embedded_data else None)
+                                     embed=self.embedded_data if self.embedded_data else None)
             start.async_start()
 
         self.last_triggered = timezone.now()

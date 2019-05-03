@@ -5214,7 +5214,8 @@ class FlowStart(SmartModel):
                                      help_text=_("Embedded data passed to the flow start (json)"))
 
     @classmethod
-    def create(cls, flow, user, groups=None, contacts=None, restart_participants=True, extra=None, include_active=True):
+    def create(cls, flow, user, groups=None, contacts=None, restart_participants=True, extra=None, include_active=True,
+               embed=None):
         if contacts is None:  # pragma: needs cover
             contacts = []
 
@@ -5225,7 +5226,8 @@ class FlowStart(SmartModel):
                                          restart_participants=restart_participants,
                                          include_active=include_active,
                                          extra=json.dumps(extra) if extra else None,
-                                         created_by=user, modified_by=user)
+                                         created_by=user, modified_by=user,
+                                         embedded_data=json.dumps(embed) if embed else None)
 
         for contact in contacts:
             start.contacts.add(contact)
