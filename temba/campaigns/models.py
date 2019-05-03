@@ -473,7 +473,7 @@ class EventFire(Model):
         """
         self.fired = timezone.now()
         self.event.flow.start([], [self.contact], restart_participants=True,
-                              extra=json.loads(self.event.embedded_data) if self.event.embedded_data else None)
+                              embed=json.loads(self.event.embedded_data) if self.event.embedded_data else None)
         self.save(update_fields=('fired',))
 
     @classmethod
@@ -490,7 +490,7 @@ class EventFire(Model):
             print('Error when it was getting embedded data to fire the flow "%s": %s' % (flow.name, e.message))
             embedded_data = {}
 
-        flow.start([], [f.contact for f in fires], restart_participants=True, extra=embedded_data)
+        flow.start([], [f.contact for f in fires], restart_participants=True, embed=embedded_data)
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod
