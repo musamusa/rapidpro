@@ -4,6 +4,32 @@
 -block summary
   -trans "Create a message keyword that launches a flow."
 
+-block fields
+  {{ block.super }}
+
+  #embedded-data
+    .embed-row.embed-template-keyword
+      .embed-field-keyword
+        %input{type:'text'}
+      .embed-value-keyword
+        %input{type:'text'}
+      .embed-remove{onclick:'removeEmbed($(this), true)'}
+        .icon.icon-close
+
+    .embed-row.embed-header-keyword.inactive
+      .embed-field-keyword
+        %label
+          -trans "Embedded field"
+      .embed-value-keyword
+        %label
+          -trans "Embedded value"
+
+    .embed-container-keyword
+
+    .add-new-embed
+      %a{href:'javascript:;', onclick:'addEmbed("", "", true)'}
+        -trans "Add embedded data"
+
 -block extra-script
   {{block.super}}
   %script

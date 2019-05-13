@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import regex
 import six
+import json
 
 from django.conf import settings
 from django.db import models
@@ -90,6 +91,9 @@ class Trigger(SmartModel):
 
     channel = models.ForeignKey(Channel, verbose_name=_("Channel"), null=True, related_name='triggers',
                                 help_text=_("The associated channel"))
+
+    embedded_data = models.TextField(verbose_name=_("Embedded Data"), null=True,
+                                     help_text=_("Extra data about this trigger"))
 
     @classmethod
     def create(cls, org, user, trigger_type, flow, channel=None, **kwargs):
@@ -343,7 +347,8 @@ class Trigger(SmartModel):
         contact.ensure_unstopped()
 
         # if we have an associated flow, start this contact in it
-        trigger.flow.start([], [contact], start_msg=msg, restart_participants=True)
+        trigger.flow.start([], [contact], start_msg=msg, restart_participants=True,
+                           embed=json.loads(trigger.embedded_data) if trigger.embedded_data else None)
 
         return True
 
@@ -445,11 +450,13 @@ class Trigger(SmartModel):
 
         # for single contacts, we just start directly
         if not groups and contacts:
-            self.flow.start(groups, contacts, restart_participants=True)
+            self.flow.start(groups, contacts, restart_participants=True,
+                            embed=json.loads(self.embedded_data) if self.embedded_data else None)
 
         # we have groups of contacts to start, create a flow start
         else:
-            start = FlowStart.create(self.flow, self.created_by, groups=groups, contacts=contacts)
+            start = FlowStart.create(self.flow, self.created_by, groups=groups, contacts=contacts,
+                                     embed=self.embedded_data if self.embedded_data else None)
             start.async_start()
 
         self.last_triggered = timezone.now()

@@ -177,6 +177,50 @@ td.created_on {
 #embedded-data {
   width: 100%;
 
+  &.launch-flow-keyword {
+    .embed-row-keyword {
+      width: 22%;
+      float: left;
+
+      select {
+        width: 100%;
+        padding: 0;
+      }
+      #s2id_embedded_keyword {
+        width: 100%;
+      }
+
+      .embed-row-keyword-field {
+        label {
+          display: inline-block;
+          color: #666;
+          font-size: 14px;
+          font-weight: 200;
+        }
+      }
+    }
+    .embed-row-content {
+      width: 75%;
+      float: right;
+      display: none;
+      &.active {
+        display: block;
+      }
+      .embed-row.embed-header {
+        margin: 0;
+      }
+      .embed-container{
+        .embed-row {
+          .embed-field, .embed-value {
+            input {
+              width: 89%;
+            }
+          }
+        }
+      }
+    }
+  }
+
   .embed-row {
     width: 100%;
     display: table;
@@ -188,11 +232,11 @@ td.created_on {
       }
     }
 
-    &.embed-template {
+    &.embed-template, &.embed-template-keyword {
       display: none;
     }
 
-    &.embed-header {
+    &.embed-header, &.embed-header-keyword {
       margin: 10px 0 0 0;
 
       &.inactive {
@@ -200,7 +244,7 @@ td.created_on {
       }
     }
 
-    .embed-field, .embed-value {
+    .embed-field, .embed-value, .embed-field-keyword, .embed-value-keyword {
       float: left;
       width: 48%;
 

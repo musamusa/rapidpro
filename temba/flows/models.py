@@ -1406,11 +1406,13 @@ class Flow(TembaModel):
 
         run = self.runs.filter(contact=contact).order_by('-created_on').first()
         run_context = run.field_dict() if run else {}
+        run_embed_context = run.embedded_field_dict() if run else {}
 
         # our current flow context
         flow_context = self.build_flow_context(contact, contact_context)
 
-        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context)
+        context = dict(flow=flow_context, channel=channel_context, step=message_context, extra=run_context,
+                       embed=run_embed_context)
 
         # if we have parent or child contexts, add them in too
         if run:
@@ -1533,7 +1535,7 @@ class Flow(TembaModel):
         results = sorted(results, reverse=True, key=lambda result: result['first_seen'] if result['first_seen'] else now)
         return results
 
-    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True):
+    def async_start(self, user, groups, contacts, restart_participants=False, include_active=True, extra=None, embed=None):
         """
         Causes us to schedule a flow to start in a background thread.
         """
@@ -1543,7 +1545,8 @@ class Flow(TembaModel):
         flow_start = FlowStart.objects.create(flow=self,
                                               restart_participants=restart_participants,
                                               include_active=include_active,
-                                              created_by=user, modified_by=user)
+                                              created_by=user, modified_by=user, extra=extra,
+                                              embedded_data=embed)
 
         contact_ids = [c.id for c in contacts]
         flow_start.contacts.add(*contact_ids)
@@ -1554,7 +1557,8 @@ class Flow(TembaModel):
         on_transaction_commit(lambda: start_flow_task.delay(flow_start.pk))
 
     def start(self, groups, contacts, restart_participants=False, started_flows=None,
-              start_msg=None, extra=None, flow_start=None, parent_run=None, interrupt=True, connection=None, include_active=True):
+              start_msg=None, extra=None, flow_start=None, parent_run=None, interrupt=True, connection=None, include_active=True,
+              embed=None):
         """
         Starts a flow for the passed in groups and contacts.
         """
@@ -1641,17 +1645,19 @@ class Flow(TembaModel):
 
         if self.flow_type == Flow.VOICE:
             return self.start_call_flow(all_contact_ids, start_msg=start_msg,
-                                        extra=extra, flow_start=flow_start, parent_run=parent_run)
+                                        extra=extra, flow_start=flow_start, parent_run=parent_run, embed=embed)
 
         elif self.flow_type == Flow.USSD:
             return self.start_ussd_flow(all_contact_ids, start_msg=start_msg,
-                                        extra=extra, flow_start=flow_start, parent_run=parent_run, connection=connection)
+                                        extra=extra, flow_start=flow_start, parent_run=parent_run, connection=connection,
+                                        embed=embed)
         else:
             return self.start_msg_flow(all_contact_ids,
                                        started_flows=started_flows, start_msg=start_msg,
-                                       extra=extra, flow_start=flow_start, parent_run=parent_run)
+                                       extra=extra, flow_start=flow_start, parent_run=parent_run, embed=embed)
 
-    def start_ussd_flow(self, all_contact_ids, start_msg=None, extra=None, flow_start=None, parent_run=None, connection=None):
+    def start_ussd_flow(self, all_contact_ids, start_msg=None, extra=None, flow_start=None, parent_run=None, connection=None,
+                        embed=None):
         from temba.ussd.models import USSDSession
 
         runs = []
@@ -1667,6 +1673,9 @@ class Flow(TembaModel):
             run = FlowRun.create(self, contact_id, start=flow_start, parent=parent_run)
             if extra:  # pragma: needs cover
                 run.update_fields(extra)
+
+            if embed:  # pragma: needs cover
+                run.update_embedded_fields(embed)
 
             if run.contact.is_test:  # pragma: no cover
                 ActionLog.create(run, '%s has entered the "%s" flow' % (run.contact.get_display(self.org, short=True), run.flow.name))
@@ -1721,7 +1730,8 @@ class Flow(TembaModel):
 
         return runs
 
-    def start_call_flow(self, all_contact_ids, start_msg=None, extra=None, flow_start=None, parent_run=None):
+    def start_call_flow(self, all_contact_ids, start_msg=None, extra=None, flow_start=None, parent_run=None,
+                        embed=None):
         from temba.ivr.models import IVRCall
         runs = []
         channel = self.org.get_call_channel()
@@ -1741,6 +1751,9 @@ class Flow(TembaModel):
             run = FlowRun.create(self, contact_id, start=flow_start, parent=parent_run)
             if extra:  # pragma: needs cover
                 run.update_fields(extra)
+
+            if embed:  # pragma: needs cover
+                run.update_embedded_fields(embed)
 
             # create our call objects
             if parent_run and parent_run.connection:
@@ -1770,7 +1783,7 @@ class Flow(TembaModel):
         return runs
 
     def start_msg_flow(self, all_contact_ids, started_flows=None, start_msg=None, extra=None,
-                       flow_start=None, parent_run=None):
+                       flow_start=None, parent_run=None, embed=None):
 
         start_msg_id = start_msg.id if start_msg else None
         flow_start_id = flow_start.id if flow_start else None
@@ -1809,13 +1822,14 @@ class Flow(TembaModel):
         if len(all_contact_ids) < START_FLOW_BATCH_SIZE:
             return self.start_msg_flow_batch(all_contact_ids, broadcasts=broadcasts, started_flows=started_flows,
                                              start_msg=start_msg, extra=extra, flow_start=flow_start,
-                                             parent_run=parent_run)
+                                             parent_run=parent_run, embed=embed)
 
         # otherwise, create batches instead
         else:
             # for all our contacts, build up start sms batches
             task_context = dict(contacts=[], flow=self.pk, flow_start=flow_start_id,
-                                started_flows=started_flows, broadcasts=[b.id for b in broadcasts], start_msg=start_msg_id, extra=extra)
+                                started_flows=started_flows, broadcasts=[b.id for b in broadcasts], start_msg=start_msg_id,
+                                extra=extra, embed=embed)
 
             batch_contacts = task_context['contacts']
             for contact_id in all_contact_ids:
@@ -1834,7 +1848,7 @@ class Flow(TembaModel):
             return []
 
     def start_msg_flow_batch(self, batch_contact_ids, broadcasts, started_flows, start_msg=None,
-                             extra=None, flow_start=None, parent_run=None):
+                             extra=None, flow_start=None, parent_run=None, embed=None):
 
         simulation = False
         if len(batch_contact_ids) == 1:
@@ -1843,10 +1857,15 @@ class Flow(TembaModel):
 
         # these fields are the initial state for our flow run
         run_fields = None
+        run_embedded_fields = None
         if extra:
             # we keep more values in @extra for new flow runs because we might be passing the state
             (normalized_fields, count) = FlowRun.normalize_fields(extra, settings.FLOWRUN_FIELDS_SIZE * 4)
             run_fields = json.dumps(normalized_fields)
+
+        if embed:
+            (normalized_fields, count) = FlowRun.normalize_fields(embed, settings.FLOWRUN_FIELDS_SIZE * 4)
+            run_embedded_fields = json.dumps(normalized_fields)
 
         # create all our flow runs for this set of contacts at once
         batch = []
@@ -1854,7 +1873,8 @@ class Flow(TembaModel):
 
         for contact_id in batch_contact_ids:
             run = FlowRun.create(self, contact_id, fields=run_fields, start=flow_start, created_on=now,
-                                 parent=parent_run, db_insert=False, responded=start_msg is not None)
+                                 parent=parent_run, db_insert=False, responded=start_msg is not None,
+                                 embedded_fields=run_embedded_fields)
             batch.append(run)
         FlowRun.objects.bulk_create(batch)
 
@@ -1877,6 +1897,9 @@ class Flow(TembaModel):
             expressions_context_base = self.build_expressions_context(None, start_msg)
             if extra:
                 expressions_context_base['extra'] = extra
+
+            if embed:
+                expressions_context_base['embed'] = embed
 
             # and add each contact and message to each broadcast
             for broadcast in broadcasts:
@@ -2891,6 +2914,9 @@ class FlowRun(models.Model):
     fields = models.TextField(blank=True, null=True,
                               help_text=_("A JSON representation of any custom flow values the user has saved away"))
 
+    embedded_fields = models.TextField(blank=True, null=True,
+                                       help_text=_("A JSON representation of any embedded flow fields the user has added"))
+
     created_on = models.DateTimeField(default=timezone.now,
                                       help_text=_("When this flow run was created"))
 
@@ -2927,10 +2953,12 @@ class FlowRun(models.Model):
 
     @classmethod
     def create(cls, flow, contact_id, start=None, session=None, connection=None, fields=None,
-               created_on=None, db_insert=True, submitted_by=None, parent=None, responded=False):
+               created_on=None, db_insert=True, submitted_by=None, parent=None, responded=False,
+               embedded_fields=None):
 
         args = dict(org=flow.org, flow=flow, contact_id=contact_id, start=start,
-                    session=session, connection=connection, fields=fields, submitted_by=submitted_by, parent=parent, responded=responded)
+                    session=session, connection=connection, fields=fields, submitted_by=submitted_by, parent=parent, responded=responded,
+                    embedded_fields=embedded_fields)
 
         if created_on:
             args['created_on'] = created_on
@@ -3266,6 +3294,22 @@ class FlowRun(models.Model):
 
     def field_dict(self):
         return json.loads(self.fields, object_pairs_hook=OrderedDict) if self.fields else {}
+
+    def update_embedded_fields(self, field_map):
+        # validate our field
+        (field_map, count) = FlowRun.normalize_fields(field_map)
+
+        if not self.embedded_fields:
+            self.embedded_fields = json.dumps(field_map)
+        else:
+            existing_map = json.loads(self.embedded_fields, object_pairs_hook=OrderedDict)
+            existing_map.update(field_map)
+            self.embedded_fields = json.dumps(existing_map)
+
+        self.save(update_fields=['embedded_fields'])
+
+    def embedded_field_dict(self):
+        return json.loads(self.embedded_fields, object_pairs_hook=OrderedDict) if self.embedded_fields else {}
 
     def is_completed(self):
         return self.exit_type == FlowRun.EXIT_TYPE_COMPLETED
@@ -5206,8 +5250,12 @@ class FlowStart(SmartModel):
     extra = models.TextField(null=True,
                              help_text=_("Any extra parameters to pass to the flow start (json)"))
 
+    embedded_data = models.TextField(null=True,
+                                     help_text=_("Embedded data passed to the flow start (json)"))
+
     @classmethod
-    def create(cls, flow, user, groups=None, contacts=None, restart_participants=True, extra=None, include_active=True):
+    def create(cls, flow, user, groups=None, contacts=None, restart_participants=True, extra=None, include_active=True,
+               embed=None):
         if contacts is None:  # pragma: needs cover
             contacts = []
 
@@ -5218,7 +5266,8 @@ class FlowStart(SmartModel):
                                          restart_participants=restart_participants,
                                          include_active=include_active,
                                          extra=json.dumps(extra) if extra else None,
-                                         created_by=user, modified_by=user)
+                                         created_by=user, modified_by=user,
+                                         embedded_data=json.dumps(embed) if embed else None)
 
         for contact in contacts:
             start.contacts.add(contact)
@@ -5242,9 +5291,11 @@ class FlowStart(SmartModel):
 
             # load up our extra if any
             extra = json.loads(self.extra) if self.extra else None
+            embed = json.loads(self.embedded_data) if self.embedded_data else None
 
             return self.flow.start(groups, contacts, flow_start=self, extra=extra,
-                                   restart_participants=self.restart_participants, include_active=self.include_active)
+                                   restart_participants=self.restart_participants, include_active=self.include_active,
+                                   embed=embed)
 
         except Exception as e:  # pragma: no cover
             import traceback

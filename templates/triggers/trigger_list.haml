@@ -189,6 +189,10 @@
                               - else
                                 -trans "not scheduled"
 
+                        -if obj.embedded_data
+                          |
+                          -trans "Contains embedded data"
+
                         -if obj.last_triggered
                           %span.count
                             %nobr

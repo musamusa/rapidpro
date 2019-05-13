@@ -472,16 +472,25 @@ class EventFire(Model):
         Actually fires this event for the passed in contact and flow
         """
         self.fired = timezone.now()
-        self.event.flow.start([], [self.contact], restart_participants=True, extra=json.loads(self.event.embedded_data))
+        self.event.flow.start([], [self.contact], restart_participants=True,
+                              embed=json.loads(self.event.embedded_data) if self.event.embedded_data else None)
         self.save(update_fields=('fired',))
 
     @classmethod
-    def batch_fire(cls, fires, flow, embedded_data=None):
+    def batch_fire(cls, fires, flow):
         """
         Starts a batch of event fires that are for events which use the same flow
         """
         fired = timezone.now()
-        flow.start([], [f.contact for f in fires], restart_participants=True, extra=json.loads(embedded_data))
+
+        try:
+            fire = fires[0]
+            embedded_data = json.loads(fire.event.embedded_data) if fire.event.embedded_data else {}
+        except Exception as e:
+            print('Error when it was getting embedded data to fire the flow "%s": %s' % (flow.name, e.message))
+            embedded_data = {}
+
+        flow.start([], [f.contact for f in fires], restart_participants=True, embed=embedded_data)
         EventFire.objects.filter(id__in=[f.id for f in fires]).update(fired=fired)
 
     @classmethod

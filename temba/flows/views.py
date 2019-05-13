@@ -2000,11 +2000,22 @@ class FlowCRUDL(SmartCRUDL):
             analytics.track(self.request.user.username, 'temba.flow_broadcast',
                             dict(contacts=len(omnibox['contacts']), groups=len(omnibox['groups'])))
 
+            embedded_fields = self.request.POST.getlist('embedded_field', [])
+            embedded_values = self.request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            embedded_data = json.dumps(embedded_data) if embedded_data else None
+
             # activate all our contacts
             flow.async_start(self.request.user,
                              list(omnibox['groups']), list(omnibox['contacts']),
                              restart_participants=form.cleaned_data['restart_participants'],
-                             include_active=form.cleaned_data['include_active'])
+                             include_active=form.cleaned_data['include_active'],
+                             embed=embedded_data)
             return flow
 
     class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):
@@ -2112,6 +2123,16 @@ class FlowCRUDL(SmartCRUDL):
 
         def get_context_data(self, *args, **kwargs):
             context = super(FlowCRUDL.LaunchKeyword, self).get_context_data(*args, **kwargs)
+            user = self.request.user
+            org = user.get_org()
+
+            current_keywords = self.form.fields.get('keyword_triggers')
+            if current_keywords.initial:
+                keywords_list = str(current_keywords.initial).split(',')
+                keywords = Trigger.objects.filter(trigger_type=Trigger.TYPE_KEYWORD, keyword__in=keywords_list, org=org)\
+                    .order_by('keyword')
+                context['current_keywords'] = keywords
+
             return context
 
         def get_form_kwargs(self):
@@ -2126,6 +2147,13 @@ class FlowCRUDL(SmartCRUDL):
 
             user = self.request.user
             org = user.get_org()
+
+            def build_embedded_data(fields, values):
+                data = {}
+                for i, field in enumerate(fields):
+                    if field and values[i]:
+                        data[field] = embedded_values[i]
+                return data
 
             if flow.flow_type != Flow.SURVEY:
                 keyword_triggers = form.cleaned_data['keyword_triggers']
@@ -2146,11 +2174,37 @@ class FlowCRUDL(SmartCRUDL):
                     archived_keywords = [t.keyword for t in flow.triggers.filter(org=org, flow=flow, trigger_type=Trigger.TYPE_KEYWORD,
                                                                                  is_archived=True, groups=None)]
                     for keyword in added_keywords:
+                        embedded_fields = self.request.POST.getlist('embedded_field_%s' % keyword, [])
+                        if embedded_fields and not embedded_fields[0]:
+                            embedded_fields = self.request.POST.getlist('embedded_field_default', [])
+
+                        embedded_values = self.request.POST.getlist('embedded_value_%s' % keyword, [])
+                        if embedded_values and not embedded_values[0]:
+                            embedded_values = self.request.POST.getlist('embedded_value_default', [])
+
+                        embedded_data = build_embedded_data(embedded_fields, embedded_values)
+
                         if keyword in archived_keywords:  # pragma: needs cover
-                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(is_archived=False)
+                            flow.triggers.filter(org=org, flow=flow, keyword=keyword, groups=None).update(
+                                is_archived=False, embedded_data=json.dumps(embedded_data) if embedded_data else None)
                         else:
                             Trigger.objects.create(org=org, keyword=keyword, trigger_type=Trigger.TYPE_KEYWORD,
-                                                   flow=flow, created_by=user, modified_by=user)
+                                                   flow=flow, created_by=user, modified_by=user,
+                                                   embedded_data=json.dumps(embedded_data) if embedded_data else None)
+
+                    for existing in existing_keywords:
+                        embedded_fields = self.request.POST.getlist('embedded_field_%s' % existing, [])
+                        if embedded_fields and not embedded_fields[0]:
+                            embedded_fields = self.request.POST.getlist('embedded_field_default', [])
+
+                        embedded_values = self.request.POST.getlist('embedded_value_%s' % existing, [])
+                        if embedded_values and not embedded_values[0]:
+                            embedded_values = self.request.POST.getlist('embedded_value_default', [])
+
+                        embedded_data = build_embedded_data(embedded_fields, embedded_values)
+
+                        Trigger.objects.filter(keyword=existing, org=org, flow=flow).update(
+                            embedded_data=json.dumps(embedded_data) if embedded_data else None)
 
             return flow
 
@@ -2258,12 +2312,23 @@ class FlowCRUDL(SmartCRUDL):
 
             recipients = self.form.cleaned_data['omnibox']
 
+            embedded_fields = self.request.POST.getlist('embedded_field', [])
+            embedded_values = self.request.POST.getlist('embedded_value', [])
+
+            embedded_data = {}
+            for i, field in enumerate(embedded_fields):
+                if field and embedded_values[i]:
+                    embedded_data[field] = embedded_values[i]
+
+            embedded_data = json.dumps(embedded_data) if embedded_data else None
+
             trigger = Trigger.objects.create(flow=flow,
                                              org=org,
                                              schedule=schedule,
                                              trigger_type=Trigger.TYPE_SCHEDULE,
                                              created_by=self.request.user,
-                                             modified_by=self.request.user)
+                                             modified_by=self.request.user,
+                                             embedded_data=embedded_data)
 
             for group in recipients['groups']:
                 trigger.groups.add(group)
