@@ -2885,6 +2885,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
      * **extra** - the dictionary of extra parameters passed to the flow start (object)
      * **created_on** - the datetime when this flow start was created (datetime)
      * **modified_on** - the datetime when this flow start was modified (datetime)
+     * **embedded_data** - extra parameters passed to the flow (accessible via @embed in your flow) (object)
 
     Example:
 
@@ -2911,6 +2912,9 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
                         "first_name": "Ryan",
                         "last_name": "Lewis"
                     },
+                    "embedded_data": {
+                        "full_name": "Ryan Lewis"
+                    },
                     "created_on": "2013-08-19T19:11:21.082Z",
                     "modified_on": "2013-08-19T19:11:21.082Z"
                 },
@@ -2930,6 +2934,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
      * **urns** - the URNs you want to start in this flow (array of up to 100 strings, optional)
      * **restart_participants** - whether to restart participants already in this flow (optional, defaults to true)
      * **extra** - a dictionary of extra parameters to pass to the flow start (accessible via @extra in your flow)
+     * **embedded_data** - extra parameters passed to the flow (accessible via @embed in your flow) (object)
 
     Example:
 
@@ -2939,7 +2944,8 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
             "groups": ["f5901b62-ba76-4003-9c62-72fdacc15515"],
             "contacts": ["f5901b62-ba76-4003-9c62-fjjajdsi15553"],
             "urns": ["twitter:sirmixalot", "tel:+12065551212"],
-            "extra": {"first_name": "Ryan", "last_name": "Lewis"}
+            "extra": {"first_name": "Ryan", "last_name": "Lewis"},
+            "embedded_data": {"full_name": "Ryan Lewis"}
         }
 
     Response is the created flow start:
@@ -2958,6 +2964,9 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
             "extra": {
                 "first_name": "Ryan",
                 "last_name": "Lewis"
+            },
+            "embedded_data": {
+                "full_name": "Ryan Lewis"
             },
             "created_on": "2013-08-19T19:11:21.082Z",
             "modified_on": "2013-08-19T19:11:21.082Z"
@@ -3029,5 +3038,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
                             dict(name='restart_participants', required=False,
                                  help="Whether to restart any participants already in the flow"),
                             dict(name='extra', required=False,
-                                 help="Any extra parameters to pass to the flow start")],
+                                 help="Any extra parameters to pass to the flow start"),
+                            dict(name='embedded_data', required=False,
+                                 help="Any embedded data to pass to the flow start")],
                     example=dict(body='{"flow":"f5901b62-ba76-4003-9c62-72fdacc1b7b7","urns":["twitter:sirmixalot"]}'))
