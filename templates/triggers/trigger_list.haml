@@ -191,7 +191,12 @@
 
                         -if obj.embedded_data
                           |
-                          -trans "Contains embedded data"
+                          -trans "Contains "
+                          - if org_perms.triggers.trigger_update
+                            %a.update-trigger{data-object-id:"{{ obj.id }}", href:"#"}
+                              -trans "embedded data"
+                          - else
+                            -trans "Contains embedded data"
 
                         -if obj.last_triggered
                           %span.count
