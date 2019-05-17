@@ -2744,6 +2744,7 @@ class RunsEndpoint(ListAPIMixin, BaseAPIView):
      * **modified_on** - when this run was last modified (datetime), filterable as `before` and `after`.
      * **exited_on** - the datetime when this run exited or null if it is still active (datetime).
      * **exit_type** - how the run ended (one of "interrupted", "completed", "expired").
+     * **embedded_fields** - extra parameters passed to the flow, you can get those using @embed into the flow (object)
 
     Note that you cannot filter by `flow` and `contact` at the same time.
 
@@ -2785,7 +2786,10 @@ class RunsEndpoint(ListAPIMixin, BaseAPIView):
                 "created_on": "2015-11-11T13:05:57.457742Z",
                 "modified_on": "2015-11-11T13:05:57.576056Z",
                 "exited_on": "2015-11-11T13:05:57.576056Z",
-                "exit_type": "completed"
+                "exit_type": "completed",
+                "embedded_fields": {
+                    "full_name": "Bob McFlow"
+                }
             },
             ...
         }
