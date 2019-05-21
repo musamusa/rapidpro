@@ -70,7 +70,7 @@
       %div.embed-row-content.embed-row-content-default.active
         .embed-row.embed-template.embed-template-default
           .embed-field.embed-field-default
-            %input{type:'text'}
+            %input{type:'text', maxlength:'36'}
           .embed-value.embed-value-default
             %input{type:'text'}
           .embed-remove{onclick:'removeEmbed($(this), "", "default")'}
@@ -94,7 +94,7 @@
         %div{class:"embed-row-content embed-row-content-{{ keyword.keyword }}"}
           %div{class:"embed-row embed-template embed-template-{{ keyword.keyword }}"}
             %div{class:"embed-field embed-field-{{ keyword.keyword }}"}
-              %input{type:'text'}
+              %input{type:'text', maxlength:'36'}
             %div{class:"embed-value embed-value-{{ keyword.keyword }}"}
               %input{type:'text'}
             .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword.keyword }}")'}
