@@ -6,6 +6,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
+from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from smartmin.views import SmartCRUDL, SmartListView, SmartUpdateView, SmartCreateView, SmartReadView, SmartDeleteView
@@ -275,6 +276,7 @@ class EventForm(forms.ModelForm):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             obj.embedded_data = json.dumps(embedded_data) if embedded_data else None

@@ -1961,6 +1961,7 @@ class FlowCRUDL(SmartCRUDL):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             embedded_data = json.dumps(embedded_data) if embedded_data else None
@@ -2107,6 +2108,7 @@ class FlowCRUDL(SmartCRUDL):
                 data = {}
                 for i, field in enumerate(fields):
                     if field and values[i]:
+                        field = str(slugify(field)).replace('-', '_')
                         data[field] = embedded_values[i]
                 return data
 
@@ -2273,6 +2275,7 @@ class FlowCRUDL(SmartCRUDL):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             embedded_data = json.dumps(embedded_data) if embedded_data else None

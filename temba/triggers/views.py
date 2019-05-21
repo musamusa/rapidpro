@@ -6,6 +6,7 @@ import regex
 from datetime import timedelta
 from django import forms
 from django.core.urlresolvers import reverse
+from django.utils.text import slugify
 from django.utils.timezone import get_current_timezone_name
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponseRedirect, HttpResponse
@@ -492,6 +493,7 @@ class TriggerCRUDL(SmartCRUDL):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             trigger.embedded_data = json.dumps(embedded_data) if embedded_data else None
@@ -624,6 +626,7 @@ class TriggerCRUDL(SmartCRUDL):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             obj.embedded_data = json.dumps(embedded_data) if embedded_data else None
@@ -750,6 +753,7 @@ class TriggerCRUDL(SmartCRUDL):
             embedded_data = {}
             for i, field in enumerate(embedded_fields):
                 if field and embedded_values[i]:
+                    field = str(slugify(field)).replace('-', '_')
                     embedded_data[field] = embedded_values[i]
 
             embedded_data = json.dumps(embedded_data) if embedded_data else None
