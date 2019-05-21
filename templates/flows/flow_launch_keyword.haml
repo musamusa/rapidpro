@@ -95,6 +95,7 @@
           %div{class:"embed-row embed-template embed-template-{{ keyword.keyword }}"}
             %div{class:"embed-field embed-field-{{ keyword.keyword }}"}
               %input{type:'text', maxlength:'36'}
+              %div{class:"embed-field-slug embed-field-slug-{{ keyword.keyword }}"}
             %div{class:"embed-value embed-value-{{ keyword.keyword }}"}
               %input{type:'text'}
             .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword.keyword }}")'}
