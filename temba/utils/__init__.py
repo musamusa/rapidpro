@@ -14,6 +14,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import slugify
 from django.utils.timezone import is_aware
 from django_countries import countries
 from itertools import islice
@@ -431,3 +432,23 @@ def get_anonymous_user():
     """
     from django.contrib.auth.models import User
     return User.objects.get(username=settings.ANONYMOUS_USER_NAME)
+
+
+def build_embedded_data(request_post, field_name, value_name):
+    """
+    Returns the embedded data as a dict
+    :param request_post: HTTP POST request data
+    :param field_name: Name of the field to find
+    :param value_name: Name of the field of value to find
+    :return:
+    """
+    embedded_fields = request_post.getlist(field_name, [])
+    embedded_values = request_post.getlist(value_name, [])
+
+    embedded_data = {}
+    for i, field in enumerate(embedded_fields):
+        if field and embedded_values[i]:
+            field = str(slugify(field)).replace('-', '_')
+            embedded_data[field] = embedded_values[i]
+
+    return embedded_data

@@ -14,6 +14,7 @@ from temba.contacts.models import ContactGroup, ContactField
 from temba.flows.models import Flow
 from temba.msgs.models import Msg
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin
+from temba.utils import build_embedded_data
 from temba.utils.views import BaseActionForm
 
 from .models import Campaign, CampaignEvent, EventFire
@@ -270,15 +271,7 @@ class EventForm(forms.ModelForm):
         else:
             obj.flow = Flow.objects.get(org=org, id=self.cleaned_data['flow_to_start'])
 
-            embedded_fields = request.POST.getlist('embedded_field', [])
-            embedded_values = request.POST.getlist('embedded_value', [])
-
-            embedded_data = {}
-            for i, field in enumerate(embedded_fields):
-                if field and embedded_values[i]:
-                    field = str(slugify(field)).replace('-', '_')
-                    embedded_data[field] = embedded_values[i]
-
+            embedded_data = build_embedded_data(request.POST, 'embedded_field', 'embedded_value')
             obj.embedded_data = json.dumps(embedded_data) if embedded_data else None
 
     def __init__(self, user, *args, **kwargs):
@@ -429,9 +422,17 @@ class CampaignEventCRUDL(SmartCRUDL):
 
         def get_context_data(self, **kwargs):
             context = super(CampaignEventCRUDL.Update, self).get_context_data(**kwargs)
-            if self.object.embedded_data:
+
+            embedded_data = {}
+            if self.request.method == 'POST':
+                embedded_data = build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
+
+            if not embedded_data and self.object.embedded_data:
                 embedded_data = json.loads(self.object.embedded_data)
-                context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in embedded_data.keys()]
+
+            context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in sorted(embedded_data.keys())] \
+                if embedded_data else []
+
             return context
 
         def derive_fields(self):
@@ -525,6 +526,18 @@ class CampaignEventCRUDL(SmartCRUDL):
             initial['offset'] = '15'
             initial['direction'] = 'A'
             return initial
+
+        def get_context_data(self, **kwargs):
+            context = super(CampaignEventCRUDL.Create, self).get_context_data(**kwargs)
+
+            embedded_data = {}
+            if self.request.method == 'POST':
+                embedded_data = build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
+
+            context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in sorted(embedded_data.keys())] \
+                if embedded_data else []
+
+            return context
 
         def post_save(self, obj):
             obj = super(CampaignEventCRUDL.Create, self).post_save(obj)
