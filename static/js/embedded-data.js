@@ -1,5 +1,14 @@
 function addEmbed(field, value, is_on_keyword_trigger, trigger_flow_keyword) {
     var template;
+    try {
+        var value_parsed = $.parseHTML(value);
+        value = value_parsed[0].data;
+    } catch (e) {
+        if (value) {
+            console.warn('Error during parseHTML command for the value "' + value + '" on embedded data');
+            value = null
+        }
+    }
     if (is_on_keyword_trigger) {
         template = $('.embed-template-keyword').clone();
         template.find('.embed-field-keyword').find('input').attr('name', 'embedded_field_keyword').attr('value', field);
