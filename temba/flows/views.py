@@ -41,7 +41,8 @@ from temba.msgs.models import Msg, PENDING
 from temba.triggers.models import Trigger
 from temba.schedules.models import Schedule
 from temba.schedules.views import BaseScheduleForm
-from temba.utils import analytics, percentage, datetime_to_str, on_transaction_commit, chunk_list
+from temba.utils import analytics, percentage, datetime_to_str, on_transaction_commit, chunk_list, \
+    build_embedded_data as _build_embedded_data
 from temba.utils.expressions import get_function_listing
 from temba.utils.views import BaseActionForm
 from temba.values.models import Value
@@ -1982,6 +1983,14 @@ class FlowCRUDL(SmartCRUDL):
             run_stats = self.object.get_run_stats()
             context['run_count'] = run_stats['total']
             context['complete_count'] = run_stats['completed']
+
+            embedded_data = {}
+            if self.request.method == 'POST':
+                embedded_data = _build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
+
+            context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in sorted(embedded_data.keys())] \
+                if embedded_data else []
+
             return context
 
         def get_form_kwargs(self):
@@ -2000,22 +2009,14 @@ class FlowCRUDL(SmartCRUDL):
             analytics.track(self.request.user.username, 'temba.flow_broadcast',
                             dict(contacts=len(omnibox['contacts']), groups=len(omnibox['groups'])))
 
-            embedded_fields = self.request.POST.getlist('embedded_field', [])
-            embedded_values = self.request.POST.getlist('embedded_value', [])
-
-            embedded_data = {}
-            for i, field in enumerate(embedded_fields):
-                if field and embedded_values[i]:
-                    embedded_data[field] = embedded_values[i]
-
-            embedded_data = json.dumps(embedded_data) if embedded_data else None
+            embedded_data = _build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
 
             # activate all our contacts
             flow.async_start(self.request.user,
                              list(omnibox['groups']), list(omnibox['contacts']),
                              restart_participants=form.cleaned_data['restart_participants'],
                              include_active=form.cleaned_data['include_active'],
-                             embed=embedded_data)
+                             embed=json.dumps(embedded_data) if embedded_data else None)
             return flow
 
     class Launch(ModalMixin, OrgObjPermsMixin, SmartReadView):
@@ -2152,6 +2153,7 @@ class FlowCRUDL(SmartCRUDL):
                 data = {}
                 for i, field in enumerate(fields):
                     if field and values[i]:
+                        field = str(slugify(field)).replace('-', '_')
                         data[field] = embedded_values[i]
                 return data
 
@@ -2259,6 +2261,14 @@ class FlowCRUDL(SmartCRUDL):
             context = super(FlowCRUDL.LaunchSchedule, self).get_context_data(*args, **kwargs)
             context['user_tz'] = timezone.get_current_timezone_name()
             context['user_tz_offset'] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() / 60)
+
+            embedded_data = {}
+            if self.request.method == 'POST':
+                embedded_data = _build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
+
+            context['embedded_data'] = [{'field': key, 'value': embedded_data[key]} for key in sorted(embedded_data.keys())] \
+                if embedded_data else []
+
             return context
 
         def get_form_kwargs(self):
@@ -2312,15 +2322,7 @@ class FlowCRUDL(SmartCRUDL):
 
             recipients = self.form.cleaned_data['omnibox']
 
-            embedded_fields = self.request.POST.getlist('embedded_field', [])
-            embedded_values = self.request.POST.getlist('embedded_value', [])
-
-            embedded_data = {}
-            for i, field in enumerate(embedded_fields):
-                if field and embedded_values[i]:
-                    embedded_data[field] = embedded_values[i]
-
-            embedded_data = json.dumps(embedded_data) if embedded_data else None
+            embedded_data = _build_embedded_data(self.request.POST, 'embedded_field', 'embedded_value')
 
             trigger = Trigger.objects.create(flow=flow,
                                              org=org,
@@ -2328,7 +2330,7 @@ class FlowCRUDL(SmartCRUDL):
                                              trigger_type=Trigger.TYPE_SCHEDULE,
                                              created_by=self.request.user,
                                              modified_by=self.request.user,
-                                             embedded_data=embedded_data)
+                                             embedded_data=json.dumps(embedded_data) if embedded_data else None)
 
             for group in recipients['groups']:
                 trigger.groups.add(group)

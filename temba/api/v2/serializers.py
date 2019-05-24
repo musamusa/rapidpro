@@ -695,9 +695,13 @@ class FlowRunReadSerializer(ReadSerializer):
     path = serializers.SerializerMethodField()
     values = serializers.SerializerMethodField()
     exit_type = serializers.SerializerMethodField()
+    embedded_fields = serializers.SerializerMethodField()
 
     def get_start(self, obj):
         return {'uuid': str(obj.start.uuid)} if obj.start else None
+
+    def get_embedded_fields(self, obj):
+        return json.loads(obj.embedded_fields) if obj.embedded_fields else None
 
     def get_path(self, obj):
         return [{'node': s.step_uuid, 'time': format_datetime(s.arrived_on)} for s in obj.steps.all()]
@@ -720,7 +724,7 @@ class FlowRunReadSerializer(ReadSerializer):
     class Meta:
         model = FlowRun
         fields = ('id', 'flow', 'contact', 'start', 'responded', 'path', 'values',
-                  'created_on', 'modified_on', 'exited_on', 'exit_type')
+                  'created_on', 'modified_on', 'exited_on', 'exit_type', 'embedded_fields')
 
 
 class FlowStartReadSerializer(ReadSerializer):
@@ -736,6 +740,7 @@ class FlowStartReadSerializer(ReadSerializer):
     groups = fields.ContactGroupField(many=True)
     contacts = fields.ContactField(many=True)
     extra = serializers.SerializerMethodField()
+    embedded_data = serializers.SerializerMethodField()
 
     def get_status(self, obj):
         return FlowStartReadSerializer.STATUSES.get(obj.status)
@@ -746,9 +751,13 @@ class FlowStartReadSerializer(ReadSerializer):
         else:
             return json.loads(obj.extra)
 
+    def get_embedded_data(self, obj):
+        return json.loads(obj.embedded_data) if obj.embedded_data else None
+
     class Meta:
         model = FlowStart
-        fields = ('id', 'uuid', 'flow', 'status', 'groups', 'contacts', 'restart_participants', 'extra', 'created_on', 'modified_on')
+        fields = ('id', 'uuid', 'flow', 'status', 'groups', 'contacts', 'restart_participants', 'extra', 'created_on',
+                  'modified_on', 'embedded_data')
 
 
 class FlowStartWriteSerializer(WriteSerializer):
@@ -758,8 +767,15 @@ class FlowStartWriteSerializer(WriteSerializer):
     urns = fields.URNListField(required=False)
     restart_participants = serializers.BooleanField(required=False)
     extra = serializers.JSONField(required=False)
+    embedded_data = serializers.JSONField(required=False)
 
     def validate_extra(self, value):
+        if not value:  # pragma: needs cover
+            return None
+        else:
+            return FlowRun.normalize_fields(value)[0]
+
+    def validate_embedded_data(self, value):
         if not value:  # pragma: needs cover
             return None
         else:
@@ -779,6 +795,7 @@ class FlowStartWriteSerializer(WriteSerializer):
         groups = self.validated_data.get('groups', [])
         restart_participants = self.validated_data.get('restart_participants', True)
         extra = self.validated_data.get('extra')
+        embedded_data = self.validated_data.get('embedded_data', None)
 
         # convert URNs to contacts
         for urn in urns:
@@ -788,7 +805,7 @@ class FlowStartWriteSerializer(WriteSerializer):
         # ok, let's go create our flow start, the actual starting will happen in our view
         return FlowStart.create(self.validated_data['flow'], self.context['user'],
                                 restart_participants=restart_participants,
-                                contacts=contacts, groups=groups, extra=extra)
+                                contacts=contacts, groups=groups, extra=extra, embed=embedded_data)
 
 
 class LabelReadSerializer(ReadSerializer):

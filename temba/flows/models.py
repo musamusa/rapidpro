@@ -857,6 +857,7 @@ class Flow(TembaModel):
 
                     # our extra will be the current flow variables
                     extra = message_context.get('extra', {})
+                    embed = message_context.get('embed', {})
                     extra['flow'] = message_context.get('flow', {})
 
                     if msg.id > 0:
@@ -866,7 +867,7 @@ class Flow(TembaModel):
                     if flow:
                         child_runs = flow.start([], [run.contact], started_flows=started_flows,
                                                 restart_participants=True, extra=extra,
-                                                parent_run=run, interrupt=False)
+                                                parent_run=run, interrupt=False, embed=embed)
                         if child_runs:
                             child_run = child_runs[0]
                             msgs += child_run.start_msgs
@@ -6352,8 +6353,9 @@ class TriggerFlowAction(VariableContactAction):
             if not run.contact.is_test:
                 # our extra will be our flow variables in our message context
                 extra = context.get('extra', dict())
+                embed = context.get('embed', dict())
                 child_runs = self.flow.start(groups, contacts, restart_participants=True, started_flows=[run.flow.pk],
-                                             extra=extra, parent_run=run)
+                                             extra=extra, parent_run=run, embed=embed)
 
                 # build up all the msgs that where sent by our flow
                 msgs = []
@@ -6458,6 +6460,7 @@ class StartFlowAction(Action):
 
         # our extra will be our flow variables in our message context
         extra = context.get('extra', dict())
+        embed = context.get('embed', dict())
 
         # if they are both flow runs, just redirect the call
         if run.flow.flow_type == Flow.VOICE and self.flow.flow_type == Flow.VOICE:
@@ -6467,7 +6470,7 @@ class StartFlowAction(Action):
             run.voice_response.redirect(url)
         else:
             child_runs = self.flow.start([], [run.contact], started_flows=started_flows, restart_participants=True,
-                                         extra=extra, parent_run=run)
+                                         extra=extra, parent_run=run, embed=embed)
             for run in child_runs:
                 msgs += run.start_msgs
 

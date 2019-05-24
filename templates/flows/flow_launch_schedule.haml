@@ -174,7 +174,8 @@
     #embedded-data
       .embed-row.embed-template
         .embed-field
-          %input{type:'text'}
+          %input{type:'text', maxlength:'36'}
+          %div.embed-field-slug
         .embed-value
           %input{type:'text'}
         .embed-remove{onclick:'removeEmbed($(this))'}
@@ -220,3 +221,9 @@
       prepareOmnibox();
 
     });
+
+    {% if embedded_data %}
+        {% for embed in embedded_data %}
+            addEmbed('{{ embed.field }}', '{{ embed.value }}');
+        {% endfor %}
+    {% endif %}

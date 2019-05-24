@@ -2744,6 +2744,7 @@ class RunsEndpoint(ListAPIMixin, BaseAPIView):
      * **modified_on** - when this run was last modified (datetime), filterable as `before` and `after`.
      * **exited_on** - the datetime when this run exited or null if it is still active (datetime).
      * **exit_type** - how the run ended (one of "interrupted", "completed", "expired").
+     * **embedded_fields** - extra parameters passed to the flow, you can get those using @embed into the flow (object)
 
     Note that you cannot filter by `flow` and `contact` at the same time.
 
@@ -2785,7 +2786,10 @@ class RunsEndpoint(ListAPIMixin, BaseAPIView):
                 "created_on": "2015-11-11T13:05:57.457742Z",
                 "modified_on": "2015-11-11T13:05:57.576056Z",
                 "exited_on": "2015-11-11T13:05:57.576056Z",
-                "exit_type": "completed"
+                "exit_type": "completed",
+                "embedded_fields": {
+                    "full_name": "Bob McFlow"
+                }
             },
             ...
         }
@@ -2881,6 +2885,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
      * **extra** - the dictionary of extra parameters passed to the flow start (object)
      * **created_on** - the datetime when this flow start was created (datetime)
      * **modified_on** - the datetime when this flow start was modified (datetime)
+     * **embedded_data** - extra parameters passed to the flow (accessible via @embed in your flow) (object)
 
     Example:
 
@@ -2907,6 +2912,9 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
                         "first_name": "Ryan",
                         "last_name": "Lewis"
                     },
+                    "embedded_data": {
+                        "full_name": "Ryan Lewis"
+                    },
                     "created_on": "2013-08-19T19:11:21.082Z",
                     "modified_on": "2013-08-19T19:11:21.082Z"
                 },
@@ -2926,6 +2934,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
      * **urns** - the URNs you want to start in this flow (array of up to 100 strings, optional)
      * **restart_participants** - whether to restart participants already in this flow (optional, defaults to true)
      * **extra** - a dictionary of extra parameters to pass to the flow start (accessible via @extra in your flow)
+     * **embedded_data** - extra parameters passed to the flow (accessible via @embed in your flow) (object)
 
     Example:
 
@@ -2935,7 +2944,8 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
             "groups": ["f5901b62-ba76-4003-9c62-72fdacc15515"],
             "contacts": ["f5901b62-ba76-4003-9c62-fjjajdsi15553"],
             "urns": ["twitter:sirmixalot", "tel:+12065551212"],
-            "extra": {"first_name": "Ryan", "last_name": "Lewis"}
+            "extra": {"first_name": "Ryan", "last_name": "Lewis"},
+            "embedded_data": {"full_name": "Ryan Lewis"}
         }
 
     Response is the created flow start:
@@ -2954,6 +2964,9 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
             "extra": {
                 "first_name": "Ryan",
                 "last_name": "Lewis"
+            },
+            "embedded_data": {
+                "full_name": "Ryan Lewis"
             },
             "created_on": "2013-08-19T19:11:21.082Z",
             "modified_on": "2013-08-19T19:11:21.082Z"
@@ -3025,5 +3038,7 @@ class FlowStartsEndpoint(ListAPIMixin, WriteAPIMixin, BaseAPIView):
                             dict(name='restart_participants', required=False,
                                  help="Whether to restart any participants already in the flow"),
                             dict(name='extra', required=False,
-                                 help="Any extra parameters to pass to the flow start")],
+                                 help="Any extra parameters to pass to the flow start"),
+                            dict(name='embedded_data', required=False,
+                                 help="Any embedded data to pass to the flow start")],
                     example=dict(body='{"flow":"f5901b62-ba76-4003-9c62-72fdacc1b7b7","urns":["twitter:sirmixalot"]}'))
