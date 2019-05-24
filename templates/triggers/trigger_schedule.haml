@@ -50,6 +50,18 @@
 
         // initialize our omnibox
         prepareOmnibox();
+
+      $('li#id-trigger-schedule input[type="submit"]').on('click', function(event) {
+        var form = $(this).parent('form');
+        var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
+        if (error) {
+            event.preventDefault();
+            $(this).removeClass('disabled');
+        } else {
+            form.submit();
+        }
+      });
+
     });
     {% if embedded_data %}
         {% for embed in embedded_data %}
@@ -105,6 +117,8 @@
         %input{type:'text'}
       .embed-remove{onclick:'removeEmbed($(this))'}
         .icon.icon-close
+      .embed-error-message.embed-error-message-field
+      .embed-error-message.embed-error-message-value
 
     .embed-row.embed-header.inactive
       .embed-field

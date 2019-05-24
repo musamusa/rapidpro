@@ -214,6 +214,9 @@ td.created_on {
           .embed-field, .embed-value {
             input {
               width: 89%;
+              &.invalid {
+                border: 1px solid #b94a48;
+              }
             }
             .embed-field-slug {
               font-size: 13px;
@@ -262,6 +265,9 @@ td.created_on {
 
       input {
         width: 92%;
+        &.invalid {
+          border: 1px solid #b94a48;
+        }
       }
 
       .embed-field-slug {
@@ -276,6 +282,13 @@ td.created_on {
       line-height: 36px;
       cursor: pointer;
       display: none;
+    }
+    .embed-error-message {
+      float: left;
+      width: 100%;
+      color: #b94a48;
+      font-size: 13px;
+      margin: -5px 0 5px 0;
     }
   }
 }

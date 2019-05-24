@@ -66,3 +66,45 @@ function removeEmbed(el, is_on_keyword_trigger, trigger_flow_keyword) {
         }
     }
 }
+
+function validateEmbeddedData(form, field_name, value_name) {
+    var regex = /[!@#$%^&*()+\-=\[\]{};':"\\|,.<>\/?]/gi;
+    var existingFields = [];
+    var error = false;
+    var embeddedDataFields = form.find('input[name="' + field_name + '"]');
+    var embeddedDataValues = form.find('input[name="' + value_name + '"]');
+    embeddedDataFields.each(function() {
+        var element = $(this);
+        var trimValue = $.trim(element.val());
+        if (!trimValue.length) {
+            element.addClass('invalid');
+            element.parent().parent().find('.embed-error-message-field').html('The field is required');
+            error = true;
+        } else if (regex.test(trimValue)) {
+            element.addClass('invalid');
+            error = true;
+            element.parent().parent().find('.embed-error-message-field').html('Field name can only contain letters, number and underscores');
+        } else if (existingFields.indexOf(trimValue) >= 0) {
+            element.addClass('invalid');
+            error = true;
+            element.parent().parent().find('.embed-error-message-field').html('Field names must be unique');
+        } else {
+            element.removeClass('invalid');
+            element.parent().parent().find('.embed-error-message-field').html('');
+        }
+        existingFields.push(trimValue);
+    });
+    embeddedDataValues.each(function() {
+        var element = $(this);
+        var trimValue = $.trim(element.val());
+        if (!trimValue.length) {
+            element.addClass('invalid');
+            element.parent().parent().find('.embed-error-message-value').html('The value is required');
+            error = true;
+        } else {
+            element.removeClass('invalid');
+            element.parent().parent().find('.embed-error-message-value').html('');
+        }
+    });
+    return error;
+}
