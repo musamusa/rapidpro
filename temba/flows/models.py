@@ -4651,10 +4651,13 @@ class ExportFlowResultsTask(BaseExportTask):
                 label = ContactURN.EXPORT_FIELDS.get(extra_urn, dict()).get('label', '')
                 extra_urn_columns.append(dict(label=label, scheme=extra_urn))
 
+        embedded_fields_map = 6 + len(extra_urn_columns) + len(contact_fields)
+
         # create a mapping of column id to index
         column_map = dict()
         for col in range(len(columns)):
             column_map[columns[col].uuid] = 6 + len(extra_urn_columns) + len(contact_fields) + col * 3
+            embedded_fields_map += 3
 
         # build a cache of rule uuid to category name, we want to use the most recent name the user set
         # if possible and back down to the cached rule_category only when necessary
@@ -4768,6 +4771,10 @@ class ExportFlowResultsTask(BaseExportTask):
                 col_widths.append(self.WIDTH_SMALL)
                 sheet_row.append("%s (Text) - %s" % (six.text_type(ruleset.label), six.text_type(ruleset.flow.name)))
                 col_widths.append(self.WIDTH_SMALL)
+
+            sheet_row.append("Embedded fields (JSON) - %s" % six.text_type(ruleset.flow.name))
+
+            sheet_row.append("Embedded fields (String) - %s" % six.text_type(ruleset.flow.name))
 
             self.set_sheet_column_widths(sheet, col_widths)
             self.append_row(sheet, sheet_row)
@@ -4987,6 +4994,19 @@ class ExportFlowResultsTask(BaseExportTask):
                         if include_runs:
                             runs_sheet_row[col + 2] = text
                         merged_sheet_row[col + 2] = text
+
+                if run_step.run.embedded_fields:
+                    if include_runs:
+                        runs_sheet_row[embedded_fields_map] = run_step.run.embedded_fields
+                    merged_sheet_row[embedded_fields_map] = run_step.run.embedded_fields
+
+                    embedded_fields = json.loads(run_step.run.embedded_fields)
+                    embedded_fields_array = ['%s: %s' % (key, embedded_fields[key]) for key in embedded_fields.keys()]
+                    string_embedded_fields = ', '.join(embedded_fields_array)
+
+                    if include_runs:
+                        runs_sheet_row[embedded_fields_map + 1] = string_embedded_fields
+                    merged_sheet_row[embedded_fields_map + 1] = string_embedded_fields
 
                 last_run = run_step.run.pk
                 last_contact = run_step.contact.pk
