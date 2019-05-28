@@ -75,6 +75,8 @@
             %input{type:'text'}
           .embed-remove{onclick:'removeEmbed($(this), "", "default")'}
             .icon.icon-close
+          .embed-error-message.embed-error-message-field
+          .embed-error-message.embed-error-message-value
 
         .embed-row.embed-header.embed-header-default.inactive
           .embed-field
@@ -100,6 +102,8 @@
               %input{type:'text'}
             .embed-remove{onclick:'removeEmbed($(this), "", "{{ keyword.keyword }}")'}
               .icon.icon-close
+            .embed-error-message.embed-error-message-field
+            .embed-error-message.embed-error-message-value
 
           %div{class:"embed-row embed-header embed-header-{{ keyword.keyword }} inactive"}
             .embed-field
@@ -114,6 +118,7 @@
           .add-new-embed
             %a{href:'javascript:;', onclick:'addEmbed("", "", "", "{{ keyword.keyword }}")'}
               -trans "Add embedded data"
+      .embedded-data-default-message
 
 -block form-buttons
   -if send_channel
