@@ -247,9 +247,20 @@
 
   :javascript
     $(document).on('click', '.update-trigger', function(e){
-       var modal = new Modax('{% trans "Update Trigger" %}', '/trigger/update/' + $(this).data("object-id") + '/');
-       modal.setIcon('icon-feed');
-       modal.setRedirectOnSuccess(true);
-       modal.show();
+      var modal = new Modax('{% trans "Update Trigger" %}', '/trigger/update/' + $(this).data("object-id") + '/');
+      modal.setIcon('icon-feed');
+      modal.setRedirectOnSuccess(true);
+      modal.setListeners({onPrimary: function(){
+        var form = modal.ele.find('form');
+        var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
+        if (error) {
+          modal.focusFirstInput();
+          var divForm = $('.modal-body').find('.span12');
+          $('.modal-body').scrollTop(divForm[0].scrollHeight);
+        } else {
+          modal.submit();
+        }
+      }}, false);
+      modal.show();
     });
     
