@@ -204,7 +204,22 @@
       $(".add-event").live('click', function(){
         var modal = new Modax('Add Event','{% url "campaigns.campaignevent_create" %}?campaign={{ object.id }}');
         modal.setIcon('icon-instant');
-        modal.setListeners({ onFormLoaded: function() { $('#id_message').focus() }});
+        modal.setListeners({
+          onFormLoaded: function() {
+            $('#id_message').focus()
+          },
+          onPrimary: function() {
+            var form = modal.ele.find('form');
+            var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
+            if (error) {
+              modal.focusFirstInput();
+              var divForm = $('.modal-body').find('.span12');
+              $('.modal-body').scrollTop(divForm[0].scrollHeight);
+            } else {
+              modal.submit();
+            }
+          }
+        }, false);
         modal.setRedirectOnSuccess(true);
         modal.show();
       });

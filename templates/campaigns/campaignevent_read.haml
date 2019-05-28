@@ -137,8 +137,21 @@
           var modal = new Modax('Update Event', '{% url "campaigns.campaignevent_update" object.pk %}');
           modal.setIcon('icon-instant');
           modal.setListeners({
-            onSuccess: function(data) {location.reload(); },
-          });
+            onSuccess: function(data) {
+              location.reload();
+            },
+            onPrimary: function() {
+              var form = modal.ele.find('form');
+              var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
+              if (error) {
+                modal.focusFirstInput();
+                var divForm = $('.modal-body').find('.span12');
+                $('.modal-body').scrollTop(divForm[0].scrollHeight);
+              } else {
+                modal.submit();
+              }
+            }
+          }, false);
           modal.show();
         });
       {% endif %}
