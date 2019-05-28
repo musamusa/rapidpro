@@ -66,3 +66,120 @@ function removeEmbed(el, is_on_keyword_trigger, trigger_flow_keyword) {
         }
     }
 }
+
+function validateEmbeddedData(form, field_name, value_name) {
+    var regex = /[!@#$%^&*()+\-=\[\]{};':"\\|,.<>\/?]/gi;
+    var existingFields = [];
+    var error = false;
+    var embeddedDataFields = form.find('input[name="' + field_name + '"]');
+    var embeddedDataValues = form.find('input[name="' + value_name + '"]');
+    embeddedDataFields.each(function() {
+        var element = $(this);
+        var trimValue = $.trim(element.val());
+        if (!trimValue.length) {
+            element.addClass('invalid');
+            element.parent().parent().find('.embed-error-message-field').html('The field is required');
+            error = true;
+        } else if (regex.test(trimValue)) {
+            element.addClass('invalid');
+            error = true;
+            element.parent().parent().find('.embed-error-message-field').html('Field name can only contain letters, number and underscores');
+        } else if (existingFields.indexOf(trimValue) >= 0) {
+            element.addClass('invalid');
+            error = true;
+            element.parent().parent().find('.embed-error-message-field').html('Field names must be unique');
+        } else {
+            element.removeClass('invalid');
+            element.parent().parent().find('.embed-error-message-field').html('');
+        }
+        existingFields.push(trimValue);
+    });
+    embeddedDataValues.each(function() {
+        var element = $(this);
+        var trimValue = $.trim(element.val());
+        if (!trimValue.length) {
+            element.addClass('invalid');
+            element.parent().parent().find('.embed-error-message-value').html('The value is required');
+            error = true;
+        } else {
+            element.removeClass('invalid');
+            element.parent().parent().find('.embed-error-message-value').html('');
+        }
+    });
+    return error;
+}
+
+function validateEmbeddedDataForTriggerWords(form) {
+    var regex = /[!@#$%^&*()+\-=\[\]{};':"\\|,.<>\/?]/gi;
+    var existingFields;
+    var existingFieldsByName = [];
+    var existingValuesByName = [];
+    var error = false;
+    var embeddedDataFields = form.find('.embed-container').find('.embed-field').find('input');
+    var embeddedDataValues = form.find('.embed-container').find('.embed-value').find('input');
+
+    embeddedDataFields.each(function() {
+        var fieldName = $(this)[0].name;
+        if (existingFieldsByName.indexOf(fieldName) <= 0) {
+            existingFieldsByName.push(fieldName);
+        }
+    });
+
+    embeddedDataValues.each(function() {
+        var valueName = $(this)[0].name;
+        if (existingValuesByName.indexOf(valueName) <= 0) {
+            existingValuesByName.push(valueName);
+        }
+    });
+
+    for (var item in existingFieldsByName) {
+        existingFields = [];
+        embeddedDataFields = form.find('input[name="' + existingFieldsByName[item] + '"]');
+        embeddedDataFields.each(function() {
+            var element = $(this);
+            var trimValue = $.trim(element.val());
+            if ((!trimValue.length) && (element[0].name !== 'embedded_field_default')) {
+                element.addClass('invalid');
+                element.parent().parent().find('.embed-error-message-field').html('The field is required');
+                error = true;
+            } else if (regex.test(trimValue)) {
+                element.addClass('invalid');
+                error = true;
+                element.parent().parent().find('.embed-error-message-field').html('Field name can only contain letters, number and underscores');
+            } else if (existingFields.indexOf(trimValue) >= 0) {
+                element.addClass('invalid');
+                error = true;
+                element.parent().parent().find('.embed-error-message-field').html('Field names must be unique');
+            } else {
+                element.removeClass('invalid');
+                element.parent().parent().find('.embed-error-message-field').html('');
+            }
+            existingFields.push(trimValue);
+        });
+    }
+
+    for (item in existingValuesByName) {
+        embeddedDataValues = form.find('input[name="' + existingValuesByName[item] + '"]');
+        embeddedDataValues.each(function() {
+            var element = $(this);
+            var trimValue = $.trim(element.val());
+            if ((!trimValue.length) && (element[0].name !== 'embedded_value_default')) {
+                element.addClass('invalid');
+                element.parent().parent().find('.embed-error-message-value').html('The value is required');
+                error = true;
+            } else {
+                element.removeClass('invalid');
+                element.parent().parent().find('.embed-error-message-value').html('');
+            }
+        });
+    }
+
+    if (error) {
+        form.find('.embedded-data-default-message').html('There\'s an error with your submission, please check all ' +
+            'fields for each keyword and try again.')
+    } else {
+        form.find('.embedded-data-default-message').html('');
+    }
+
+    return error;
+}

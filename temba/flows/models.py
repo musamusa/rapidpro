@@ -4755,6 +4755,8 @@ class ExportFlowResultsTask(BaseExportTask):
             book.create_sheet(name)
             run_sheets.append(name)
 
+        embedded_fields_mapping = {}
+
         sheet_row = []
         # then populate their header columns
         for (sheet_num, sheet_name) in enumerate(run_sheets):
@@ -4808,6 +4810,20 @@ class ExportFlowResultsTask(BaseExportTask):
                 col_widths.append(self.WIDTH_SMALL)
                 sheet_row.append("%s (Text) - %s" % (six.text_type(ruleset.label), six.text_type(ruleset.flow.name)))
                 col_widths.append(self.WIDTH_SMALL)
+
+            for run in runs:
+                if run.embedded_fields:
+                    embedded_fields = json.loads(run.embedded_fields)
+
+                    for key in embedded_fields.keys():
+                        if str(run.uuid) not in embedded_fields_mapping:
+                            embedded_fields_mapping[str(run.uuid)] = {}
+
+                        col_header = "Embedded field (%s)" % six.text_type(key)
+                        if col_header not in sheet_row:
+                            sheet_row.append(col_header)
+
+                        embedded_fields_mapping[str(run.uuid)][key] = sheet_row.index(col_header)
 
             self.set_sheet_column_widths(sheet, col_widths)
             self.append_row(sheet, sheet_row)
@@ -5027,6 +5043,14 @@ class ExportFlowResultsTask(BaseExportTask):
                         if include_runs:
                             runs_sheet_row[col + 2] = text
                         merged_sheet_row[col + 2] = text
+
+                if run_step.run.embedded_fields:
+                    run_data_map = embedded_fields_mapping.get(str(run_step.run.uuid))
+                    embedded_fields = json.loads(run_step.run.embedded_fields)
+                    for item in embedded_fields.keys():
+                        if include_runs:
+                            runs_sheet_row[run_data_map.get(item)] = embedded_fields[item]
+                        merged_sheet_row[run_data_map.get(item)] = embedded_fields[item]
 
                 last_run = run_step.run.pk
                 last_contact = run_step.contact.pk

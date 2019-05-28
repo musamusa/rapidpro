@@ -6,7 +6,6 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.utils.text import slugify
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from smartmin.views import SmartCRUDL, SmartListView, SmartUpdateView, SmartCreateView, SmartReadView, SmartDeleteView
