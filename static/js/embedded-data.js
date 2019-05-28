@@ -114,6 +114,8 @@ function validateEmbeddedDataForTriggerWords(form) {
     var existingFields;
     var existingFieldsByName = [];
     var existingValuesByName = [];
+    var moreThanOneField = [];
+    var moreThanOneValue = [];
     var error = false;
     var embeddedDataFields = form.find('.embed-container').find('.embed-field').find('input');
     var embeddedDataValues = form.find('.embed-container').find('.embed-value').find('input');
@@ -122,6 +124,8 @@ function validateEmbeddedDataForTriggerWords(form) {
         var fieldName = $(this)[0].name;
         if (existingFieldsByName.indexOf(fieldName) <= 0) {
             existingFieldsByName.push(fieldName);
+        } else {
+            moreThanOneField.push(fieldName);
         }
     });
 
@@ -129,6 +133,8 @@ function validateEmbeddedDataForTriggerWords(form) {
         var valueName = $(this)[0].name;
         if (existingValuesByName.indexOf(valueName) <= 0) {
             existingValuesByName.push(valueName);
+        } else {
+            moreThanOneValue.push(valueName)
         }
     });
 
@@ -138,7 +144,7 @@ function validateEmbeddedDataForTriggerWords(form) {
         embeddedDataFields.each(function() {
             var element = $(this);
             var trimValue = $.trim(element.val());
-            if ((!trimValue.length) && (element[0].name !== 'embedded_field_default')) {
+            if ((!trimValue.length) && (element[0].name !== 'embedded_field_default') && (moreThanOneField.indexOf(element[0].name) >= 0)) {
                 element.addClass('invalid');
                 element.parent().parent().find('.embed-error-message-field').html('The field is required');
                 error = true;
@@ -163,7 +169,7 @@ function validateEmbeddedDataForTriggerWords(form) {
         embeddedDataValues.each(function() {
             var element = $(this);
             var trimValue = $.trim(element.val());
-            if ((!trimValue.length) && (element[0].name !== 'embedded_value_default')) {
+            if ((!trimValue.length) && (element[0].name !== 'embedded_value_default') && (moreThanOneValue.indexOf(element[0].name) >= 0)) {
                 element.addClass('invalid');
                 element.parent().parent().find('.embed-error-message-value').html('The value is required');
                 error = true;
