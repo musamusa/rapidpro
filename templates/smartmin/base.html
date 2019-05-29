@@ -107,6 +107,7 @@
 
 </script>
 
+{% if refresh %}
 <script>
 function refresh(onSuccess, forceReload){
 
@@ -130,7 +131,6 @@ function refresh(onSuccess, forceReload){
   });
 }
 
-{% if refresh %}
 function scheduleRefresh() {
     window.setTimeout(refresh, {{ refresh }});
 }
@@ -138,8 +138,9 @@ function scheduleRefresh() {
 $(document).ready(function(){
     scheduleRefresh();
 });
-{% endif %}
+
 </script>
+{% endif %}
 
 {% endblock %}
 
