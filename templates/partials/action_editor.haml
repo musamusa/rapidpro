@@ -308,7 +308,7 @@
         -trans "Additional options"
 
       .webhook-headers{ng-show:"formData.isActionWebhookAdditionalOptionsVisible"}
-        .modal-webhook-header-pair
+        .modal-webhook-header-pair{ng-show:"action.webhook_headers.length > 0"}
           .modal-webhook-header.modal-webhook-header-name
             .message
               -trans "Header Name"
@@ -325,6 +325,17 @@
 
         %a.add-header{href:"javascript:;",ng-click:"addNewActionWebhookHeader()"}
           -trans "Add header"
+
+        .modal-webhook-body
+          %label
+            -trans "JSON body"
+          %textarea{auto-complete:"", ng-model:"action.action_webhook_body"}
+          %button.btn.btn-primary{ng-click:"actionValidBodyJSON()"}
+            -trans "Check JSON"
+          .validation-alert.notok{ng-show:"action_webhook_body_valid == false"}
+            -trans "Does not conform to JSON format"
+          .validation-alert{ng-show:"action_webhook_body_valid == true"}
+            -trans "Valid JSON body"
 
       .help-text
         -blocktrans
@@ -357,7 +368,7 @@
           In this example @extra.product and @extra.stock_level
           would be added for all future steps.
 
-      %button{ng-click:"saveWebhook(action.action, action.webhook)",class:"submit hide"}
+      %button{ng-click:"saveWebhook(action.action, action.webhook, action.action_webhook_body)",class:"submit hide"}
         -trans "Ok"
     </ng-form>
 .modal-footer

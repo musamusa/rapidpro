@@ -1542,6 +1542,26 @@
         margin: 5px 0;
         display: inline-block;
       }
+      .modal-webhook-body {
+        margin: 12px 0;
+        label {
+          color: #333333;
+          font-size: 14px;
+          font-weight: 200;
+          margin: 0 0 5px 0;
+        }
+        textarea {
+          width: 93%;
+          height: 120px;
+        }
+        .validation-alert {
+          display: inline-block;
+          color: green;
+          &.notok {
+            color: red;
+          }
+        }
+      }
       .modal-webhook-header-pair, .modal-salesforce-field-pair{
         margin: 0;
         .modal-webhook-header, .modal-salesforce-field{
@@ -1715,6 +1735,25 @@
         display: inline-block;
       }
       .webhook-headers{
+        .modal-webhook-body {
+          margin: 12px 0;
+          label {
+            color: #333333;
+            font-size: 14px;
+            font-weight: 200;
+          }
+          textarea {
+            width: 93%;
+            height: 120px;
+          }
+          .validation-alert {
+            display: inline-block;
+            color: green;
+            &.notok {
+              color: red;
+            }
+          }
+        }
         a.add-header{
           margin: 5px 0;
           display: inline-block;
