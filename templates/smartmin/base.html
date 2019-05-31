@@ -107,11 +107,10 @@
 
 </script>
 
-{% if refresh %}
 <script>
 function refresh(onSuccess, forceReload){
 
-  var url = "{{url_params|safe}}"
+  var url = "{{url_params}}";
   {% if page_obj %}
     url += "page={{page_obj.number}}";
   {% endif %}
@@ -130,7 +129,7 @@ function refresh(onSuccess, forceReload){
       }
   });
 }
-
+{% if refresh %}
 function scheduleRefresh() {
     window.setTimeout(refresh, {{ refresh }});
 }
@@ -138,9 +137,8 @@ function scheduleRefresh() {
 $(document).ready(function(){
     scheduleRefresh();
 });
-
-</script>
 {% endif %}
+</script>
 
 {% endblock %}
 
