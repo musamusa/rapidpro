@@ -126,8 +126,8 @@
             var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
             if (error) {
               modal.focusFirstInput();
-              var divForm = $('.modal-body').find('.span12');
-              $('.modal-body').scrollTop(divForm[0].scrollHeight);
+              var divForm = $('.modal-body').find('input.invalid');
+              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
             } else {
               modal.submit();
             }
@@ -157,8 +157,8 @@
             var error = validateEmbeddedDataForTriggerWords(form);
             if (error) {
               modal.focusFirstInput();
-              var divForm = $('.modal-body').find('.span12');
-              $('.modal-body').scrollTop(divForm[0].scrollHeight);
+              var divForm = $('.modal-body').find('input.invalid');
+              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
             } else {
               modal.submit();
             }
@@ -188,8 +188,8 @@
             var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
             if (error) {
               modal.focusFirstInput();
-              var divForm = $('.modal-body').find('.span12');
-              $('.modal-body').scrollTop(divForm[0].scrollHeight);
+              var divForm = $('.modal-body').find('input.invalid');
+              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
             } else {
               modal.submit();
             }
