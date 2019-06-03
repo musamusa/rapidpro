@@ -167,6 +167,12 @@
             if (error) {
               modal.focusFirstInput();
               var divForm = $('.modal-body').find('input.invalid');
+              var fieldName = divForm[0].name;
+              var keywordValue = fieldName.replace('embedded_field_', '').replace('embedded_value_', '');
+              $('#embedded_keyword').val(keywordValue).trigger('change');
+              $('.embed-row-content.active').removeClass('active');
+              $('.embed-row-content-' + keywordValue).addClass('active');
+              divForm[0].focus();
               $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
             } else {
               modal.submit();
