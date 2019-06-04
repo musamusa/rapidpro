@@ -888,7 +888,7 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
     * **flow** - the UUID of the flow to start the contact down (string, required if message is not specified)
     * **embedded_data** - the dictionary of extra parameters passed to the flow start of the campaign event (object)
 
-    Example:
+    Example 1:
 
         POST /api/v2/campaign_events.json
         {
@@ -897,8 +897,7 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "offset": 160,
             "unit": "weeks",
             "delivery_hour": -1,
-            "message": "Feeling sick and helpless, lost the compass where self is.",
-            "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
+            "message": "Feeling sick and helpless, lost the compass where self is."
         }
 
     You will receive an event object as a response if successful:
@@ -912,6 +911,34 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "delivery_hour": -1,
             "message": {"eng": "Feeling sick and helpless, lost the compass where self is."},
             "flow": null,
+            "created_on": "2013-08-19T19:11:21.088453Z",
+            "embedded_data": null
+        }
+
+    Example 2:
+
+        POST /api/v2/campaign_events.json
+        {
+            "campaign": "f14e4ff0-724d-43fe-a953-1d16aefd1c00",
+            "relative_to": "last_hit",
+            "offset": 160,
+            "unit": "weeks",
+            "delivery_hour": -1,
+            "flow": "a9534ff0-724d-43fe-a953-1d16aefc4511",
+            "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
+        }
+
+    You will receive an event object as a response if successful:
+
+        {
+            "uuid": "6a6d7531-6b44-4c45-8c33-957ddd8dfabc",
+            "campaign": {"uuid": "f14e4ff0-724d-43fe-a953-1d16aefd1c00", "name": "Hits"},
+            "relative_to": "last_hit",
+            "offset": 160,
+            "unit": "W",
+            "delivery_hour": -1,
+            "message": null,
+            "flow": {"uuid": "a9534ff0-724d-43fe-a953-1d16aefc4511"},
             "created_on": "2013-08-19T19:11:21.088453Z",
             "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
         }
@@ -928,7 +955,18 @@ class CampaignEventsEndpoint(ListAPIMixin, WriteAPIMixin, DeleteAPIMixin, BaseAP
             "offset": 100,
             "unit": "weeks",
             "delivery_hour": -1,
-            "message": "Feeling sick and helpless, lost the compass where self is.",
+            "message": "Feeling sick and helpless, lost the compass where self is."
+        }
+
+    Example 2:
+
+        POST /api/v2/campaign_events.json?uuid=6a6d7531-6b44-4c45-8c33-957ddd8dfabc
+        {
+            "relative_to": "last_hit",
+            "offset": 100,
+            "unit": "weeks",
+            "delivery_hour": -1,
+            "flow": "a9534ff0-724d-43fe-a953-1d16aefc4511",
             "embedded_data": {"first_name": "Ryan", "last_name": "Lewis"}
         }
 
