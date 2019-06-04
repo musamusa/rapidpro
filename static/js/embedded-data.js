@@ -122,7 +122,7 @@ function validateEmbeddedDataForTriggerWords(form) {
 
     embeddedDataFields.each(function() {
         var fieldName = $(this)[0].name;
-        if (existingFieldsByName.indexOf(fieldName) <= 0) {
+        if (existingFieldsByName.indexOf(fieldName) < 0) {
             existingFieldsByName.push(fieldName);
         } else {
             moreThanOneField.push(fieldName);
@@ -131,7 +131,7 @@ function validateEmbeddedDataForTriggerWords(form) {
 
     embeddedDataValues.each(function() {
         var valueName = $(this)[0].name;
-        if (existingValuesByName.indexOf(valueName) <= 0) {
+        if (existingValuesByName.indexOf(valueName) < 0) {
             existingValuesByName.push(valueName);
         } else {
             moreThanOneValue.push(valueName)
@@ -144,7 +144,7 @@ function validateEmbeddedDataForTriggerWords(form) {
         embeddedDataFields.each(function() {
             var element = $(this);
             var trimValue = $.trim(element.val());
-            if ((!trimValue.length) && (element[0].name !== 'embedded_field_default') && (moreThanOneField.indexOf(element[0].name) >= 0)) {
+            if ((!trimValue.length) && (moreThanOneField.indexOf(element[0].name) >= 0)) {
                 element.addClass('invalid');
                 element.parent().parent().find('.embed-error-message-field').html('The field is required');
                 error = true;
@@ -169,7 +169,7 @@ function validateEmbeddedDataForTriggerWords(form) {
         embeddedDataValues.each(function() {
             var element = $(this);
             var trimValue = $.trim(element.val());
-            if ((!trimValue.length) && (element[0].name !== 'embedded_value_default') && (moreThanOneValue.indexOf(element[0].name) >= 0)) {
+            if ((!trimValue.length) && (moreThanOneValue.indexOf(element[0].name) >= 0)) {
                 element.addClass('invalid');
                 element.parent().parent().find('.embed-error-message-value').html('The value is required');
                 error = true;
