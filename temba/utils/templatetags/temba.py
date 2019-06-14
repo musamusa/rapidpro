@@ -170,8 +170,16 @@ def format_datetime(time, tz):
 def temba_get_value(context, obj, field):
     view = context['view']
     org = context['user_org']
+    is_datetime = False
+
+    if isinstance(obj.get(field), dict) and obj.get(field).get('__type') == 'Date':
+        obj[field] = obj.get(field).get('iso')
+        is_datetime = True
+    elif field in ['updatedAt', 'createdAt']:
+        is_datetime = True
+
     value = view.lookup_field_value(context, ToObj(obj), field)
-    if type(value) == datetime:
-        return format_datetime(value, org.timezone)
+    if is_datetime:
+        return format_datetime(datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ'), org.timezone)
 
     return value
