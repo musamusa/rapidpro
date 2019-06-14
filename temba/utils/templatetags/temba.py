@@ -11,6 +11,7 @@ from django.utils.translation import ugettext, ungettext_lazy
 from ...campaigns.models import Campaign
 from ...flows.models import Flow
 from ...triggers.models import Trigger
+from .. import ToObj
 
 TIME_SINCE_CHUNKS = (
     (60 * 60 * 24 * 365, ungettext_lazy('%d year', '%d years')),
@@ -169,7 +170,7 @@ def format_datetime(time, tz):
 def temba_get_value(context, obj, field):
     view = context['view']
     org = context['user_org']
-    value = view.lookup_field_value(context, obj, field)
+    value = view.lookup_field_value(context, ToObj(obj), field)
     if type(value) == datetime:
         return format_datetime(value, org.timezone)
 
