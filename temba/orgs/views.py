@@ -2347,11 +2347,19 @@ class OrgCRUDL(SmartCRUDL):
             org = self.request.user.get_org()
             collection = OrgCRUDL.Giftcards.get_collection_full_name(org_slug=org.slug, org_id=org.id, name=db, collection_type=collection_type)
 
-            register(settings.PARSE_APP_ID, settings.PARSE_REST_KEY, master=settings.PARSE_MASTER_KEY)
+            parse_headers = {
+                'X-Parse-Application-Id': settings.PARSE_APP_ID,
+                'X-Parse-Master-Key': settings.PARSE_MASTER_KEY,
+                'Content-Type': 'application/json'
+            }
 
-            factory = Object.factory(collection)
-            results = factory.Query.all().limit(1000).order_by('order')
-            return results
+            parse_url = '%s/classes/%s?limit=1000&order=order' % (settings.PARSE_URL, collection)
+            response = requests.get(parse_url, headers=parse_headers, timeout=60)
+
+            if response.status_code == 200 and 'results' in response.json():
+                return response.json().get('results')
+
+            return []
 
         def derive_title(self):
             return self.request.GET.get('db')

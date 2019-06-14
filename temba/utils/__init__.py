@@ -452,3 +452,12 @@ def build_embedded_data(request_post, field_name, value_name):
             embedded_data[field] = embedded_values[i]
 
     return embedded_data
+
+
+class ToObj(object):
+    def __init__(self, d):
+        for a, b in list(d.items()):
+            if isinstance(b, (list, tuple)):
+                setattr(self, a, [ToObj(x) if isinstance(x, dict) else x for x in b])
+            else:
+                setattr(self, a, ToObj(b) if isinstance(b, dict) else b)
