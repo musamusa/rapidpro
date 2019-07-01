@@ -26,12 +26,12 @@ class FlowRunWriteSerializer(FlowRunWriteSerializerV1):
 
         if self.flow_obj.launch_status == Flow.STATUS_PRODUCTION:
             # look for previous run with this contact and flow
-            run = FlowRun.objects.filter(org=self.org, contact=self.contact_obj, submitted_by=self.submitted_by_obj,
+            run = FlowRun.objects.filter(org=self.org, contact=self.contact_obj, submitted_by=self.user,
                                          flow=self.flow_obj, created_on=started).order_by('-modified_on').first()
 
             if not run:
                 run = FlowRun.create(self.flow_obj, self.contact_obj.pk, created_on=started,
-                                     submitted_by=self.submitted_by_obj)
+                                     submitted_by=self.user)
 
             step_objs = []
             previous_rule = None
