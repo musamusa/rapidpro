@@ -455,13 +455,15 @@ class Org(SmartModel):
 
         for component in components:
             if isinstance(component, Flow):
+                component.ensure_current_version()  # only export current versions
                 if keep_on_current_version:
-                    component.ensure_current_version()  # only export current versions
                     exported_flows.append(component.as_json(expand_contacts=True))
                 else:
                     flow_revision = component.revisions.filter(revision=revision).first()
                     if flow_revision:
                         exported_flows.append(flow_revision.get_definition_json())
+                    else:
+                        exported_flows.append(component.as_json(expand_contacts=True))
             elif isinstance(component, Campaign):
                 exported_campaigns.append(component.as_json())
             elif isinstance(component, Trigger):
