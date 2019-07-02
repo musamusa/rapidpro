@@ -53,6 +53,7 @@ JIOCHAT_SCHEME = 'jiochat'
 LINE_SCHEME = 'line'
 TEL_SCHEME = 'tel'
 TELEGRAM_SCHEME = 'telegram'
+TWILIO_WHATSAPP_SCHEME = 'twilio_whatsapp'
 TWILIO_SCHEME = 'twilio'
 TWITTER_SCHEME = 'twitter'
 TWITTERID_SCHEME = 'twitterid'
@@ -72,7 +73,8 @@ URN_SCHEME_CONFIG = ((TEL_SCHEME, _("Phone number"), 'phone', 'tel_e164'),
                      (EMAIL_SCHEME, _("Email address"), 'email', EMAIL_SCHEME),
                      (EXTERNAL_SCHEME, _("External identifier"), 'external', EXTERNAL_SCHEME),
                      (JIOCHAT_SCHEME, _("Jiochat identifier"), 'jiochat', JIOCHAT_SCHEME),
-                     (FCM_SCHEME, _("Firebase Cloud Messaging identifier"), 'fcm', FCM_SCHEME))
+                     (FCM_SCHEME, _("Firebase Cloud Messaging identifier"), 'fcm', FCM_SCHEME),
+                     (TWILIO_WHATSAPP_SCHEME, _("WhatsApp phone number"), 'twilio_whatsapp', TWILIO_WHATSAPP_SCHEME))
 
 
 IMPORT_HEADERS = tuple((c[2], c[0]) for c in URN_SCHEME_CONFIG)
@@ -143,7 +145,7 @@ class URN(object):
         except ValueError:
             return False
 
-        if scheme == TEL_SCHEME:
+        if scheme in [TEL_SCHEME, TWILIO_WHATSAPP_SCHEME]:
             try:
                 parsed = phonenumbers.parse(path, country_code)
                 return phonenumbers.is_possible_number(parsed)
@@ -207,7 +209,7 @@ class URN(object):
 
         norm_path = six.text_type(path).strip()
 
-        if scheme == TEL_SCHEME:
+        if scheme in [TEL_SCHEME, TWILIO_WHATSAPP_SCHEME]:
             norm_path, valid = cls.normalize_number(norm_path, country_code)
         elif scheme == TWITTER_SCHEME:
             norm_path = norm_path.lower()
@@ -324,6 +326,10 @@ class URN(object):
     @classmethod
     def from_jiochat(cls, path):
         return cls.from_parts(JIOCHAT_SCHEME, path)
+
+    @classmethod
+    def from_whatsapp(cls, path):
+        return cls.from_parts(TWILIO_WHATSAPP_SCHEME, path)
 
 
 @six.python_2_unicode_compatible

@@ -1257,6 +1257,8 @@ class Channel(TembaModel):
             url = reverse('courier.tms', args=[channel_uuid, 'status'])
         elif channel_type == 'TW':
             url = reverse('courier.tw', args=[channel_uuid, 'status'])
+        elif channel_type == 'TWP':
+            url = reverse('courier.twp', args=[channel_uuid, 'status'])
 
         url = "https://" + domain + url + "?action=callback&id=%d" % sms_id
         return url

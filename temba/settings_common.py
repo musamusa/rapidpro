@@ -1207,6 +1207,7 @@ MESSAGE_HANDLERS = [
 
 CHANNEL_TYPES = [
     'temba.channels.types.twilio.TwilioType',
+    'temba.channels.types.twilio_whatsapp.TwilioWhatsappType',
     'temba.channels.types.twilio_messaging_service.TwilioMessagingServiceType',
     'temba.channels.types.nexmo.NexmoType',
     'temba.channels.types.africastalking.AfricasTalkingType',
