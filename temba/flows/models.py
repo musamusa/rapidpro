@@ -882,6 +882,7 @@ class Flow(TembaModel):
             # store the media path as the value if it isn't a "wait for a photo" in a message flow
             value = msg.attachments[0].split(':', 1)[1]
 
+        # TODO Save corrected value as well for Spell Checker feature
         step.save_rule_match(rule, value)
         ruleset.save_run_value(run, rule, value, msg.text)
 
@@ -3492,6 +3493,7 @@ class FlowStep(models.Model):
                     rule_category = rule.get_category_name(run.flow.base_language)
                     rule_value = value
 
+                # TODO Save corrected text for Spell Checker feature
                 ruleset.save_run_value(run, rule, rule_value, json_obj['rule']['text'])
 
             # update our step with our rule details
@@ -4020,6 +4022,12 @@ class RuleSet(models.Model):
                 (text, errors) = Msg.evaluate_template(self.operand, context, org=run.flow.org)
             elif msg:
                 text = msg.text
+
+            # TODO Implement Spell Checker here
+            try:
+                pass
+            except Exception:
+                pass
 
             if self.ruleset_type == RuleSet.TYPE_AIRTIME:
 
