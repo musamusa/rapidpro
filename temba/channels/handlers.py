@@ -335,7 +335,7 @@ class TwilioWhatsappHandler(TwimlAPIHandler):
     courier_url = r'^twp/(?P<uuid>[a-z0-9\-]+)/(?P<action>receive|status)$'
     courier_name = 'courier.twp'
 
-    handler_url = r'^twilio_whatsapp/(?P<action>receive|status|voice)/(?P<uuid>[a-z0-9\-]+)/?$'
+    handler_url = r'^twilio_whatsapp/(?P<action>receive|status)/(?P<uuid>[a-z0-9\-]+)/?$'
     handler_name = 'handlers.twilio_whatsapp_handler'
 
     def get_channel_type(self):
