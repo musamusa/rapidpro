@@ -2033,6 +2033,7 @@ class ContactURN(models.Model):
         JIOCHAT_SCHEME: dict(label="Jiochat", key=None, id=0, field=None, urn_scheme=JIOCHAT_SCHEME),
         FCM_SCHEME: dict(label="FCM", key=None, id=0, field=None, urn_scheme=FCM_SCHEME),
         LINE_SCHEME: dict(label='Line', key=None, id=0, field=None, urn_scheme=LINE_SCHEME),
+        TWILIO_WHATSAPP_SCHEME: dict(label='WhatsApp', key=None, id=0, field=None, urn_scheme=TWILIO_WHATSAPP_SCHEME),
     }
 
     EXPORT_SCHEME_HEADERS = tuple((c[0], c[1]) for c in URN_SCHEME_CONFIG)
