@@ -37,8 +37,6 @@ from functools import cmp_to_key
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartFormView, SmartReadView, SmartUpdateView, SmartListView, SmartTemplateView
 from smartmin.views import SmartModelFormView, SmartModelActionView
 from datetime import timedelta
-from parse_rest.connection import register
-from parse_rest.datatypes import Object
 from temba.api.models import APIToken
 from temba.campaigns.models import Campaign
 from temba.channels.models import Channel
