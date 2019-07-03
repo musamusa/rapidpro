@@ -616,7 +616,7 @@ class Channel(TembaModel):
         if not (self.is_active and self.org):
             return None
 
-        if self.channel_type == 'T':
+        if self.channel_type in ['T', 'TWP']:
             return self.org.get_twilio_client()
         elif self.channel_type == 'TW':
             return self.get_twiml_client()
@@ -1258,6 +1258,8 @@ class Channel(TembaModel):
             url = reverse('courier.tms', args=[channel_uuid, 'status'])
         elif channel_type == 'TW':
             url = reverse('courier.tw', args=[channel_uuid, 'status'])
+        elif channel_type == 'TWP':
+            url = reverse('courier.twp', args=[channel_uuid, 'status'])
 
         url = "https://" + domain + url + "?action=callback&id=%d" % sms_id
         return url

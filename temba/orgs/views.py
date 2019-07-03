@@ -864,7 +864,10 @@ class OrgCRUDL(SmartCRUDL):
             org.connect_twilio(account_sid, account_token, self.request.user)
             org.save()
 
-            return HttpResponseRedirect(self.get_success_url())
+            _next = self.request.GET.get('next', None)
+            redirect_url = _next if _next else self.get_success_url()
+
+            return HttpResponseRedirect(redirect_url)
 
     class NexmoConfiguration(InferOrgMixin, OrgPermsMixin, SmartReadView):
 

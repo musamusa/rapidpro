@@ -758,6 +758,35 @@
     %code
       {{ channel.secret }}
 
+  -elif object.channel_type == 'TWP'
+    %h4
+      -blocktrans
+        To finish configuring your Facebook connection, you'll need to enter the following webhook URL.
+        Once your number get approved, you can type the number into the box below, get the webhook URL and add it to
+        the number on the <a href="https://www.twilio.com/console/sms/whatsapp/senders" target="_new">Twilio console</a>
+        following these steps:
+
+      %ol.whatsapp-steps
+        %li
+          -blocktrans
+            Find the number that you want to set up and click on "Configure".
+
+        %li
+          -blocktrans
+            Copy the webhook URL provided after this step and paste in the box "A MESSAGE COMES IN".
+
+        %li
+          -blocktrans
+            Click on Configure.
+
+    %hr
+
+    %h4
+      -trans "Webhook URL"
+
+    %code
+      https://{{ domain }}{% url 'courier.twp' object.uuid 'receive' %}
+
   -elif object.channel_type == 'JC'
     %h4
       -blocktrans
@@ -1105,7 +1134,7 @@
       font-size:20px;
     }
 
-    ol.line-steps li {
+    ol.line-steps li, ol.whatsapp-steps li {
       margin-top: 10px;
       list-style: decimal;
     }
