@@ -268,7 +268,9 @@ class TwimlAPIHandler(BaseChannelHandler):
 
             # Twilio sometimes sends concat sms as base64 encoded MMS
             body = decode_base64(request.POST['Body'])
-            urn = URN.from_tel(request.POST['From'])
+
+            urn = URN.from_twilio_whatsapp(request.POST['From']) if self.get_channel_type() == 'TWP' else \
+                URN.from_tel(request.POST['From'])
             attachments = []
 
             # download any attached media
@@ -326,6 +328,18 @@ class TwilioHandler(TwimlAPIHandler):
 
     def get_channel_type(self):
         return 'T'
+
+
+class TwilioWhatsappHandler(TwimlAPIHandler):
+
+    courier_url = r'^twp/(?P<uuid>[a-z0-9\-]+)/(?P<action>receive|status)$'
+    courier_name = 'courier.twp'
+
+    handler_url = r'^twilio_whatsapp/(?P<action>receive|status|voice)/(?P<uuid>[a-z0-9\-]+)/?$'
+    handler_name = 'handlers.twilio_whatsapp_handler'
+
+    def get_channel_type(self):
+        return 'TWP'
 
 
 class TwilioMessagingServiceHandler(BaseChannelHandler):

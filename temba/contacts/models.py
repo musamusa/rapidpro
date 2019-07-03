@@ -328,7 +328,9 @@ class URN(object):
         return cls.from_parts(JIOCHAT_SCHEME, path)
 
     @classmethod
-    def from_whatsapp(cls, path):
+    def from_twilio_whatsapp(cls, path):
+        if str(path).startswith('whatsapp'):
+            path = path.split(':')[-1]
         return cls.from_parts(TWILIO_WHATSAPP_SCHEME, path)
 
 

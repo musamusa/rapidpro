@@ -21,8 +21,8 @@ from twilio import TwilioRestException
 
 class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
-        phone_number = forms.CharField(label=_("WhatsApp phone number"),
-                                       help_text=_("Only numbers"))
+        phone_number = forms.CharField(label=_("WhatsApp number"),
+                                       help_text=_("Type the WhatsApp number"))
 
         def clean_phone_number(self):
             org = self.request.user.get_org()
@@ -41,8 +41,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
                 twilio_phones = client.phone_numbers.list(phone_number=phone_number)
                 if not twilio_phones:
                     raise ValidationError(_("Phone number not found in your Twilio account"))
-            except Exception:
-                raise ValidationError(_("Your Twilio authentication is invalid, please check and try again"))
+            except Exception as e:
+                raise ValidationError(e.message)
 
             return phone_number
 
@@ -79,7 +79,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         phone = phonenumbers.format_number(phonenumbers.parse(phone_number, None),
                                            phonenumbers.PhoneNumberFormat.NATIONAL)
 
-        self.object = Channel.create(org, self.request.user, None, 'TWP', name=phone, address=phone_number, role=role,
+        self.object = Channel.create(org, self.request.user, None, 'TWP', name=phone, address=phone_number,
                                      config=config, uuid=channel_uuid)
 
         return super(ClaimView, self).form_valid(form)

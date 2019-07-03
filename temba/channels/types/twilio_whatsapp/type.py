@@ -27,9 +27,7 @@ class TwilioWhatsappType(ChannelType):
     icon = 'icon-whatsapp'
     show_config_page = True
 
-    claim_blurb = _("""Add a <a href="https://telegram.org">Telegram</a> bot to send and receive messages to Telegram
-    users for free. Your users will need an Android, Windows or iOS device and a Telegram account to send and receive
-    messages.""")
+    claim_blurb = _("""Add a WhatsApp number from Twilio to send and receive messages to WhatsApp users.""")
     claim_view = ClaimView
 
     schemes = [TWILIO_WHATSAPP_SCHEME]
@@ -61,8 +59,8 @@ class TwilioWhatsappType(ChannelType):
                                        config.get(Channel.CONFIG_AUTH_TOKEN))
 
         try:
-            client.messages.create(to=msg.urn_path,
-                                   from_=channel.address,
+            client.messages.create(to='whatsapp:%s' % msg.urn_path,
+                                   from_='whatsapp:%s' % channel.address,
                                    body=text,
                                    media_url=media_urls,
                                    status_callback=callback_url)

@@ -615,7 +615,7 @@ class Channel(TembaModel):
         if not (self.is_active and self.org):
             return None
 
-        if self.channel_type == 'T':
+        if self.channel_type in ['T', 'TWP']:
             return self.org.get_twilio_client()
         elif self.channel_type == 'TW':
             return self.get_twiml_client()
