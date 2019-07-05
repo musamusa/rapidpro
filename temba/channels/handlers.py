@@ -242,7 +242,7 @@ class TwimlAPIHandler(BaseChannelHandler):
                 sms.status_sent()
             elif status == 'delivered':
                 sms.status_delivered()
-            elif status == 'failed':
+            elif status in ['failed', 'undelivered']:
                 sms.status_fail()
 
             return HttpResponse("", status=200)
