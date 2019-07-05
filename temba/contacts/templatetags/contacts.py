@@ -4,7 +4,8 @@ from django import template
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from temba.contacts.models import ContactURN, EMAIL_SCHEME, EXTERNAL_SCHEME, FACEBOOK_SCHEME, FCM_SCHEME
-from temba.contacts.models import TELEGRAM_SCHEME, TEL_SCHEME, TWITTER_SCHEME, TWITTERID_SCHEME, TWILIO_SCHEME, LINE_SCHEME
+from temba.contacts.models import TELEGRAM_SCHEME, TEL_SCHEME, TWITTER_SCHEME, TWITTERID_SCHEME, TWILIO_SCHEME
+from temba.contacts.models import LINE_SCHEME, TWILIO_WHATSAPP_SCHEME
 from temba.ivr.models import IVRCall
 from temba.msgs.models import ERRORED, FAILED
 
@@ -20,7 +21,8 @@ URN_SCHEME_ICONS = {
     TELEGRAM_SCHEME: 'icon-telegram',
     LINE_SCHEME: 'icon-line',
     EXTERNAL_SCHEME: 'icon-channel-external',
-    FCM_SCHEME: 'icon-fcm'
+    FCM_SCHEME: 'icon-fcm',
+    TWILIO_WHATSAPP_SCHEME: 'icon-whatsapp'
 }
 
 ACTIVITY_ICONS = {

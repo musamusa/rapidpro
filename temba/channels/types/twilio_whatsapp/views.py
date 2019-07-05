@@ -28,11 +28,15 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             org = self.request.user.get_org()
             phone_number = self.cleaned_data['phone_number']
 
-            if '+' in phone_number:
-                phone_number.replace('+', '').strip()
+            try:
+                phone = phonenumbers.parse(phone_number)
+                phone_number = phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
+            except Exception:
+                raise ValidationError(_('Invalid number. Ensure number includes country code, e.g. +14153019999'))
 
             # does a bot already exist on this account with that auth token
-            existing = Channel.objects.filter(org=org, is_active=True, address=phone_number).first()
+            existing = Channel.objects.filter(org=org, is_active=True, address=phone_number,
+                                              channel_type='TWP').first()
             if existing:
                 raise ValidationError(_("A WhatsApp channel for this phone number already exists on your account."))
 

@@ -761,19 +761,19 @@
   -elif object.channel_type == 'TWP'
     %h4
       -blocktrans
-        To finish configuring your Facebook connection, you'll need to enter the following webhook URL.
-        Once your number get approved, you can type the number into the box below, get the webhook URL and add it to
-        the number on the <a href="https://www.twilio.com/console/sms/whatsapp/senders" target="_new">Twilio console</a>
-        following these steps:
+        To finish configuring your WhatsApp connection, you'll need to enter the webhook URL below on your Twilio's
+        <a href="https://www.twilio.com/console/sms/whatsapp/senders" target="_new">settings page</a> following these steps:
 
       %ol.whatsapp-steps
         %li
           -blocktrans
             Find the number that you want to set up and click on "Configure".
+          %img{src:'{{ STATIC_URL }}images/twilio_whatsapp_configure_1.jpg'}
 
         %li
           -blocktrans
             Copy the webhook URL provided after this step and paste in the box "A MESSAGE COMES IN".
+          %img{src:'{{ STATIC_URL }}images/twilio_whatsapp_configure_2.jpg'}
 
         %li
           -blocktrans
@@ -1137,6 +1137,10 @@
     ol.line-steps li, ol.whatsapp-steps li {
       margin-top: 10px;
       list-style: decimal;
+    }
+
+    ol.whatsapp-steps li img {
+      margin: 5px 0 10px 0;
     }
 
     .info {
