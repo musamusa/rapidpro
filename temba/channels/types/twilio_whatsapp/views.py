@@ -22,7 +22,8 @@ from twilio import TwilioRestException
 class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
         phone_number = forms.CharField(label=_("WhatsApp number"),
-                                       help_text=_("Type the WhatsApp number"))
+                                       help_text=_("Type the WhatsApp number"),
+                                       widget=forms.TextInput(attrs={'placeholder': 'e.g. +14153019999'}))
 
         def clean_phone_number(self):
             org = self.request.user.get_org()
