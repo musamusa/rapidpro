@@ -27,7 +27,7 @@ class TwilioWhatsappType(ChannelType):
     icon = 'icon-whatsapp'
     show_config_page = True
 
-    claim_blurb = _("""Add a WhatsApp number from Twilio to send and receive messages to WhatsApp users.""")
+    claim_blurb = _("""Add a WhatsApp number from Twilio to send and receive messages from WhatsApp users.""")
     claim_view = ClaimView
 
     schemes = [TWILIO_WHATSAPP_SCHEME]
