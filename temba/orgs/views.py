@@ -105,7 +105,7 @@ class OrgPermsMixin(object):
 
     def has_org_perm(self, permission):
         if self.org:
-            return self.get_user().has_perm(permission)
+            return self.get_user().has_org_perm(self.org, permission)
         return False
 
     def has_permission(self, request, *args, **kwargs):
