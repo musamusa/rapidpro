@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.files.base import ContentFile
 from django.core.urlresolvers import reverse
+from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.functions import Upper
@@ -1236,6 +1237,12 @@ class ContactCRUDL(SmartCRUDL):
         title = _("Invite Participants")
         template_name = 'contacts/contact_invite_filter.haml'
 
+        def has_permission_view_objects(self):
+            group = ContactGroup.all_groups.filter(org=self.request.user.get_org(), uuid=self.kwargs.get('group')).first()
+            if not group:
+                raise PermissionDenied()
+            return None
+
         def get_gear_links(self):
             return []
 
@@ -1335,6 +1342,12 @@ class ContactCRUDL(SmartCRUDL):
 
     class Filter(ContactActionMixin, ContactListView):
         template_name = "contacts/contact_filter.haml"
+
+        def has_permission_view_objects(self):
+            group = ContactGroup.all_groups.filter(org=self.request.user.get_org(), uuid=self.kwargs.get('group')).first()
+            if not group:
+                raise PermissionDenied()
+            return None
 
         def get_gear_links(self):
             links = []
