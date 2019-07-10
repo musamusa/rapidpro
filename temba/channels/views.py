@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Count, Sum
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
@@ -1602,6 +1602,12 @@ class ChannelCRUDL(SmartCRUDL):
 
     class Configuration(OrgPermsMixin, SmartReadView):
 
+        def has_permission_view_objects(self):
+            channel = Channel.objects.filter(org=self.request.user.get_org(), pk=self.kwargs.get('pk')).first()
+            if not channel:
+                raise PermissionDenied()
+            return None
+
         def get_context_data(self, **kwargs):
             context = super(ChannelCRUDL.Configuration, self).get_context_data(**kwargs)
 
@@ -1884,6 +1890,12 @@ class ChannelLogCRUDL(SmartCRUDL):
         fields = ('channel', 'description', 'created_on')
         link_fields = ('channel', 'description', 'created_on')
         paginate_by = 50
+
+        def has_permission_view_objects(self):
+            channel = Channel.objects.filter(org=self.request.user.get_org(), pk=self.request.GET['channel']).first()
+            if not channel:
+                raise PermissionDenied()
+            return None
 
         def derive_queryset(self, **kwargs):
             channel = Channel.objects.get(pk=self.request.GET['channel'])

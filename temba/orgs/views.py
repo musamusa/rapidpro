@@ -101,7 +101,7 @@ class OrgPermsMixin(object):
             else:
                 return HttpResponseRedirect(settings.LOGIN_URL)
 
-        return None
+        return self.has_permission_view_objects()
 
     def has_org_perm(self, permission):
         if self.org:
@@ -127,6 +127,9 @@ class OrgPermsMixin(object):
             return True
 
         return self.has_org_perm(self.permission)
+
+    def has_permission_view_objects(self):
+        return None
 
 
 class AnonMixin(OrgPermsMixin):

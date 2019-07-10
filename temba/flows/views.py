@@ -12,7 +12,7 @@ from random import randint
 from datetime import datetime, timedelta
 from django.conf import settings
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.files.storage import default_storage
 from django.core.urlresolvers import reverse
 from django.db.models import Count, Min, Max, Sum
@@ -1014,6 +1014,13 @@ class FlowCRUDL(SmartCRUDL):
         actions = ['label']
         campaign = None
 
+        def has_permission_view_objects(self):
+            from temba.campaigns.models import Campaign
+            campaign = Campaign.objects.filter(org=self.request.user.get_org(), id=self.kwargs.get('campaign_id')).first()
+            if not campaign:
+                raise PermissionDenied()
+            return None
+
         @classmethod
         def derive_url_pattern(cls, path, action):
             return r'^%s/%s/(?P<campaign_id>\d+)/$' % (path, action)
@@ -1045,6 +1052,12 @@ class FlowCRUDL(SmartCRUDL):
     class Filter(BaseList):
         add_button = True
         actions = ['unlabel', 'label']
+
+        def has_permission_view_objects(self):
+            flow_label = FlowLabel.objects.filter(org=self.request.user.get_org(), id=self.kwargs.get('label_id')).first()
+            if not flow_label:
+                raise PermissionDenied()
+            return None
 
         def get_gear_links(self):
             links = []
