@@ -16,10 +16,10 @@
 {% endblock %} 
 
 {% block content %}
-    <h4>
+    <div class="alert alert-warning">
         {% blocktrans %}
             <p>
-                Oops! If you are seeing that page is because you don't have permission to access it.
+                Oops! You don't have permission to access this page.
             </p>
             <p>
                 <a href="javascript:history.back()">
@@ -27,5 +27,5 @@
                 </a>
             </p>
         {% endblocktrans %}
-    </h4>
+    </div>
 {% endblock %}
