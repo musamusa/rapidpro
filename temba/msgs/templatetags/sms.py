@@ -38,11 +38,11 @@ def as_icon(contact_event):
         icon = 'icon-bubble-user primary'
     elif status in ['P', 'Q']:
         icon = 'icon-bubble-dots-2 green'
-    elif status == 'D':
+    elif status in ['D', 'A']:
         icon = 'icon-bubble-check green'
     elif status in ['W', 'S']:
         icon = 'icon-bubble-right green'
-    elif status in ['E', 'F']:
+    elif status in ['E', 'F', 'U']:
         icon = 'icon-bubble-notification red'
     elif status == ChannelEvent.TYPE_CALL_IN:
         icon = 'icon-call-incoming green'

@@ -60,10 +60,12 @@ QUEUED = 'Q'
 WIRED = 'W'
 SENT = 'S'
 DELIVERED = 'D'
+UNDELIVERED = 'U'
 HANDLED = 'H'
 ERRORED = 'E'
 FAILED = 'F'
 RESENT = 'R'
+READ = 'A'
 
 INCOMING = 'I'
 OUTGOING = 'O'
@@ -94,6 +96,8 @@ STATUS_CONFIG = (
     (ERRORED, _("Error Sending"), 'errored'),  # there was an error during delivery
     (FAILED, _("Failed Sending"), 'failed'),   # we gave up on sending this message
     (RESENT, _("Resent message"), 'resent'),   # we retried this message
+    (UNDELIVERED, _("Undelivered"), 'undelivered'),  # there was an error during delivery
+    (READ, _("Read"), 'read'),  # the contact read the message
 )
 
 
@@ -1666,6 +1670,26 @@ class Msg(models.Model):
         self.save(update_fields=('status', 'modified_on', 'sent_on'))
 
         Channel.track_status(self.channel, "Delivered")
+
+    def status_undelivered(self):
+        """
+        Update the message status to UNDELIVERED
+        """
+        self.status = UNDELIVERED
+        self.save(update_fields=('status', 'modified_on', 'error_count'))
+
+        Channel.track_status(self.channel, "Undelivered")
+
+    def status_read(self):
+        """
+        Update the message status to READ
+        """
+        self.status = READ
+        if not self.sent_on:
+            self.sent_on = timezone.now()
+        self.save(update_fields=('status', 'modified_on', 'sent_on'))
+
+        Channel.track_status(self.channel, "Read")
 
     def archive(self):
         """

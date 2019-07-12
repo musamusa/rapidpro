@@ -19,6 +19,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django.utils.dateparse import parse_datetime
+from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from django_redis import get_redis_connection
@@ -244,11 +245,14 @@ class TwimlAPIHandler(BaseChannelHandler):
                 sms.status_delivered()
             elif status == 'failed':
                 sms.status_fail()
-            elif status == 'undelivered':
-                msg_log = channel.logs.filter(msg_id=sms.id).order_by('-id').first()
-                msg_log.description = 'Message Undelivered'
+            elif status in ['undelivered', 'read']:
+                msg_log = channel.logs.filter(msg_id=sms.id).only('description').order_by('-id').first()
+                msg_log.description = _('Message undelivered') if status == 'undelivered' else _('Message read')
                 msg_log.save(update_fields=('description',))
-                sms.status_fail()
+                if status == 'undelivered':
+                    sms.status_undelivered()
+                else:
+                    sms.status_read()
 
             return HttpResponse("", status=200)
 
