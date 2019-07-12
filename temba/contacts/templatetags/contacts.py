@@ -7,7 +7,7 @@ from temba.contacts.models import ContactURN, EMAIL_SCHEME, EXTERNAL_SCHEME, FAC
 from temba.contacts.models import TELEGRAM_SCHEME, TEL_SCHEME, TWITTER_SCHEME, TWITTERID_SCHEME, TWILIO_SCHEME
 from temba.contacts.models import LINE_SCHEME, TWILIO_WHATSAPP_SCHEME
 from temba.ivr.models import IVRCall
-from temba.msgs.models import ERRORED, FAILED
+from temba.msgs.models import ERRORED, FAILED, UNDELIVERED
 
 register = template.Library()
 
@@ -32,7 +32,9 @@ ACTIVITY_ICONS = {
     'Incoming': 'icon-bubble-user',
     'Outgoing': 'icon-bubble-right',
     'Failed': 'icon-bubble-notification',
+    'Undelivered': 'icon-bubble-notification',
     'Delivered': 'icon-bubble-check',
+    'Read': 'icon-bubble-check',
     'Call': 'icon-phone',
     'IVRCall': 'icon-call-outgoing',
     'DTMF': 'icon-call-incoming',
@@ -116,6 +118,10 @@ def activity_icon(item):
                 icon = 'Failed'
             elif obj.status == 'D':
                 icon = 'Delivered'
+            elif obj.status == 'U':
+                icon = 'Undelivered'
+            elif obj.status == 'A':
+                icon = 'Read'
             else:
                 icon = 'Outgoing'
     elif item['type'] == 'run-start':
@@ -140,7 +146,7 @@ def history_class(item):
 
     if item['type'] in ('msg', 'broadcast'):
         classes.append('msg')
-        if obj.status in (ERRORED, FAILED):
+        if obj.status in (ERRORED, FAILED, UNDELIVERED):
             classes.append('warning')
     else:
         classes.append('non-msg')
