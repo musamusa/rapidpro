@@ -34,7 +34,7 @@ ACTIVITY_ICONS = {
     'Failed': 'icon-bubble-notification',
     'Undelivered': 'icon-bubble-notification',
     'Delivered': 'icon-bubble-check',
-    'Read': 'icon-bubble-check',
+    'Read': 'icon-bubble-double-check',
     'Call': 'icon-phone',
     'IVRCall': 'icon-call-outgoing',
     'DTMF': 'icon-call-incoming',

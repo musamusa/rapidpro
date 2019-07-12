@@ -38,8 +38,10 @@ def as_icon(contact_event):
         icon = 'icon-bubble-user primary'
     elif status in ['P', 'Q']:
         icon = 'icon-bubble-dots-2 green'
-    elif status in ['D', 'A']:
+    elif status == 'D':
         icon = 'icon-bubble-check green'
+    elif status == 'A':
+        icon = 'icon-bubble-double-check green'
     elif status in ['W', 'S']:
         icon = 'icon-bubble-right green'
     elif status in ['E', 'F', 'U']:
