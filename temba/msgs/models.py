@@ -1628,19 +1628,20 @@ class Msg(models.Model):
         """
         Update the message status to DELIVERED
         """
-        self.status = DELIVERED
-        if not self.sent_on:
-            self.sent_on = timezone.now()
-        self.save(update_fields=('status', 'modified_on', 'sent_on'))
+        if self.status != READ:
+            self.status = DELIVERED
+            if not self.sent_on:
+                self.sent_on = timezone.now()
+            self.save(update_fields=('status', 'modified_on', 'sent_on'))
 
-        Channel.track_status(self.channel, "Delivered")
+            Channel.track_status(self.channel, "Delivered")
 
     def status_undelivered(self):
         """
         Update the message status to UNDELIVERED
         """
         self.status = UNDELIVERED
-        self.save(update_fields=('status', 'modified_on', 'error_count'))
+        self.save(update_fields=('status', 'modified_on'))
 
         Channel.track_status(self.channel, "Undelivered")
 

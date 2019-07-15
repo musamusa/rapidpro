@@ -33,7 +33,7 @@ from temba.orgs.models import NEXMO_UUID
 from temba.msgs.models import Msg, HANDLE_EVENT_TASK, HANDLER_QUEUE, MSG_EVENT, OUTGOING
 from temba.triggers.models import Trigger
 from temba.ussd.models import USSDSession
-from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit
+from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit, datetime_to_str
 from temba.utils.queues import push_task
 from temba.utils.http import HttpEvent, http_headers
 from temba.utils.jiochat import JiochatClient
@@ -247,12 +247,21 @@ class TwimlAPIHandler(BaseChannelHandler):
                 sms.status_fail()
             elif status in ['undelivered', 'read']:
                 msg_log = channel.logs.filter(msg_id=sms.id).only('description').order_by('-id').first()
-                msg_log.description = _('Message undelivered') if status == 'undelivered' else _('Message read')
-                msg_log.save(update_fields=('description',))
-                if status == 'undelivered':
-                    sms.status_undelivered()
-                else:
-                    sms.status_read()
+                if msg_log:
+                    log_response = json.loads(msg_log.response)
+                    log_response['status'] = status
+                    log_response['date_updated'] = datetime_to_str(timezone.now(), format='%a, %d %b %Y %H:%M:%S')
+                    msg_log.response = json.dumps(log_response)
+
+                    if status == 'undelivered':
+                        sms.status_undelivered()
+                        log_description = _('Message undelivered')
+                    else:
+                        sms.status_read()
+                        log_description = _('Message read')
+
+                    msg_log.description = log_description
+                    msg_log.save(update_fields=('description', 'response'))
 
             return HttpResponse("", status=200)
 
