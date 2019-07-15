@@ -862,12 +862,13 @@ class Org(SmartModel):
     def remove_smtp_config(self, user):
         if self.config:
             config = self.config_json()
-            config.pop(SMTP_FROM_EMAIL)
-            config.pop(SMTP_HOST)
-            config.pop(SMTP_USERNAME)
-            config.pop(SMTP_PASSWORD)
-            config.pop(SMTP_PORT)
-            config.pop(SMTP_ENCRYPTION)
+            if SMTP_FROM_EMAIL in config:
+                config.pop(SMTP_FROM_EMAIL)
+                config.pop(SMTP_HOST)
+                config.pop(SMTP_USERNAME)
+                config.pop(SMTP_PASSWORD)
+                config.pop(SMTP_PORT)
+                config.pop(SMTP_ENCRYPTION)
             self.config = json.dumps(config)
             self.modified_by = user
             self.save()
