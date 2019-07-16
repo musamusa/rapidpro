@@ -245,23 +245,10 @@ class TwimlAPIHandler(BaseChannelHandler):
                 sms.status_delivered()
             elif status == 'failed':
                 sms.status_fail()
-            elif status in ['undelivered', 'read']:
-                msg_log = channel.logs.filter(msg_id=sms.id).only('description').order_by('-id').first()
-                if msg_log:
-                    log_response = json.loads(msg_log.response)
-                    log_response['status'] = status
-                    log_response['date_updated'] = datetime_to_str(timezone.now(), format='%a, %d %b %Y %H:%M:%S')
-                    msg_log.response = json.dumps(log_response)
-
-                    if status == 'undelivered':
-                        sms.status_undelivered()
-                        log_description = _('Message undelivered')
-                    else:
-                        sms.status_read()
-                        log_description = _('Message read')
-
-                    msg_log.description = log_description
-                    msg_log.save(update_fields=('description', 'response'))
+            elif status == 'undelivered':
+                sms.status_undelivered()
+            elif status == 'read':
+                sms.status_read()
 
             return HttpResponse("", status=200)
 
