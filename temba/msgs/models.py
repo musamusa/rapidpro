@@ -752,6 +752,9 @@ class Msg(models.Model):
 
     metadata = models.TextField(null=True, help_text=_("The metadata for this msg"))
 
+    read_on = models.DateTimeField(null=True, blank=True,
+                                   help_text=_('Date that the message was read by the WhatsApp contact'))
+
     @classmethod
     def send_messages(cls, all_msgs):
         """
@@ -1649,11 +1652,17 @@ class Msg(models.Model):
         Update the message status to READ
         """
         self.status = READ
+        self.read_on = timezone.now()
         if not self.sent_on:
             self.sent_on = timezone.now()
-        self.save(update_fields=('status', 'modified_on', 'sent_on'))
+        self.save(update_fields=('status', 'modified_on', 'sent_on', 'read_on'))
 
         Channel.track_status(self.channel, "Read")
+
+    @classmethod
+    def update_whatsapp_msgs_status(cls):
+        cls.objects.filter(channel__channel_type='TWP', status=DELIVERED).exclude(
+            read_on__isnull=True).update(status=READ)
 
     def archive(self):
         """
