@@ -999,6 +999,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'check_messages_task',
         'schedule': timedelta(seconds=300)
     },
+    "update-whatsapp-msgs-status": {
+        'task': 'update_whatsapp_msgs_status',
+        'schedule': timedelta(seconds=60)
+    },
     "fail-old-messages": {
         'task': 'fail_old_messages',
         'schedule': crontab(hour=0, minute=0),
