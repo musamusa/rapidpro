@@ -144,7 +144,10 @@ class WriteSerializer(serializers.Serializer):
 
         super(WriteSerializer, self).__init__(*args, **kwargs)
 
-        self.instance = None
+        context = kwargs.get('context', None)
+        view = context.get('view') if context and 'view' in context else None
+
+        self.instance = kwargs.get('instance', None) if view and view.throttle_scope == 'v3.contacts' else None
 
     def run_validation(self, data=serializers.empty):
         if not isinstance(data, dict):
@@ -374,7 +377,7 @@ class ContactWriteSerializer(WriteSerializer):
             self.instance = Contact.get_or_create(self.org, self.user, name, urns=self.parsed_urns, language=language)
 
         # Contact.get_or_create doesn't nullify language so do that here
-        if 'language' in self.validated_data and language is None:
+        if 'language' in self.validated_data and language is not None:
             self.instance.language = language.lower() if language else None
             self.instance.save()
 

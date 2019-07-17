@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import random
+import six
 import string
 import itertools
 
@@ -17,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from smartmin.views import SmartFormView
 from smartmin.email import build_email_context
 from smartmin.users.models import RecoveryToken, FailedLogin
-from rest_framework import views, status, mixins, generics
+from rest_framework import views, status, generics
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
@@ -48,7 +49,7 @@ from temba.api.v2.views import ResthooksEndpoint as ResthooksEndpointV2
 from temba.api.v2.views import ResthookSubscribersEndpoint as ResthookSubscribersEndpointV2
 from temba.api.v2.views import ResthookEventsEndpoint as ResthookEventsEndpointV2
 from temba.campaigns.models import Campaign
-from temba.contacts.models import Contact
+from temba.contacts.models import Contact, ContactField
 from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool, splitting_getlist
@@ -863,7 +864,71 @@ class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
     """
     permission = 'contacts.contact_api'
     throttle_scope = 'v3.contacts'
-    lookup_params = {'uuid': 'uuid', 'urn': 'urns__identity'}
+    lookup_params = {'uuid': 'uuid', 'urns': 'urns__identity', 'urn': 'urns__identity'}
+
+    def get_lookup_values(self):
+        """
+        Extracts lookup_params from the request URL, e.g. {"uuid": "123..."}
+        """
+        lookup_values = {}
+        for param, field in six.iteritems(self.lookup_params):
+            if param in self.request.query_params:
+                param_value = self.request.query_params[param]
+
+                # try to normalize URN lookup values
+                if param in ['urn', 'urns']:
+                    param_value = self.normalize_urn(param_value)
+
+                lookup_values[field] = param_value
+
+        if len(lookup_values) > 1:
+            raise InvalidQueryError("URL can only contain one of the following parameters: " + ", ".join(self.lookup_params.keys()))
+
+        return lookup_values
+
+    def post_save(self, instance):
+        """
+        Can be overridden to add custom handling after object creation
+        """
+        pass
+
+    def post(self, request, *args, **kwargs):
+        self.lookup_values = self.get_lookup_values()
+
+        # determine if this is an update of an existing object or a create of a new object
+        if self.lookup_values:
+            print(self.lookup_values)
+            instance = self.get_object()
+        else:
+            instance = None
+
+        user = request.user
+        context = self.get_serializer_context()
+        context['lookup_values'] = self.lookup_values
+        context['instance'] = instance
+
+        serializer = self.write_serializer_class(instance=instance, data=request.data, context=context, user=user)
+
+        if serializer.is_valid():
+            with transaction.atomic():
+                output = serializer.save()
+                self.post_save(output)
+                return self.render_write_response(output, context)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def prepare_for_serialization(self, object_list):
+        # initialize caches of all contact fields and URNs
+        org = self.request.user.get_org()
+        Contact.bulk_cache_initialize(org, object_list)
+
+    def get_serializer_context(self):
+        """
+        So that we only fetch active contact fields once for all contacts
+        """
+        context = super(ContactsEndpoint, self).get_serializer_context()
+        context['contact_fields'] = ContactField.objects.filter(org=self.request.user.get_org(), is_active=True)
+        return context
 
     def get_object(self):
         queryset = self.get_queryset().filter(**self.lookup_values)
@@ -876,6 +941,11 @@ class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
 
     def perform_destroy(self, instance):
         instance.release(self.request.user)
+
+    def render_write_response(self, write_output, context):
+        response_serializer = self.serializer_class(instance=write_output, context=context)
+        status_code = status.HTTP_200_OK if context['instance'] else status.HTTP_201_CREATED
+        return Response(response_serializer.data, status=status_code)
 
     @classmethod
     def get_read_explorer(cls):
