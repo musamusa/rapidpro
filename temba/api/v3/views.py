@@ -1738,6 +1738,8 @@ class MessagesEndpoint(MessagesEndpointV2):
             ...
         }
     """
+    throttle_scope = 'v3.messages'
+
     @classmethod
     def get_read_explorer(cls):
         source_object = MessagesEndpointV2.get_read_explorer()
@@ -2091,6 +2093,7 @@ class RunsEndpoint(RunsEndpointV2):
             ...
         }
     """
+    throttle_scope = 'v3.runs'
     serializer_class = FlowRunReadSerializer
 
     def filter_queryset(self, queryset):
