@@ -7,6 +7,7 @@ import itertools
 from django import forms
 from django.contrib.auth import authenticate
 from django.http import HttpResponse, JsonResponse
+from django.db import transaction
 from django.db.models import Prefetch
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
@@ -16,13 +17,13 @@ from django.views.decorators.csrf import csrf_exempt
 from smartmin.views import SmartFormView
 from smartmin.email import build_email_context
 from smartmin.users.models import RecoveryToken, FailedLogin
-from rest_framework import views, status
+from rest_framework import views, status, mixins, generics
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from temba.api.models import APIToken, api_token, DeviceToken
 from temba.api.v1.views import ContactEndpoint as ContactEndpointV1, FlowStepEndpoint as FlowStepEndpointV1
-from temba.api.v2.views import WriteAPIMixin, BaseAPIView, ListAPIMixin, SSLPermission, IsAuthenticated
+from temba.api.v2.views import WriteAPIMixin, BaseAPIView, ListAPIMixin, SSLPermission, IsAuthenticated, DeleteAPIMixin
 from temba.api.v2.views import AuthenticateView as AuthenticateEndpointV2
 from temba.api.v2.views import RunsEndpoint as RunsEndpointV2
 from temba.api.v2.views import ExplorerView as ExplorerViewV2
@@ -61,6 +62,17 @@ def get_apitoken_from_auth(auth):
     token = auth.split(' ')[-1]
     api_token = APIToken.objects.filter(key=token).only('org').first()
     return api_token if api_token else None
+
+
+class BaseAPIViewV3(BaseAPIView):
+    """
+    Base class of all our API endpoints
+    """
+    throttle_scope = 'v3'
+
+    @transaction.non_atomic_requests
+    def dispatch(self, request, *args, **kwargs):
+        return super(BaseAPIViewV3, self).dispatch(request, *args, **kwargs)
 
 
 class RootView(views.APIView):
@@ -747,7 +759,7 @@ class ChannelEventsEndpoint(ChannelEventsEndpointV2):
         return source_object
 
 
-class ContactsEndpoint(ContactEndpointV1):
+class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
     """
     ## Adding a Contact
 
@@ -836,8 +848,34 @@ class ContactsEndpoint(ContactEndpointV1):
                 }
             }]
         }
+    ## Deleting Contacts
+
+    A **DELETE** can also be used to delete an existing contact if you specify either its UUID or one of its URNs in the
+    URL.
+
+    Examples:
+
+        DELETE /api/v3/contacts.json?uuid=27fb583b-3087-4778-a2b3-8af489bf4a93
+
+        DELETE /api/v3/contacts.json?urn=tel%3A%2B250783835665
+
+    You will receive either a 204 response if a contact was deleted, or a 404 response if no matching contact was found.
     """
     permission = 'contacts.contact_api'
+    throttle_scope = 'v3.contacts'
+    lookup_params = {'uuid': 'uuid', 'urn': 'urns__identity'}
+
+    def get_object(self):
+        queryset = self.get_queryset().filter(**self.lookup_values)
+
+        # don't blow up if posted a URN that doesn't exist - we'll let the serializer create a new contact
+        if self.request.method == 'POST' and 'urns__identity' in self.lookup_values:
+            return queryset.first()
+        else:
+            return generics.get_object_or_404(queryset)
+
+    def perform_destroy(self, instance):
+        instance.release(self.request.user)
 
     @classmethod
     def get_read_explorer(cls):
@@ -892,8 +930,8 @@ class ContactsEndpoint(ContactEndpointV1):
             'slug': 'contact-delete',
             'params': [dict(name='uuid', required=False,
                             help="One or more UUIDs to filter by. (repeatable) ex: 27fb583b-3087-4778-a2b3-8af489bf4a93"),
-                       dict(name='urns', required=False,
-                            help="One or more URNs to filter by.  ex: tel:+250788123123,twitter:ben"),
+                       dict(name='urn', required=False,
+                            help="One URN to filter by.  ex: tel:+250788123123"),
                        dict(name='group_uuids', required=False,
                             help="One or more group UUIDs to filter by. (repeatable) ex: 6685e933-26e1-4363-a468-8f7268ab63a9")],
         }

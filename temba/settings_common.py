@@ -1129,6 +1129,11 @@ REST_FRAMEWORK = {
         'v2.messages': '2500/hour',
         'v2.runs': '2500/hour',
         'v2.api': '2500/hour',
+        'v3': '3600/hour',
+        'v3.contacts': '3600/hour',
+        'v3.messages': '3600/hour',
+        'v3.runs': '3600/hour',
+        'v3.api': '3600/hour',
     },
     'PAGE_SIZE': 250,
     'DEFAULT_RENDERER_CLASSES': (
