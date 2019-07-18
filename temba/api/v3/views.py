@@ -964,7 +964,7 @@ class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
                             help="only contacts which have changed on this date or after.  ex: 2012-01-28T18:00:00.000"),
                        dict(name='before', required=False,
                             help="only contacts which have changed on this date or before. ex: 2012-01-28T18:00:00.000")],
-            'example': {'query': "urn=tel%3A%2B250788123123"},
+            'example': {'query': "urns=tel%3A%2B250788123123"},
         }
 
     @classmethod
