@@ -240,7 +240,7 @@ class Broadcast(models.Model):
 
     @classmethod
     def create(cls, org, user, text, recipients, base_language=None, channel=None, media=None, send_all=False,
-               quick_replies=None, **kwargs):
+               quick_replies=None, apply_options=None, **kwargs):
         # for convenience broadcasts can still be created with single translation and no base_language
         if isinstance(text, six.string_types):
             base_language = org.primary_language.iso_code if org.primary_language else 'base'
@@ -254,6 +254,9 @@ class Broadcast(models.Model):
         metadata = None
         if quick_replies:
             metadata = json.dumps(dict(quick_replies=quick_replies))
+
+        elif apply_options and apply_options.get('options', []):
+            metadata = json.dumps(dict(apply_options=apply_options))
 
         broadcast = cls.objects.create(org=org, channel=channel, send_all=send_all,
                                        base_language=base_language, text=text, media=media,
@@ -397,9 +400,31 @@ class Broadcast(models.Model):
         language_metadata = []
         if self.metadata:
             metadata = json.loads(self.metadata)
-            for item in metadata.get('quick_replies'):
+            for item in metadata.get('quick_replies', []):
                 text = Language.get_localized_text(text_translations=item, preferred_languages=preferred_languages)
                 language_metadata.append(text)
+
+        return language_metadata
+
+    def get_translated_apply_options(self, contact, org=None):
+        """
+        Gets the appropriate apply options translation for the given contact
+        """
+        preferred_languages = self.get_preferred_languages(contact, org)
+        language_metadata = {}
+        if self.metadata:
+            options = []
+            metadata = json.loads(self.metadata)
+            if 'apply_options' in metadata and 'options' in metadata.get('apply_options'):
+                apply_options = metadata.get('apply_options', [])
+                for item in apply_options.get('options'):
+                    text = Language.get_localized_text(text_translations=item, preferred_languages=preferred_languages)
+                    options.append(text)
+                language_metadata['options'] = options
+                language_metadata['option_true'] = Language.get_localized_text(
+                    text_translations=apply_options.get('option_true'), preferred_languages=preferred_languages)
+                language_metadata['option_false'] = Language.get_localized_text(
+                    text_translations=apply_options.get('option_false'), preferred_languages=preferred_languages)
 
         return language_metadata
 
@@ -469,6 +494,8 @@ class Broadcast(models.Model):
             # get the appropriate quick replies translation for this contact
             quick_replies = self.get_translated_quick_replies(contact)
 
+            apply_options = self.get_translated_apply_options(contact)
+
             media = self.get_translated_media(contact)
             if media:
                 media_type, media_url = media.split(':', 1)
@@ -512,7 +539,8 @@ class Broadcast(models.Model):
                                           insert_object=False,
                                           attachments=[media] if media else None,
                                           created_on=created_on,
-                                          quick_replies=quick_replies)
+                                          quick_replies=quick_replies,
+                                          apply_options=apply_options)
 
             except UnreachableException:
                 # there was no way to reach this contact, do not create a message
@@ -1149,12 +1177,12 @@ class Msg(models.Model):
         return sorted_logs[0] if sorted_logs else None
 
     def reply(self, text, user, trigger_send=False, expressions_context=None, connection=None, attachments=None, msg_type=None,
-              send_all=False, created_on=None, quick_replies=None):
+              send_all=False, created_on=None, quick_replies=None, apply_options=None):
 
         return self.contact.send(text, user, trigger_send=trigger_send, expressions_context=expressions_context,
                                  response_to=self if self.id else None, connection=connection, attachments=attachments,
                                  msg_type=msg_type or self.msg_type, created_on=created_on, all_urns=send_all,
-                                 high_priority=True, quick_replies=quick_replies)
+                                 high_priority=True, quick_replies=quick_replies, apply_options=apply_options)
 
     def update(self, cmd):
         """
@@ -1438,7 +1466,8 @@ class Msg(models.Model):
     @classmethod
     def create_outgoing(cls, org, user, recipient, text, broadcast=None, channel=None, high_priority=False,
                         created_on=None, response_to=None, expressions_context=None, status=PENDING, insert_object=True,
-                        attachments=None, topup_id=None, msg_type=INBOX, connection=None, quick_replies=None):
+                        attachments=None, topup_id=None, msg_type=INBOX, connection=None, quick_replies=None,
+                        apply_options=None):
 
         if not org or not user:  # pragma: no cover
             raise ValueError("Trying to create outgoing message with no org or user")
@@ -1552,6 +1581,13 @@ class Msg(models.Model):
                 if value:
                     quick_replies[counter] = value
             metadata = json.dumps(dict(quick_replies=quick_replies))
+
+        if apply_options and apply_options.get('options', []):
+            for counter, option in enumerate(apply_options.get('options')):
+                (value, errors) = Msg.evaluate_template(text=option, context=expressions_context, org=org)
+                if value:
+                    apply_options.get('options')[counter] = value
+            metadata = json.dumps(dict(apply_options=apply_options))
 
         msg_args = dict(contact=contact,
                         contact_urn=contact_urn,

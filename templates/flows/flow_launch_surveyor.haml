@@ -1,0 +1,27 @@
+{% extends "smartmin/delete_confirm.html" %}
+-load i18n temba
+
+-block modal
+    {{block.super}}
+    :javascript
+        $(".modal-footer .btn.primary").show();
+        $(".modal-footer .btn.secondary").text("Cancel");
+
+    -blocktrans
+        %p
+            You will not be able to change your survey after launching.
+        %p
+            If you need to make changes, make a copy of this survey and rename it.
+            Users will need to download this updated version to submit responses.
+            We also suggest that you archive this survey to make it unavailable to users for future use.
+
+        %p
+            Are you sure you want to launch the flow
+            %span.name
+              {{object}}
+            now?
+
+    :css
+        .name {
+            font-weight: 400;
+        }

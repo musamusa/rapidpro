@@ -781,3 +781,38 @@ def get_api_user():
         user = User.objects.create_user('api', 'code@temba.com')
         user.groups.add(Group.objects.get(name='Service Users'))
         return user
+
+
+@six.python_2_unicode_compatible
+class DeviceToken(models.Model):
+    """
+    Our Device token for user receive push notifications
+    """
+
+    is_active = models.BooleanField(default=True)
+
+    device_token = models.TextField(primary_key=True)
+
+    user = models.ForeignKey(User, related_name='device_tokens')
+
+    created = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def get_or_create(cls, device_token, user):
+        """
+        Gets or creates a device token for this user
+        """
+
+        device_tokens = cls.objects.filter(user=user, device_token=device_token)
+
+        if not device_tokens:
+            device_token = cls.objects.create(user=user, device_token=device_token)
+        else:
+            device_token = device_tokens.first()
+            device_token.is_active = True
+            device_token.save(update_fields=['is_active'])
+
+        return device_token
+
+    def __str__(self):
+        return self.device_token

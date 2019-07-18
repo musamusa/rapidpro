@@ -1,15 +1,24 @@
 from __future__ import print_function, unicode_literals
 
+import requests
+import json
+
 from celery.task import task
 from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
 from django_redis import get_redis_connection
+from django.template import loader
+from django.core.mail import send_mail
 
 from temba.utils import chunk_list
 from temba.utils.queues import nonoverlapping_task
+from temba.utils.email import send_template_email
 from .models import WebHookEvent, WebHookResult
+
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 @task(track_started=True, name='deliver_event_task')
@@ -78,3 +87,65 @@ def trim_webhook_event_task():
         event_ids = event_ids.values_list('id', flat=True)
         for batch in chunk_list(event_ids, 1000):
             WebHookEvent.objects.filter(id__in=batch).delete()
+
+
+@task(track_started=True, name='send_account_manage_email_task')
+def send_account_manage_email_task(user_email, message):
+    branding = settings.BRANDING.get(settings.DEFAULT_BRAND)
+
+    if not user_email or not branding:  # pragma: needs cover
+        return
+
+    subject = _("%(name)s Request Info") % branding
+    template = "orgs/email/manage_account_email"
+
+    context = dict(message=message)
+    context['subject'] = subject
+
+    send_template_email(user_email, subject, template, context, branding)
+
+
+@task(track_started=True, name='send_recovery_mail')
+def send_recovery_mail(context, emails):
+    hostname = getattr(settings, 'HOSTNAME')
+
+    col_index = hostname.find(':')
+    domain = hostname[:col_index] if col_index > 0 else hostname
+
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'website@%s' % domain)
+    user_email_template = getattr(settings, "USER_FORGET_EMAIL_TEMPLATE", "smartmin/users/user_email.txt")
+
+    email_template = loader.get_template(user_email_template)
+    send_mail(_('Password Changing Request'), email_template.render(context), from_email, emails, fail_silently=False)
+
+
+@task(track_started=True, name='push_notification_to_fcm')
+def push_notification_to_fcm(user_tokens):
+    scopes = ['https://www.googleapis.com/auth/firebase.messaging']
+    credentials = ServiceAccountCredentials._from_parsed_json_keyfile(settings.FCM_CONFIG, scopes)
+    access_token_info = credentials.get_access_token()
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer %s' % access_token_info.access_token
+    }
+
+    for token in user_tokens:
+        data = {
+            "message": {
+                "token": token,
+                "notification": {
+                    "body": str(_("There is a new access request. Check your User Approval session")),
+                    "title": str(_("Surveyor User Request"))
+                }
+            }
+        }
+
+        try:
+            print("[%s] Sending push notification..." % timezone.now())
+            response = requests.post(settings.FCM_HOST, data=json.dumps(data), headers=headers, timeout=5)
+            if response.status_code == 200:
+                print("[%s] Push notification sent successfully" % timezone.now())
+        except Exception as e:  # pragma: no cover
+            import traceback
+            traceback.print_exc(e)

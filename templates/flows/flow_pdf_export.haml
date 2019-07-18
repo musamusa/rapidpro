@@ -233,6 +233,12 @@
         -elif flow.flow_type == 'S'
           .icon-mobile
         {{ flow.name }}
+        -if flow.flow_type == 'S'
+          %span{style:'font-size: 14px'}
+            -if flow.launch_status == 'D'
+              -trans "Demo"
+            -elif flow.launch_status == 'P'
+              -trans "Launched"
 
       #pending{ng-show:'pending == "S" || pending == "P"'}
         %div{class:"alert alert-info"}
@@ -402,6 +408,8 @@
 
                     .node-attachment.viewer-button{ng-class:'{"icon-videocam": action._media.type == "video", "icon-photo": action._media.type=="image", "icon-arrow-right-8": action._media.type=="audio"}', ng-show:'action._media', ng-click:'clickShowActionMedia(action); $event.stopPropagation();'}
                     .node-attachment.icon-attachment{ng-show:'action._attachURL'}
+                    .node-attachment.viewer-button.icon-button-quick-reply{ng-show:'action.quick_replies.length > 0'}
+                    .node-attachment.viewer-button.icon-checkbox-checked{ng-show:'action.apply_options.options.length > 0'}
 
                     .uploading{ng-show:'action.uploading'}
                       %img.throbber{ src: "{{ STATIC_URL }}images/loader-bars.gif" }
@@ -512,6 +520,9 @@
               -trans "Wait for "
               [[ruleset.label]]
 
+            .title.wait-message{ng-show:'ruleset.ruleset_type=="wait_date"'}
+              -trans "Wait for Date"
+
             .title.wait-ussd{ng-show:'ruleset.ruleset_type=="wait_menu"'}
               -trans "Wait for USSD Menu"
 
@@ -532,6 +543,10 @@
 
             .title.wait-gps{ng-show:'ruleset.ruleset_type=="wait_gps"'}
               -trans "Wait for "
+              [[ruleset.label]]
+
+            .title.wait-gps{ng-show:'ruleset.ruleset_type=="all_that_apply"'}
+              -trans "Select all that apply "
               [[ruleset.label]]
 
             .title.webhook-header{ng-show:'ruleset.ruleset_type=="wait_recording"'}

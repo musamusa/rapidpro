@@ -440,7 +440,7 @@ class Org(SmartModel):
         Trigger.import_triggers(data, self, user, same_site)
 
     @classmethod
-    def export_definitions(cls, site_link, components):
+    def export_definitions(cls, site_link, components, revision=None):
         from temba.campaigns.models import Campaign
         from temba.flows.models import Flow
         from temba.triggers.models import Trigger
@@ -451,10 +451,19 @@ class Org(SmartModel):
         exported_triggers = []
         exported_links = []
 
+        keep_on_current_version = True if not revision else False
+
         for component in components:
             if isinstance(component, Flow):
                 component.ensure_current_version()  # only export current versions
-                exported_flows.append(component.as_json(expand_contacts=True))
+                if keep_on_current_version:
+                    exported_flows.append(component.as_json(expand_contacts=True))
+                else:
+                    flow_revision = component.revisions.filter(revision=revision).first()
+                    if flow_revision:
+                        exported_flows.append(flow_revision.get_definition_json())
+                    else:
+                        exported_flows.append(component.as_json(expand_contacts=True))
             elif isinstance(component, Campaign):
                 exported_campaigns.append(component.as_json())
             elif isinstance(component, Trigger):
@@ -2009,13 +2018,13 @@ class Org(SmartModel):
                                                       include_archived=include_archived)
 
         primary_components = set(itertools.chain(flows, campaigns))
-        all_components = set()
+        all_components = list()
 
         def add_component(c):
             if c in all_components:
                 return
 
-            all_components.add(c)
+            all_components.append(c)
             if c in primary_components:
                 primary_components.remove(c)
 
@@ -2220,7 +2229,8 @@ class Org(SmartModel):
             return None
 
         if not hasattr(user, '_org'):
-            org = Org.objects.filter(administrators=user, is_active=True).first()
+            org = Org.objects.filter(Q(administrators=user) | Q(editors=user) | Q(viewers=user) | Q(surveyors=user),
+                                     is_active=True).first()
             if org:
                 user._org = org
 

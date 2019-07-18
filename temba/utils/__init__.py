@@ -19,6 +19,7 @@ from django.utils.timezone import is_aware
 from django_countries import countries
 from itertools import islice
 
+
 DEFAULT_DATE = datetime.datetime(1, 1, 1, 0, 0, 0, 0, None)
 MAX_UTC_OFFSET = 14 * 60 * 60  # max offset postgres supports for a timezone
 
