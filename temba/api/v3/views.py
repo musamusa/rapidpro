@@ -144,7 +144,7 @@ class RootView(views.APIView):
     will get a response with status code 429. The response will also include a header called 'Retry-After' which will
     specify the number of seconds that you should wait for before making further requests.
 
-    The rate limit for all endpoints is 2,500 requests per hour. It is important to honor the Retry-After header when
+    The rate limit for all endpoints is 3,600 requests per hour. It is important to honor the Retry-After header when
     encountering 429 responses as the limit is subject to change without notice.
 
     ## Date Values
@@ -1502,6 +1502,7 @@ class FlowStepEndpoint(FlowStepEndpointV1):
     """
     permission = 'flows.flow_api'
     write_serializer_class = FlowRunWriteSerializer
+    throttle_scope = 'v3.flowstep'
 
     @classmethod
     def get_write_explorer(cls):
