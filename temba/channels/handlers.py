@@ -19,7 +19,6 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django.utils.dateparse import parse_datetime
-from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from django_redis import get_redis_connection
@@ -33,7 +32,7 @@ from temba.orgs.models import NEXMO_UUID
 from temba.msgs.models import Msg, HANDLE_EVENT_TASK, HANDLER_QUEUE, MSG_EVENT, OUTGOING
 from temba.triggers.models import Trigger
 from temba.ussd.models import USSDSession
-from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit, datetime_to_str
+from temba.utils import get_anonymous_user, json_date_to_datetime, ms_to_datetime, on_transaction_commit
 from temba.utils.queues import push_task
 from temba.utils.http import HttpEvent, http_headers
 from temba.utils.jiochat import JiochatClient
