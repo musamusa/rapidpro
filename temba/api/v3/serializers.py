@@ -1,5 +1,7 @@
 from temba.flows.models import FlowRun, Flow, FlowStep
+from temba.contacts.models import Contact, URN, TEL_SCHEME
 from ..v1.serializers import FlowRunWriteSerializer as FlowRunWriteSerializerV1
+from ..v1.serializers import ContactWriteSerializer as ContactWriteSerializerV1
 from ..v2.serializers import FlowRunReadSerializer as FlowRunReadSerializerV2
 from ..v2.serializers import FlowReadSerializer as FlowReadSerializerV2
 
@@ -59,3 +61,39 @@ class FlowReadSerializer(FlowReadSerializerV2):
     class Meta:
         model = Flow
         fields = FlowReadSerializerV2.Meta.fields + ('revision', 'launch_status')
+
+
+class ContactWriteSerializer(ContactWriteSerializerV1):
+
+    def validate_urns(self, value):
+        if value is not None:
+            org = self.context['org']
+            self.parsed_urns = []
+
+            # this field isn't allowed if we are looking up by URN in the URL
+            if 'urns__identity' in self.context['lookup_values']:
+                raise serializers.ValidationError("Field not allowed when using URN in URL")
+
+            # or for updates by anonymous organizations (we do allow creation of contacts with URNs)
+            if org.is_anon and self.instance:
+                raise serializers.ValidationError("Updating URNs not allowed for anonymous organizations")
+
+            # if creating a contact, URNs can't belong to other contacts
+            if not self.instance:
+                for urn in value:
+                    if Contact.from_urn(org, urn):
+                        raise serializers.ValidationError("URN belongs to another contact: %s" % urn)
+
+            for urn in value:
+                try:
+                    normalized = URN.normalize(urn)
+                    scheme, path, display = URN.to_parts(normalized)
+                    # for backwards compatibility we don't validate phone numbers here
+                    if scheme != TEL_SCHEME and not URN.validate(normalized):  # pragma: needs cover
+                        raise ValueError()
+                except ValueError:
+                    raise serializers.ValidationError("Invalid URN: '%s'" % urn)
+
+                self.parsed_urns.append(normalized)
+
+        return value
