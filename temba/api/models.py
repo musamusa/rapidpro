@@ -794,12 +794,14 @@ class DeviceToken(models.Model):
         Gets or creates a device token for this user
         """
 
-        device_tokens = cls.objects.filter(is_active=True, user=user, device_token=device_token)
+        device_tokens = cls.objects.filter(user=user, device_token=device_token)
 
         if not device_tokens:
             device_token = cls.objects.create(user=user, device_token=device_token)
         else:
             device_token = device_tokens.first()
+            device_token.is_active = True
+            device_token.save(update_fields=['is_active'])
 
         return device_token
 
