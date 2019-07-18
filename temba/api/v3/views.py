@@ -54,7 +54,7 @@ from temba.flows.models import Flow, FlowStart, FlowStep, RuleSet
 from temba.orgs.models import get_user_orgs, Org
 from temba.utils import str_to_bool, splitting_getlist
 
-from .serializers import FlowRunReadSerializer, FlowReadSerializer, FlowRunWriteSerializer
+from .serializers import FlowRunReadSerializer, FlowReadSerializer, FlowRunWriteSerializer, ContactWriteSerializer
 from ..tasks import send_account_manage_email_task, send_recovery_mail, push_notification_to_fcm
 from ..support import InvalidQueryError
 
@@ -865,6 +865,7 @@ class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
     permission = 'contacts.contact_api'
     throttle_scope = 'v3.contacts'
     lookup_params = {'uuid': 'uuid', 'urns': 'urns__identity', 'urn': 'urns__identity'}
+    write_serializer_class = ContactWriteSerializer
 
     def get_lookup_values(self):
         """
@@ -897,7 +898,6 @@ class ContactsEndpoint(ContactEndpointV1, DeleteAPIMixin, BaseAPIViewV3):
 
         # determine if this is an update of an existing object or a create of a new object
         if self.lookup_values:
-            print(self.lookup_values)
             instance = self.get_object()
         else:
             instance = None
