@@ -4045,9 +4045,18 @@ class RuleSet(models.Model):
             elif msg:
                 text = msg.text
 
-            # TODO Implement Spell Checker here
             try:
-                pass
+                if len(text) <= settings.SPELL_CHECKER_TEXT_MIN_LENGTH:
+                    raise Exception
+
+                data = {'text': text}
+                params = {'mkt': 'en-us', 'mode': 'spell'}
+                headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Ocp-Apim-Subscription-Key': settings.BING_SPELL_CHECKER_API_KEY,
+                }
+                spell_check_response = requests.post(settings.BING_SPELL_CHECKER_ENDPOINT, headers=headers,
+                                                     params=params, data=data)
             except Exception:
                 pass
 
