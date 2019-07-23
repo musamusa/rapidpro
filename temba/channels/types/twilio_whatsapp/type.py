@@ -39,9 +39,6 @@ class TwilioWhatsappType(ChannelType):
         countrycode = timezone_to_country_code(org.timezone)
         return countrycode in TWILIO_SUPPORTED_COUNTRIES_CONFIG
 
-    def has_attachment_support(self, channel):
-        return channel.country in ('US', 'CA')
-
     def send(self, channel, msg, text):
         callback_url = Channel.build_twilio_callback_url(channel.callback_domain, channel.channel_type, channel.uuid,
                                                          msg.id)
