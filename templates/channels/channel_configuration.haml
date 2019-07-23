@@ -758,6 +758,41 @@
     %code
       {{ channel.secret }}
 
+  -elif object.channel_type == 'TWP'
+    %h4
+      -blocktrans
+        To finish configuring your WhatsApp connection, you'll need to enter the webhook URL below on your Twilio's
+        <a href="https://www.twilio.com/console/sms/whatsapp/senders" target="_new">settings page</a> following these steps:
+
+      %ol.whatsapp-steps
+        %li
+          -blocktrans
+            Find the number that you want to set up and click on "Configure".
+          %p
+            %img{src:'{{ STATIC_URL }}images/twilio_whatsapp_configure_1.jpg'}
+
+        %li
+          -blocktrans
+            Copy the webhook URL provided below and paste in the box "A MESSAGE COMES IN"
+          %p
+            %img{src:'{{ STATIC_URL }}images/twilio_whatsapp_configure_2.jpg'}
+
+        %li
+          -blocktrans
+            Click on Configure.
+
+        %li
+          -blocktrans
+            Now you are ready to start using WhatsApp.
+
+    %hr
+
+    %h4
+      -trans "Webhook URL"
+
+    %code
+      https://{{ domain }}{% url 'courier.twp' object.uuid 'receive' %}
+
   -elif object.channel_type == 'JC'
     %h4
       -blocktrans
@@ -1085,9 +1120,13 @@
       font-size:20px;
     }
 
-    ol.line-steps li {
+    ol.line-steps li, ol.whatsapp-steps li {
       margin-top: 10px;
       list-style: decimal;
+    }
+
+    ol.whatsapp-steps li img {
+      margin: 5px 0 10px 0;
     }
 
     .info {

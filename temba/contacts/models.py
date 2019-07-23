@@ -53,6 +53,7 @@ JIOCHAT_SCHEME = 'jiochat'
 LINE_SCHEME = 'line'
 TEL_SCHEME = 'tel'
 TELEGRAM_SCHEME = 'telegram'
+TWILIO_WHATSAPP_SCHEME = 'whatsapp'
 TWILIO_SCHEME = 'twilio'
 TWITTER_SCHEME = 'twitter'
 TWITTERID_SCHEME = 'twitterid'
@@ -72,7 +73,8 @@ URN_SCHEME_CONFIG = ((TEL_SCHEME, _("Phone number"), 'phone', 'tel_e164'),
                      (EMAIL_SCHEME, _("Email address"), 'email', EMAIL_SCHEME),
                      (EXTERNAL_SCHEME, _("External identifier"), 'external', EXTERNAL_SCHEME),
                      (JIOCHAT_SCHEME, _("Jiochat identifier"), 'jiochat', JIOCHAT_SCHEME),
-                     (FCM_SCHEME, _("Firebase Cloud Messaging identifier"), 'fcm', FCM_SCHEME))
+                     (FCM_SCHEME, _("Firebase Cloud Messaging identifier"), 'fcm', FCM_SCHEME),
+                     (TWILIO_WHATSAPP_SCHEME, _("WhatsApp phone number"), 'whatsapp', TWILIO_WHATSAPP_SCHEME))
 
 
 IMPORT_HEADERS = tuple((c[2], c[0]) for c in URN_SCHEME_CONFIG)
@@ -143,7 +145,7 @@ class URN(object):
         except ValueError:
             return False
 
-        if scheme == TEL_SCHEME:
+        if scheme in [TEL_SCHEME, TWILIO_WHATSAPP_SCHEME]:
             try:
                 parsed = phonenumbers.parse(path, country_code)
                 return phonenumbers.is_possible_number(parsed)
@@ -207,7 +209,7 @@ class URN(object):
 
         norm_path = six.text_type(path).strip()
 
-        if scheme == TEL_SCHEME:
+        if scheme in [TEL_SCHEME, TWILIO_WHATSAPP_SCHEME]:
             norm_path, valid = cls.normalize_number(norm_path, country_code)
         elif scheme == TWITTER_SCHEME:
             norm_path = norm_path.lower()
@@ -324,6 +326,12 @@ class URN(object):
     @classmethod
     def from_jiochat(cls, path):
         return cls.from_parts(JIOCHAT_SCHEME, path)
+
+    @classmethod
+    def from_twilio_whatsapp(cls, path):
+        if str(path).startswith('whatsapp'):
+            path = path.split(':')[-1]
+        return cls.from_parts(TWILIO_WHATSAPP_SCHEME, path)
 
 
 @six.python_2_unicode_compatible
@@ -1965,7 +1973,8 @@ class Contact(TembaModel):
             return tel.path
 
     def send(self, text, user, trigger_send=True, response_to=None, expressions_context=None, connection=None,
-             quick_replies=None, attachments=None, msg_type=None, created_on=None, all_urns=False, high_priority=False):
+             quick_replies=None, attachments=None, msg_type=None, created_on=None, all_urns=False, high_priority=False,
+             apply_options=None):
         from temba.msgs.models import Msg, INBOX, PENDING, SENT, UnreachableException
 
         status = SENT if created_on else PENDING
@@ -1982,7 +1991,7 @@ class Contact(TembaModel):
                                           response_to=response_to, expressions_context=expressions_context,
                                           connection=connection, attachments=attachments, msg_type=msg_type or INBOX,
                                           status=status, quick_replies=quick_replies, created_on=created_on,
-                                          high_priority=high_priority)
+                                          high_priority=high_priority, apply_options=apply_options)
                 if msg is not None:
                     msgs.append(msg)
             except UnreachableException:
@@ -2025,6 +2034,7 @@ class ContactURN(models.Model):
         JIOCHAT_SCHEME: dict(label="Jiochat", key=None, id=0, field=None, urn_scheme=JIOCHAT_SCHEME),
         FCM_SCHEME: dict(label="FCM", key=None, id=0, field=None, urn_scheme=FCM_SCHEME),
         LINE_SCHEME: dict(label='Line', key=None, id=0, field=None, urn_scheme=LINE_SCHEME),
+        TWILIO_WHATSAPP_SCHEME: dict(label='WhatsApp', key=None, id=0, field=None, urn_scheme=TWILIO_WHATSAPP_SCHEME),
     }
 
     EXPORT_SCHEME_HEADERS = tuple((c[0], c[1]) for c in URN_SCHEME_CONFIG)

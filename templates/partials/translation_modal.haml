@@ -39,6 +39,29 @@
                   .translate-from{ng-show:"translation.fromQuickReplies"}
                     [[ response[language.from] ]]
                   %input{type:"text", name:"quick-reply-title", auto-complete:"", ng-model:"response[language.to]", ng-required:"true"}
+
+            .all-that-apply{ng-show:"translation.fromApplyOptions.length"}
+              .modal-all-that-apply-header
+                .all-that-apply-title
+                  -trans "Select all that apply"
+
+              .modal-all-that-apply{ng-repeat:"option in translation.fromApplyOptions", class:""}
+                .all-that-apply-title.center-translate
+                  .translate-from{ng-show:"translation.fromApplyOptions"}
+                    [[ option[language.from] ]]
+                  %input{type:"text", name:"apply-option-title", auto-complete:"", ng-model:"option[language.to]", ng-required:"true"}
+
+              .all-that-apply-title
+                -trans "Selection text"
+                .modal-all-that-apply
+                  .all-that-apply-true
+                    .translate-from{ng-show:"translation.fromApplyOptions"}
+                      [[ translation.fromApplyTrue[language.from] ]]
+                    %input{type:"text", name:"apply-true", auto-complete:"", ng-model:"translation.fromApplyTrue[language.to]", ng-required:"true"}
+                  .all-that-apply-false
+                    .translate-from{ng-show:"translation.fromApplyOptions"}
+                      [[ translation.fromApplyFalse[language.from] ]]
+                    %input{type:"text", name:"apply-false", auto-complete:"", ng-model:"translation.fromApplyFalse[language.to]", ng-required:"true"}
       .modal-footer
         %button{ng-click:"cancel()",class:"btn btn-secondary"}
           -trans "Cancel"

@@ -194,6 +194,9 @@ class Flow(TembaModel):
     RULES_ENTRY = 'R'
     ACTIONS_ENTRY = 'A'
 
+    STATUS_DEMO = 'D'
+    STATUS_PRODUCTION = 'P'
+
     FLOW_TYPES = ((FLOW, _("Message flow")),
                   (MESSAGE, _("Single Message Flow")),
                   (VOICE, _("Phone call flow")),
@@ -202,6 +205,9 @@ class Flow(TembaModel):
 
     ENTRY_TYPES = ((RULES_ENTRY, "Rules"),
                    (ACTIONS_ENTRY, "Actions"))
+
+    LAUNCH_STATUS = ((STATUS_DEMO, _("Demo")),
+                     (STATUS_PRODUCTION, _("Production")))
 
     START_MSG_FLOW_BATCH = 'start_msg_flow_batch'
 
@@ -259,11 +265,17 @@ class Flow(TembaModel):
     field_dependencies = models.ManyToManyField(ContactField, related_name='dependent_flows', verbose_name=_(''), blank=True,
                                                 help_text=('Any fields this flow depends on'))
 
+    launch_status = models.CharField(max_length=1, choices=LAUNCH_STATUS, null=True,
+                                     help_text=_("The launch status of this flow"))
+
     @classmethod
     def create(cls, org, user, name, flow_type=FLOW, expires_after_minutes=FLOW_DEFAULT_EXPIRES_AFTER, base_language=None):
+        launch_status = Flow.STATUS_DEMO if flow_type == Flow.SURVEY else None
+
         flow = Flow.objects.create(org=org, name=name, flow_type=flow_type,
                                    expires_after_minutes=expires_after_minutes, base_language=base_language,
-                                   saved_by=user, created_by=user, modified_by=user)
+                                   saved_by=user, created_by=user, modified_by=user,
+                                   launch_status=launch_status)
 
         analytics.track(user.username, 'nyaruka.flow_created', dict(name=name))
         return flow
@@ -1068,6 +1080,10 @@ class Flow(TembaModel):
             results[count['result_key']] = result
         return results
 
+    def get_last_flow_revision(self):
+        last = self.revisions.last()
+        return last.revision if last else None
+
     def delete_results(self):
         """
         Removes all flow runs, values and steps for a flow.
@@ -1793,7 +1809,8 @@ class Flow(TembaModel):
                                                  media=send_action.media,
                                                  base_language=self.base_language,
                                                  send_all=send_action.send_all,
-                                                 quick_replies=send_action.quick_replies)
+                                                 quick_replies=send_action.quick_replies,
+                                                 apply_options=send_action.apply_options)
                     broadcast.update_contacts(all_contact_ids)
 
                     # manually set our broadcast status to QUEUED, our sub processes will send things off for us
@@ -3611,6 +3628,8 @@ class FlowStep(models.Model):
 @six.python_2_unicode_compatible
 class RuleSet(models.Model):
     TYPE_WAIT_MESSAGE = 'wait_message'
+    TYPE_ALL_THAT_APPLY = 'all_that_apply'
+    TYPE_WAIT_DATE = 'wait_date'
 
     # Ussd
     TYPE_WAIT_USSD_MENU = 'wait_menu'
@@ -3651,16 +3670,19 @@ class RuleSet(models.Model):
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
 
     TYPE_WAIT = (TYPE_WAIT_MESSAGE, TYPE_WAIT_RECORDING, TYPE_WAIT_DIGIT, TYPE_WAIT_DIGITS, TYPE_WAIT_USSD_MENU,
-                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS)
+                 TYPE_WAIT_USSD, TYPE_WAIT_PHOTO, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_GPS,
+                 TYPE_ALL_THAT_APPLY, TYPE_WAIT_DATE)
 
     TYPE_USSD = (TYPE_WAIT_USSD_MENU, TYPE_WAIT_USSD)
 
     TYPE_CHOICES = ((TYPE_WAIT_MESSAGE, "Wait for message"),
+                    (TYPE_WAIT_DATE, "Wait for date"),
                     (TYPE_WAIT_USSD_MENU, "Wait for USSD menu"),
                     (TYPE_WAIT_USSD, "Wait for USSD message"),
                     (TYPE_WAIT_RECORDING, "Wait for recording"),
                     (TYPE_WAIT_DIGIT, "Wait for digit"),
                     (TYPE_WAIT_DIGITS, "Wait for digits"),
+                    (TYPE_ALL_THAT_APPLY, "Wait for all that apply"),
                     (TYPE_SUBFLOW, "Subflow"),
                     (TYPE_WEBHOOK, "Webhook"),
                     (TYPE_RESTHOOK, "Resthook"),
@@ -4330,6 +4352,7 @@ class FlowRevision(SmartModel):
     def get_definition_json(self):
 
         definition = json.loads(self.definition)
+        definition['metadata']['revision'] = self.revision
 
         # if it's previous to version 6, wrap the definition to
         # mirror our exports for those versions
@@ -6031,14 +6054,16 @@ class ReplyAction(Action):
     MEDIA = 'media'
     SEND_ALL = 'send_all'
     QUICK_REPLIES = 'quick_replies'
+    APPLY_OPTIONS = 'apply_options'
 
-    def __init__(self, uuid, msg=None, media=None, quick_replies=None, send_all=False):
+    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, send_all=False):
         super(ReplyAction, self).__init__(uuid)
 
         self.msg = msg
         self.media = media if media else {}
         self.send_all = send_all
         self.quick_replies = quick_replies if quick_replies else []
+        self.apply_options = apply_options if apply_options else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
@@ -6054,11 +6079,12 @@ class ReplyAction(Action):
             raise FlowException("Invalid reply action, no message")
 
         return cls(json_obj.get(cls.UUID), msg=json_obj.get(cls.MESSAGE), media=json_obj.get(cls.MEDIA, None),
-                   quick_replies=json_obj.get(cls.QUICK_REPLIES), send_all=json_obj.get(cls.SEND_ALL, False))
+                   quick_replies=json_obj.get(cls.QUICK_REPLIES), apply_options=json_obj.get(cls.APPLY_OPTIONS),
+                   send_all=json_obj.get(cls.SEND_ALL, False))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, media=self.media, quick_replies=self.quick_replies,
-                    send_all=self.send_all)
+                    apply_options=self.apply_options, send_all=self.send_all)
 
     @staticmethod
     def get_translated_quick_replies(metadata, run):
@@ -6087,6 +6113,15 @@ class ReplyAction(Action):
             if self.quick_replies:
                 quick_replies = ReplyAction.get_translated_quick_replies(self.quick_replies, run)
 
+            apply_options = {}
+            if self.apply_options:
+                apply_options['option_true'] = run.flow.get_localized_text(self.apply_options.get('option_true'),
+                                                                           run.contact)
+                apply_options['option_false'] = run.flow.get_localized_text(self.apply_options.get('option_false'),
+                                                                            run.contact)
+                apply_options['options'] = ReplyAction.get_translated_quick_replies(self.apply_options.get('options'),
+                                                                                    run)
+
             attachments = None
             if self.media:
                 # localize our media attachment
@@ -6107,7 +6142,8 @@ class ReplyAction(Action):
             if msg and msg.id:
                 replies = msg.reply(text, user, trigger_send=False, expressions_context=context,
                                     connection=run.connection, msg_type=self.MSG_TYPE, quick_replies=quick_replies,
-                                    attachments=attachments, send_all=self.send_all, created_on=created_on)
+                                    attachments=attachments, send_all=self.send_all, created_on=created_on,
+                                    apply_options=apply_options)
             else:
                 # if our run has been responded to or any of our parent runs have
                 # been responded to consider us interactive with high priority
@@ -6115,7 +6151,7 @@ class ReplyAction(Action):
                 replies = run.contact.send(text, user, trigger_send=False, expressions_context=context,
                                            connection=run.connection, msg_type=self.MSG_TYPE, attachments=attachments,
                                            quick_replies=quick_replies, created_on=created_on, all_urns=self.send_all,
-                                           high_priority=high_priority)
+                                           high_priority=high_priority, apply_options=apply_options)
         return replies
 
 

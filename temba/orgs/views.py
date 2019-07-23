@@ -37,8 +37,6 @@ from functools import cmp_to_key
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartFormView, SmartReadView, SmartUpdateView, SmartListView, SmartTemplateView
 from smartmin.views import SmartModelFormView, SmartModelActionView
 from datetime import timedelta
-from parse_rest.connection import register
-from parse_rest.datatypes import Object
 from temba.api.models import APIToken
 from temba.campaigns.models import Campaign
 from temba.channels.models import Channel
@@ -103,7 +101,7 @@ class OrgPermsMixin(object):
             else:
                 return HttpResponseRedirect(settings.LOGIN_URL)
 
-        return None
+        return self.has_permission_view_objects()
 
     def has_org_perm(self, permission):
         if self.org:
@@ -129,6 +127,9 @@ class OrgPermsMixin(object):
             return True
 
         return self.has_org_perm(self.permission)
+
+    def has_permission_view_objects(self):
+        return None
 
 
 class AnonMixin(OrgPermsMixin):
@@ -864,7 +865,10 @@ class OrgCRUDL(SmartCRUDL):
             org.connect_twilio(account_sid, account_token, self.request.user)
             org.save()
 
-            return HttpResponseRedirect(self.get_success_url())
+            _next = self.request.GET.get('next', None)
+            redirect_url = _next if _next else self.get_success_url()
+
+            return HttpResponseRedirect(redirect_url)
 
     class NexmoConfiguration(InferOrgMixin, OrgPermsMixin, SmartReadView):
 

@@ -1,0 +1,31 @@
+{% extends "frame.html" %}
+
+{% load i18n %}
+
+{% block page-title %}
+    {% blocktrans %}
+        Permission Denied
+    {% endblocktrans %}
+{% endblock %}
+
+{% block title %}
+    <div class="medium-help float-left icon-warning"></div>
+    <h2 class="font_normalize header-margin title">
+        Permission Denied
+    </h2>
+{% endblock %} 
+
+{% block content %}
+    <div class="alert alert-warning">
+        {% blocktrans %}
+            <p>
+                Oops! You don't have permission to access this page.
+            </p>
+            <p>
+                <a href="javascript:history.back()">
+                    Go back
+                </a>
+            </p>
+        {% endblocktrans %}
+    </div>
+{% endblock %}

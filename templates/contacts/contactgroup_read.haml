@@ -36,12 +36,16 @@
                   .glyph.icon-bubble-3.sent
                 -ifequal broadcast.status 'D'
                   .glyph.icon-bubble-check.delivered
+                -ifequal broadcast.status 'A'
+                  .glyph.icon-bubble-double-check.read
                 -ifequal boadcast.status 'H'
                   .glyph.icon-bubble-3.handled
                 -ifequal broadcast.status 'E'
                   .glyph.icon-bubble-notification.errored
                 -ifequal broadcast.status 'F'
                   .glyph.icon-bubble-notification.failed
+                -ifequal broadcast.status 'U'
+                  .glyph.icon-bubble-notification.undelivered
               %td.created
                 {{ broadcast.created_on|gmail_time }}
 
@@ -71,7 +75,7 @@
  .sent{
   color: #5bb75b;
   }
-  .delivered{
+  .delivered, .read{
   color: #51a351;
   }
  .handled{
@@ -80,7 +84,7 @@
  .errored{
   color: #da4f49;
   }
- .failed{
+ .failed, .undelivered{
   color: #da4f49;
   }
 {% endblock %}

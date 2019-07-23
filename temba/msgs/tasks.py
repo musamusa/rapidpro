@@ -439,3 +439,8 @@ def clear_old_msg_external_ids():
         Msg.objects.filter(pk__in=msg_id_batch).update(external_id=None)
 
     print("Cleared external ids on %d messages" % len(msg_ids))
+
+
+@task(track_started=True, name='update_whatsapp_msgs_status')
+def update_whatsapp_msgs_status():  # pragma: needs cover
+    Msg.update_whatsapp_msgs_status()

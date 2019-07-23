@@ -466,6 +466,7 @@ PERMISSIONS = {
                    'launch',
                    'launch_keyword',
                    'launch_schedule',
+                   'launch_surveyor',
                    'read',
                    'recent_messages',
                    'results',
@@ -998,6 +999,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'check_messages_task',
         'schedule': timedelta(seconds=300)
     },
+    "update-whatsapp-msgs-status": {
+        'task': 'update_whatsapp_msgs_status',
+        'schedule': timedelta(seconds=60)
+    },
     "fail-old-messages": {
         'task': 'fail_old_messages',
         'schedule': crontab(hour=0, minute=0),
@@ -1128,6 +1133,12 @@ REST_FRAMEWORK = {
         'v2.messages': '2500/hour',
         'v2.runs': '2500/hour',
         'v2.api': '2500/hour',
+        'v3': '3600/hour',
+        'v3.contacts': '7200/hour',
+        'v3.messages': '3600/hour',
+        'v3.runs': '3600/hour',
+        'v3.flowstep': '7200/hour',
+        'v3.api': '3600/hour',
     },
     'PAGE_SIZE': 250,
     'DEFAULT_RENDERER_CLASSES': (
@@ -1207,6 +1218,7 @@ MESSAGE_HANDLERS = [
 
 CHANNEL_TYPES = [
     'temba.channels.types.twilio.TwilioType',
+    'temba.channels.types.twilio_whatsapp.TwilioWhatsappType',
     'temba.channels.types.twilio_messaging_service.TwilioMessagingServiceType',
     'temba.channels.types.nexmo.NexmoType',
     'temba.channels.types.africastalking.AfricasTalkingType',
@@ -1314,5 +1326,12 @@ PARSE_APP_ID = '__YOUR_PARSE_APP_ID__'
 PARSE_REST_KEY = '__YOUR_PARSE_REST_KEY__'
 PARSE_MASTER_KEY = '__YOUR_PARSE_MASTER_KEY__'
 PARSE_SERVER_NAME = '__SERVER_NAME__'
+
+FCM_PROJECT_NAME = 'MISSING_FCM_PROJECT_NAME'
+FCM_SERVER_KEY = 'MISSING_FCM_SERVER_KEY'
+FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJECT_NAME
+
+# FCM configuration from JSON file got from FCM Console
+FCM_CONFIG = dict()
 
 CREDITS_EXPIRATION = False
