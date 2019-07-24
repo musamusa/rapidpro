@@ -1008,6 +1008,8 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
   formData.resthook = ""
   formData.shorten_url = ""
   formData.giftcard_db = ""
+  formData.spellChecker = false
+  formData.spelling_correction_sensitivity = 70
 
   if options.nodeType == 'rules' or options.nodeType == 'ivr'
 

@@ -47,10 +47,10 @@
             -trans "Correction Sensitivity"
             %a.icon-nav-help-inverted
           -trans "High"
-          %input{type:'range', id:'start', name:'correction-sensitivity', min:'70', max:'100', value:'70', ng-model:'formData.spelling_correction_sensitivity'}
+          %input{type:'range', id:'start', name:'correction-sensitivity', min:'70', max:'99', ng-model:'formData.spelling_correction_sensitivity'}
           -trans "Low"
           %label
-            -trans "70% confidence in corrections"
+            -trans "[[formData.spelling_correction_sensitivity]]% confidence in corrections"
 
       #split-on
         -trans "If the message response..."
