@@ -36,6 +36,22 @@
     .wait-ussd{ng-if:'formData.rulesetConfig.type == "wait_ussd"', ussd:1}
 
     .response{ng-if:'formData.rulesetConfig.type == "wait_message" || formData.rulesetConfig.type == "wait_date"'}><
+      #enable-spelling-correction
+        %label.enable-checkbox
+          %input{type:'checkbox', ng-model:'formData.spellChecker'}
+          -trans "Enable spelling correction"
+          %a.icon-nav-help-inverted
+
+        .correction-sensitivity{ng-show:'formData.spellChecker'}
+          %label.title
+            -trans "Correction Sensitivity"
+            %a.icon-nav-help-inverted
+          -trans "High"
+          %input{type:'range', id:'start', name:'correction-sensitivity', min:'70', max:'100', value:'70', ng-model:'formData.spelling_correction_sensitivity'}
+          -trans "Low"
+          %label
+            -trans "70% confidence in corrections"
+
       #split-on
         -trans "If the message response..."
 
