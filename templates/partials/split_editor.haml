@@ -38,11 +38,11 @@
     .response{ng-if:'formData.rulesetConfig.type == "wait_message" || formData.rulesetConfig.type == "wait_date"'}><
       #enable-spelling-correction
         %label.enable-checkbox
-          %input{type:'checkbox', ng-model:'formData.spellChecker'}
+          %input{type:'checkbox', ng-model:'formData.spell_checker'}
           -trans "Enable spelling correction"
           %a.icon-nav-help-inverted
 
-        .correction-sensitivity{ng-show:'formData.spellChecker'}
+        .correction-sensitivity{ng-show:'formData.spell_checker'}
           %label.title
             -trans "Correction Sensitivity"
             %a.icon-nav-help-inverted
