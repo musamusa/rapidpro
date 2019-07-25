@@ -35,7 +35,7 @@ from temba.utils import datetime_to_s, dict_to_json, get_anonymous_user
 from temba.utils.export import BaseExportTask, BaseExportAssetStore
 from temba.utils.expressions import evaluate_template
 from temba.utils.http import http_headers
-from temba.utils.models import SquashableModel, TembaModel, TranslatableField
+from temba.utils.models import SquashableModel, TembaModel, TranslatableField, URLTextField
 from temba.utils.queues import DEFAULT_PRIORITY, push_task, LOW_PRIORITY, HIGH_PRIORITY
 from temba.utils.text import clean_string
 from .handler import MessageHandler
@@ -772,7 +772,7 @@ class Msg(models.Model):
     topup = models.ForeignKey(TopUp, null=True, blank=True, related_name='msgs', on_delete=models.SET_NULL,
                               help_text="The topup that this message was deducted from")
 
-    attachments = ArrayField(models.URLField(max_length=255), null=True,
+    attachments = ArrayField(URLTextField(), null=True,
                              help_text=_("The media attachments on this message if any"))
 
     connection = models.ForeignKey('channels.ChannelSession', null=True,

@@ -6,7 +6,9 @@ import time
 from collections import defaultdict
 from django.contrib.postgres.fields import HStoreField
 from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import models, connection
+from django.forms.fields import URLField
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 from smartmin.models import SmartModel
@@ -147,3 +149,24 @@ class ChunkIterator(object):
 
     def next(self):
         return self._generator.next()
+
+
+class URLTextField(models.TextField):
+    default_validators = [URLValidator()]
+    description = _("URL Text Field")
+
+    def __init__(self, verbose_name=None, name=None, **kwargs):
+        super(URLTextField, self).__init__(verbose_name, name, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(URLTextField, self).deconstruct()
+        return name, path, args, kwargs
+
+    def formfield(self, **kwargs):
+        # As with CharField, this will cause URL validation to be performed
+        # twice.
+        defaults = {
+            'form_class': URLField,
+        }
+        defaults.update(kwargs)
+        return super(URLTextField, self).formfield(**defaults)
