@@ -3667,6 +3667,9 @@ class RuleSet(models.Model):
     CONFIG_WEBHOOK_BODY = 'webhook_body'
     CONFIG_RESTHOOK = 'resthook'
 
+    CONFIG_SPELL_CHECKER = 'spell_checker'
+    CONFIG_SPELLING_CORRECTION_SENSITIVITY = 'spelling_correction_sensitivity'
+
     TYPE_MEDIA = (TYPE_WAIT_PHOTO, TYPE_WAIT_GPS, TYPE_WAIT_VIDEO, TYPE_WAIT_AUDIO, TYPE_WAIT_RECORDING)
 
     TYPE_WAIT = (TYPE_WAIT_MESSAGE, TYPE_WAIT_RECORDING, TYPE_WAIT_DIGIT, TYPE_WAIT_DIGITS, TYPE_WAIT_USSD_MENU,
@@ -4046,18 +4049,35 @@ class RuleSet(models.Model):
                 text = msg.text
 
             try:
-                if len(text) <= settings.SPELL_CHECKER_TEXT_MIN_LENGTH:
-                    raise Exception
+                config = self.config_json()
+                spell_checker_enabled = config.get(RuleSet.CONFIG_SPELL_CHECKER, False) if RuleSet.CONFIG_SPELL_CHECKER in config else False
 
-                data = {'text': text}
-                params = {'mkt': 'en-us', 'mode': 'spell'}
-                headers = {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Ocp-Apim-Subscription-Key': settings.BING_SPELL_CHECKER_API_KEY,
-                }
-                spell_check_response = requests.post(settings.BING_SPELL_CHECKER_ENDPOINT, headers=headers,
-                                                     params=params, data=data)
+                if spell_checker_enabled:
+                    # Calculating percentage of sensitivity
+                    spelling_correction_sensitivity = float(config.get(RuleSet.CONFIG_SPELLING_CORRECTION_SENSITIVITY, settings.SPELL_CHECKER_DEFAULT_SENSITIVITY)) / 100
+
+                    if len(text) <= settings.SPELL_CHECKER_TEXT_MIN_LENGTH:
+                        raise Exception
+
+                    data = {'text': text}
+                    params = {'mkt': 'en-us', 'mode': settings.SPELL_CHECKER_MODE}
+                    headers = {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Ocp-Apim-Subscription-Key': settings.BING_SPELL_CHECKER_API_KEY,
+                    }
+                    spell_check_response = requests.post(settings.BING_SPELL_CHECKER_ENDPOINT, headers=headers,
+                                                         params=params, data=data)
+                    if spell_check_response.status_code != 200:
+                        raise Exception
+
+                    response = spell_check_response.json()
+                    for correction in response.get('flaggedTokens', []):
+                        for suggestion in correction.get('suggestions', []):
+                            if suggestion.get('score') >= spelling_correction_sensitivity:
+                                text = text.replace(correction.get('token'), suggestion.get('suggestion'))
+
             except Exception:
+                # Passing this because the flow needs to continue
                 pass
 
             if self.ruleset_type == RuleSet.TYPE_AIRTIME:
