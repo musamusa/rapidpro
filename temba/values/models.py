@@ -76,6 +76,9 @@ class Value(models.Model):
 
     string_value = models.TextField(help_text="The string value or string representation of this value")
 
+    string_value_corrected = models.TextField(help_text="The string value or string representation of this value corrected by Bing Spell Checker",
+                                              null=True)
+
     decimal_value = models.DecimalField(max_digits=36, decimal_places=8, null=True,
                                         help_text="The decimal value of this value if any.")
     datetime_value = models.DateTimeField(null=True,

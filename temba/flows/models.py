@@ -4062,7 +4062,7 @@ class RuleSet(models.Model):
             elif msg:
                 text = msg.text
 
-            corrected_text = text
+            corrected_text = None
             try:
                 config = self.config_json()
                 spell_checker_enabled = config.get(RuleSet.CONFIG_SPELL_CHECKER, False) if RuleSet.CONFIG_SPELL_CHECKER in config else False
@@ -4085,6 +4085,7 @@ class RuleSet(models.Model):
                     if spell_check_response.status_code != 200:
                         raise Exception
 
+                    corrected_text = text
                     response = spell_check_response.json()
                     for correction in response.get('flaggedTokens', []):
                         for suggestion in correction.get('suggestions', []):
@@ -4138,7 +4139,7 @@ class RuleSet(models.Model):
 
     def save_run_value(self, run, rule, raw_value, raw_input, text_corrected=None):
         value = six.text_type(raw_value)[:Value.MAX_VALUE_LEN]
-        text_corrected = six.text_type(text_corrected)[:Value.MAX_VALUE_LEN]
+        text_corrected = six.text_type(text_corrected)[:Value.MAX_VALUE_LEN] if text_corrected else None
         location_value = None
         dec_value = None
         dt_value = None
@@ -4169,7 +4170,8 @@ class RuleSet(models.Model):
         Value.objects.create(contact=run.contact, run=run, ruleset=self, rule_uuid=rule.uuid,
                              category=rule.get_category_name(run.flow.base_language),
                              string_value=value, decimal_value=dec_value, datetime_value=dt_value,
-                             location_value=location_value, media_value=media_value, org=run.flow.org)
+                             location_value=location_value, media_value=media_value, org=run.flow.org,
+                             string_value_corrected=text_corrected)
 
         run.save_run_result(name=self.label,
                             node_uuid=self.uuid,
