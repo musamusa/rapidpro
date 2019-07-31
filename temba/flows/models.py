@@ -881,7 +881,7 @@ class Flow(TembaModel):
                             return dict(handled=True, destination=None, destination_type=None, msgs=msgs)
 
             # find a matching rule
-            rule, value = ruleset.find_matching_rule(step, run, msg, resume_after_timeout=resume_after_timeout)
+            rule, value, value_corrected = ruleset.find_matching_rule(step, run, msg, resume_after_timeout=resume_after_timeout)
 
         flow = ruleset.flow
 
@@ -894,9 +894,8 @@ class Flow(TembaModel):
             # store the media path as the value if it isn't a "wait for a photo" in a message flow
             value = msg.attachments[0].split(':', 1)[1]
 
-        # TODO Save corrected value as well for Spell Checker feature
-        step.save_rule_match(rule, value)
-        ruleset.save_run_value(run, rule, value, msg.text)
+        step.save_rule_match(rule, value, value_corrected)
+        ruleset.save_run_value(run, rule, value, msg.text, value_corrected)
 
         # output the new value if in the simulator
         if run.contact.is_test:
@@ -1001,6 +1000,7 @@ class Flow(TembaModel):
         def value_wrapper(val):
             return dict(__default__=six.text_type(val['rule_value']),
                         text=val['text'],
+                        corrected=val['corrected'],
                         time=datetime_to_str(val['time'], format=date_format, tz=self.org.timezone),
                         category=self.get_localized_text(val['category'], contact),
                         value=six.text_type(val['rule_value']))
@@ -1484,6 +1484,7 @@ class Flow(TembaModel):
                              rule_decimal_value=step.rule_decimal_value,
                              rule_value=step.rule_value,
                              text=step.get_text(),
+                             corrected=step.rule_value_corrected,
                              step_uuid=step.step_uuid)
 
             step_run = step.run.id
@@ -1526,6 +1527,7 @@ class Flow(TembaModel):
                                        label=label,
                                        category=category,
                                        text=rule_step['text'],
+                                       corrected=rule_step['corrected'],
                                        value=value,
                                        rule_value=rule_step['rule_value'],
                                        time=time))
@@ -2888,6 +2890,7 @@ class FlowRun(models.Model):
     RESULT_CATEGORY = 'category'
     RESULT_CATEGORY_LOCALIZED = 'category_localized'
     RESULT_VALUE = 'value'
+    RESULT_CORRECTED = 'corrected'
     RESULT_INPUT = 'input'
     RESULT_CREATED_ON = 'created_on'
 
@@ -3362,7 +3365,7 @@ class FlowRun(models.Model):
         else:
             return six.text_type(value)
 
-    def save_run_result(self, name, node_uuid, category, category_localized, raw_value, raw_input):
+    def save_run_result(self, name, node_uuid, category, category_localized, raw_value, raw_input, text_corrected=None):
         # slug our name
         key = Flow.label_to_slug(name)
 
@@ -3373,6 +3376,7 @@ class FlowRun(models.Model):
             FlowRun.RESULT_NODE_UUID: node_uuid,
             FlowRun.RESULT_CATEGORY: category,
             FlowRun.RESULT_VALUE: FlowRun.serialize_value(raw_value),
+            FlowRun.RESULT_CORRECTED: FlowRun.serialize_value(text_corrected),
             FlowRun.RESULT_INPUT: raw_input,
             FlowRun.RESULT_CREATED_ON: timezone.now().isoformat(),
         }
@@ -3416,6 +3420,9 @@ class FlowStep(models.Model):
 
     rule_value = models.TextField(null=True,
                                   help_text=_("The value that was matched in our category for this ruleset, null on ActionSets"))
+
+    rule_value_corrected = models.TextField(null=True,
+                                            help_text=_("The value corrected that was matched in our category for this ruleset, null on ActionSets"))
 
     rule_decimal_value = models.DecimalField(max_digits=36, decimal_places=8, null=True,
                                              help_text=_("The decimal value that was matched in our category for this ruleset, null on ActionSets or if a non numeric rule was matched"))
@@ -3488,6 +3495,7 @@ class FlowStep(models.Model):
             rule_uuid = json_obj['rule']['uuid']
             rule_value = json_obj['rule']['value']
             rule_category = json_obj['rule']['category']
+            rule_value_corrected = json_obj['rule']['corrected']
 
             # update the value if we have an existing ruleset
             ruleset = RuleSet.objects.filter(flow=flow, uuid=node.uuid).first()
@@ -3501,7 +3509,7 @@ class FlowStep(models.Model):
                 if not rule:
                     # the user updated the rules try to match the new rules
                     msg = Msg(org=run.org, contact=run.contact, text=json_obj['rule']['text'], id=0)
-                    rule, value = ruleset.find_matching_rule(step, run, msg)
+                    rule, value, value_corrected = ruleset.find_matching_rule(step, run, msg)
 
                     if not rule:
                         raise ValueError("No such rule with UUID %s" % rule_uuid)
@@ -3509,21 +3517,22 @@ class FlowStep(models.Model):
                     rule_uuid = rule.uuid
                     rule_category = rule.get_category_name(run.flow.base_language)
                     rule_value = value
+                    rule_value_corrected = value_corrected
 
-                # TODO Save corrected text for Spell Checker feature
-                ruleset.save_run_value(run, rule, rule_value, json_obj['rule']['text'])
+                ruleset.save_run_value(run, rule, rule_value, json_obj['rule']['text'], json_obj['rule']['corrected'])
 
             # update our step with our rule details
             step.rule_uuid = rule_uuid
             step.rule_category = rule_category
             step.rule_value = rule_value
+            step.rule_value_corrected = rule_value_corrected
 
             try:
                 step.rule_decimal_value = Decimal(json_obj['rule']['value'])
             except Exception:
                 pass
 
-            step.save(update_fields=('rule_uuid', 'rule_category', 'rule_value', 'rule_decimal_value'))
+            step.save(update_fields=('rule_uuid', 'rule_category', 'rule_value', 'rule_decimal_value', 'rule_value_corrected'))
 
         return step
 
@@ -3551,12 +3560,17 @@ class FlowStep(models.Model):
     def release(self):
         self.delete()
 
-    def save_rule_match(self, rule, value):
+    def save_rule_match(self, rule, value, value_corrected=None):
         self.rule_category = rule.get_category_name(self.run.flow.base_language)
         self.rule_uuid = rule.uuid
 
         if value is None:
             value = ''
+
+        if value_corrected is None:
+            value_corrected = ''
+
+        self.rule_value_corrected = six.text_type(value_corrected)[:Msg.MAX_TEXT_LEN]
 
         # format our rule value appropriately
         if isinstance(value, datetime):
@@ -3568,7 +3582,7 @@ class FlowStep(models.Model):
         if isinstance(value, Decimal):
             self.rule_decimal_value = value
 
-        self.save(update_fields=['rule_category', 'rule_uuid', 'rule_value', 'rule_decimal_value'])
+        self.save(update_fields=['rule_category', 'rule_uuid', 'rule_value', 'rule_decimal_value', 'rule_value_corrected'])
 
     def get_text(self, run=None):
         """
@@ -3866,7 +3880,7 @@ class RuleSet(models.Model):
                 if isinstance(rule.test, TimeoutTest):
                     (result, value) = rule.matches(run, msg, context, orig_text)
                     if result > 0:
-                        return rule, value
+                        return rule, value, None
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
             url = 'https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=%s' % settings.FDL_API_KEY
@@ -3889,9 +3903,9 @@ class RuleSet(models.Model):
                     run.update_fields(response_json)
                     if result > 0:
                         short_url = response_json.get('shortLink')
-                        return rule, short_url
+                        return rule, short_url, None
             else:
-                return None, None
+                return None, None, None
 
         elif self.ruleset_type == RuleSet.TYPE_LOOKUP:
             lookup_queries = self.config_json()['lookup_queries']
@@ -3928,7 +3942,7 @@ class RuleSet(models.Model):
                 response_json = json.loads(response.text)
                 run.update_fields(response_json)
                 if result > 0:
-                    return rule, response_json
+                    return rule, response_json, None
 
         elif self.ruleset_type == RuleSet.TYPE_GIFTCARD:
             giftcard_db = self.config_json()['giftcard_db']
@@ -3947,7 +3961,7 @@ class RuleSet(models.Model):
                 response_json = json.loads(response.text)
                 run.update_fields(response_json)
                 if result > 0:
-                    return rule, response_json
+                    return rule, response_json, None
 
         elif self.ruleset_type in [RuleSet.TYPE_WEBHOOK, RuleSet.TYPE_RESTHOOK]:
             header = {}
@@ -4032,7 +4046,7 @@ class RuleSet(models.Model):
             for rule in self.get_rules():
                 (result, value) = rule.matches(run, msg, context, str(status_code))
                 if result > 0:
-                    return rule, body
+                    return rule, body, None
 
         else:
             # if it's a form field, construct an expression accordingly
@@ -4048,6 +4062,7 @@ class RuleSet(models.Model):
             elif msg:
                 text = msg.text
 
+            corrected_text = text
             try:
                 config = self.config_json()
                 spell_checker_enabled = config.get(RuleSet.CONFIG_SPELL_CHECKER, False) if RuleSet.CONFIG_SPELL_CHECKER in config else False
@@ -4074,7 +4089,7 @@ class RuleSet(models.Model):
                     for correction in response.get('flaggedTokens', []):
                         for suggestion in correction.get('suggestions', []):
                             if suggestion.get('score') >= spelling_correction_sensitivity:
-                                text = text.replace(correction.get('token'), suggestion.get('suggestion'))
+                                corrected_text = corrected_text.replace(correction.get('token'), suggestion.get('suggestion'))
 
             except Exception:
                 # Passing this because the flow needs to continue
@@ -4105,12 +4120,12 @@ class RuleSet(models.Model):
                     (result, value) = rule.matches(run, msg, context, text)
                     if result > 0:
                         # treat category as the base category
-                        return rule, value
+                        return rule, value, corrected_text
             finally:
                 if msg:
                     msg.text = orig_text
 
-        return None, None
+        return None, None, None
 
     def find_interrupt_rule(self, step, run, msg):
         rules = self.get_rules()
@@ -4121,8 +4136,9 @@ class RuleSet(models.Model):
                 return rule, value
         return None, None
 
-    def save_run_value(self, run, rule, raw_value, raw_input):
+    def save_run_value(self, run, rule, raw_value, raw_input, text_corrected=None):
         value = six.text_type(raw_value)[:Value.MAX_VALUE_LEN]
+        text_corrected = six.text_type(text_corrected)[:Value.MAX_VALUE_LEN]
         location_value = None
         dec_value = None
         dt_value = None
@@ -4160,7 +4176,8 @@ class RuleSet(models.Model):
                             category=rule.get_category_name(run.flow.base_language),
                             category_localized=rule.get_category_name(run.flow.base_language, run.contact.language),
                             raw_value=raw_value,
-                            raw_input=raw_input)
+                            raw_input=raw_input,
+                            text_corrected=text_corrected)
 
         # invalidate any cache on this ruleset
         Value.invalidate_cache(ruleset=self)
