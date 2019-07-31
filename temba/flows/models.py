@@ -4750,7 +4750,7 @@ class ExportFlowResultsTask(BaseExportTask):
         # create a mapping of column id to index
         column_map = dict()
         for col in range(len(columns)):
-            column_map[columns[col].uuid] = 6 + len(extra_urn_columns) + len(contact_fields) + col * 3
+            column_map[columns[col].uuid] = 6 + len(extra_urn_columns) + len(contact_fields) + col * 4
 
         # build a cache of rule uuid to category name, we want to use the most recent name the user set
         # if possible and back down to the cached rule_category only when necessary
@@ -4865,6 +4865,8 @@ class ExportFlowResultsTask(BaseExportTask):
                 sheet_row.append("%s (Value) - %s" % (six.text_type(ruleset.label), six.text_type(ruleset.flow.name)))
                 col_widths.append(self.WIDTH_SMALL)
                 sheet_row.append("%s (Text) - %s" % (six.text_type(ruleset.label), six.text_type(ruleset.flow.name)))
+                col_widths.append(self.WIDTH_SMALL)
+                sheet_row.append("%s (Text Corrected) - %s" % (six.text_type(ruleset.label), six.text_type(ruleset.flow.name)))
                 col_widths.append(self.WIDTH_SMALL)
 
             for run in runs:
@@ -5099,6 +5101,13 @@ class ExportFlowResultsTask(BaseExportTask):
                         if include_runs:
                             runs_sheet_row[col + 2] = text
                         merged_sheet_row[col + 2] = text
+
+                    text_corrected = run_step.rule_value_corrected
+                    if text_corrected:
+                        text_corrected = self.prepare_value(text_corrected)
+                        if include_runs:
+                            runs_sheet_row[col + 3] = text_corrected
+                        merged_sheet_row[col + 3] = text_corrected
 
                 if run_step.run.embedded_fields:
                     run_data_map = embedded_fields_mapping.get(str(run_step.run.uuid))
