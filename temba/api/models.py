@@ -213,7 +213,7 @@ class WebHookEvent(SmartModel):
 
     @classmethod
     def trigger_flow_event(cls, run, webhook_url, node_uuid, msg, action='POST', resthook=None, headers=None,
-                           webhook_body=None):
+                           webhook_body=None, force_use_data=False):
         flow = run.flow
         org = flow.org
         contact = run.contact
@@ -301,10 +301,10 @@ class WebHookEvent(SmartModel):
                     response = requests.get(webhook_url, headers=requests_headers, timeout=10)
                 else:
                     post_args = dict(url=webhook_url, headers=requests_headers, timeout=10)
-                    if webhook_body:
-                        post_args.update(dict(json=data))
-                    else:
+                    if force_use_data or not webhook_body:
                         post_args.update(dict(data=data))
+                    else:
+                        post_args.update(dict(json=data))
                     response = requests.post(**post_args)
 
                 body = response.text

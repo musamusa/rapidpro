@@ -3869,6 +3869,8 @@ class RuleSet(models.Model):
         return None
 
     def find_matching_rule(self, step, run, msg, resume_after_timeout=False):
+        from temba.api.models import WebHookEvent
+
         orig_text = None
         if msg:
             orig_text = msg.text
@@ -4012,7 +4014,6 @@ class RuleSet(models.Model):
             body = ""
 
             for url in urls:
-                from temba.api.models import WebHookEvent
 
                 (value, errors) = Msg.evaluate_template(url, context, org=run.flow.org, url_encode=True)
 
@@ -4085,18 +4086,20 @@ class RuleSet(models.Model):
                         raise Exception
 
                     data = {'text': text}
-                    params = {'mkt': spell_checker_lang_code, 'mode': settings.SPELL_CHECKER_MODE}
                     headers = {
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'Ocp-Apim-Subscription-Key': settings.BING_SPELL_CHECKER_API_KEY,
                     }
-                    spell_check_response = requests.post(settings.BING_SPELL_CHECKER_ENDPOINT, headers=headers,
-                                                         params=params, data=data)
-                    if spell_check_response.status_code != 200:
+                    action = 'POST'
+                    url = '%s/?mkt=%s&mode=%s' % (settings.BING_SPELL_CHECKER_ENDPOINT, spell_checker_lang_code, settings.SPELL_CHECKER_MODE)
+                    result = WebHookEvent.trigger_flow_event(run, url, self, msg, action, headers=headers,
+                                                             webhook_body=data, force_use_data=True)
+
+                    if result.status_code != 200:
                         raise Exception
 
                     corrected_text = text
-                    response = spell_check_response.json()
+                    response = json.loads(result.body)
                     for correction in response.get('flaggedTokens', []):
                         for suggestion in correction.get('suggestions', []):
                             if suggestion.get('score') >= spelling_correction_sensitivity:
