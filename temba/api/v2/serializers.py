@@ -711,6 +711,7 @@ class FlowRunReadSerializer(ReadSerializer):
         for value in obj.values.all():
             values[value.ruleset.context_key] = {
                 'value': value.decimal_value if value.decimal_value is not None else value.string_value,
+                'input_corrected': value.string_value_corrected if value.string_value_corrected else None,
                 'category': value.category,
                 'node': value.ruleset.uuid,
                 'time': value.modified_on,

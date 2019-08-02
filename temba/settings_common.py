@@ -1336,3 +1336,9 @@ FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJE
 FCM_CONFIG = dict()
 
 CREDITS_EXPIRATION = False
+
+BING_SPELL_CHECKER_API_KEY = '<ENTER-KEY-HERE>'
+BING_SPELL_CHECKER_ENDPOINT = 'https://api.cognitive.microsoft.com/bing/v7.0/SpellCheck'
+SPELL_CHECKER_TEXT_MIN_LENGTH = 5
+SPELL_CHECKER_DEFAULT_SENSITIVITY = 70
+SPELL_CHECKER_MODE = 'spell'
