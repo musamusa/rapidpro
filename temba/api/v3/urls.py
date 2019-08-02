@@ -11,7 +11,7 @@ from .views import CampaignsEndpoint, CampaignEventsEndpoint, ContactsEndpoint, 
 from .views import FieldsEndpoint, FlowStartsEndpoint, GroupsEndpoint, LabelsEndpoint, MediaEndpoint, MessagesEndpoint
 from .views import OrgEndpoint, ResthooksEndpoint, ResthookEventsEndpoint, ResthookSubscribersEndpoint, RunsEndpoint
 from .views import BoundariesEndpoint, ContactActionsEndpoint, MessageActionsEndpoint, CustomEndpoints, MeEndpoint
-from .views import RecoveryPasswordView
+from .views import RecoveryPasswordView, StatusEndpoint
 
 
 urlpatterns = [
@@ -28,6 +28,7 @@ urlpatterns = [
     url(r'^manage_accounts/list$', ManageAccountsListEndpoint.as_view(), name='api.v3.manage_accounts_list'),
     url(r'^manage_accounts/action/(?P<action>approve|deny)$', ManageAccountsActionEndpoint.as_view(), name='api.v3.manage_accounts_action'),
     url(r'^custom_endpoints$', CustomEndpoints.as_view(), name='api.v3.custom_endpoints'),
+    url(r'^status$', StatusEndpoint.as_view(), name='api.v3.status'),
 
     # ========== endpoints A-Z ===========
     url(r'^boundaries$', BoundariesEndpoint.as_view(), name='api.v3.boundaries'),
