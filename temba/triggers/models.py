@@ -455,8 +455,12 @@ class Trigger(SmartModel):
 
         # we have groups of contacts to start, create a flow start
         else:
+            embedded_data = self.embedded_data
+            if isinstance(embedded_data, unicode):
+                embedded_data = json.loads(embedded_data)
+
             start = FlowStart.create(self.flow, self.created_by, groups=groups, contacts=contacts,
-                                     embed=self.embedded_data if self.embedded_data else None)
+                                     embed=embedded_data if embedded_data else None)
             start.async_start()
 
         self.last_triggered = timezone.now()
