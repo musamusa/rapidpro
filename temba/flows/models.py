@@ -3495,7 +3495,7 @@ class FlowStep(models.Model):
             rule_uuid = json_obj['rule']['uuid']
             rule_value = json_obj['rule']['value']
             rule_category = json_obj['rule']['category']
-            rule_value_corrected = json_obj['rule']['corrected']
+            rule_value_corrected = json_obj['rule']['corrected'] if 'corrected' in json_obj['rule'] else None
 
             # update the value if we have an existing ruleset
             ruleset = RuleSet.objects.filter(flow=flow, uuid=node.uuid).first()
@@ -3519,7 +3519,8 @@ class FlowStep(models.Model):
                     rule_value = value
                     rule_value_corrected = value_corrected
 
-                ruleset.save_run_value(run, rule, rule_value, json_obj['rule']['text'], json_obj['rule']['corrected'])
+                ruleset.save_run_value(run, rule, rule_value, json_obj['rule']['text'],
+                                       json_obj['rule']['corrected'] if 'corrected' in json_obj['rule'] else None)
 
             # update our step with our rule details
             step.rule_uuid = rule_uuid
