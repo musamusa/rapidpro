@@ -2711,6 +2711,17 @@ class RecoveryPasswordView(SmartFormView):
             )
 
 
+class StatusEndpoint(BaseAPIView):
+    """
+    Provides the PING on API to use on Surveyor App
+    """
+
+    permission_classes = []
+
+    def get(self, request, *args, **kwargs):
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+
 class CustomEndpoints(ListAPIMixin, BaseAPIView):
     """
     ## Create Account
