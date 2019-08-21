@@ -1,3 +1,5 @@
+from django.utils.translation import ugettext_lazy as _
+
 from temba.flows.models import FlowRun, Flow, FlowStep
 from temba.contacts.models import Contact, URN, TEL_SCHEME
 from ..v1.serializers import FlowRunWriteSerializer as FlowRunWriteSerializerV1
@@ -20,6 +22,17 @@ class FlowRunReadSerializer(FlowRunReadSerializerV2):
 
 
 class FlowRunWriteSerializer(FlowRunWriteSerializerV1):
+
+    def validate_contact(self, value):
+        # If the flow status is demo, it will ignore the contact validation because it won't be saved
+        if self.flow_obj and self.flow_obj.launch_status == Flow.STATUS_DEMO:
+            return value
+
+        if value:
+            self.contact_obj = Contact.objects.filter(uuid=value, org=self.org, is_active=True).first()
+            if not self.contact_obj:  # pragma: needs cover
+                raise serializers.ValidationError(_("Unable to find contact with uuid: %s") % value)
+        return value
 
     def save(self):
         started = self.validated_data['started']
