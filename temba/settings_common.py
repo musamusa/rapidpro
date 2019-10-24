@@ -1257,6 +1257,7 @@ CHANNEL_TYPES = [
     'temba.channels.types.vumi_ussd.VumiUSSDType',
     'temba.channels.types.yo.YoType',
     'temba.channels.types.zenvia.ZenviaType',
+    'temba.channels.types.ws.WsType',
 ]
 
 # -----------------------------------------------------------------------------------
@@ -1335,3 +1336,5 @@ FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJE
 FCM_CONFIG = dict()
 
 CREDITS_EXPIRATION = False
+
+WS_URL = 'http://localhost:9091'

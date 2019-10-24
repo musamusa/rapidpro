@@ -126,3 +126,7 @@ ansible/site.retry
 docker.settings.prod
 docker.settings.aptible-stage
 docker.settings.aptible-prod
+
+temba/_settings.py
+celerybeat-schedule
+old_venv/
