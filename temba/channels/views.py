@@ -1036,11 +1036,20 @@ class UpdateAndroidForm(UpdateChannelForm):
 
 
 class UpdateTwitterForm(UpdateChannelForm):
+    
+
     class Meta(UpdateChannelForm.Meta):
         fields = 'name', 'address', 'alert_email'
         readonly = ('address',)
         labels = {'address': _('Handle')}
         helps = {'address': _('Twitter handle of this channel')}
+
+
+class UpdateWsForm(UpdateChannelForm):
+    class Meta(UpdateChannelForm.Meta):
+        fields = 'name', 'address', 'alert_email'
+        readonly = ('address',)
+        helps = {'address': _('URL to the WebSocket Server')}
 
 
 TYPE_UPDATE_FORM_CLASSES = {

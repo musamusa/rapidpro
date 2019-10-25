@@ -12,6 +12,7 @@ from temba.msgs.models import WIRED
 from temba.utils.http import HttpEvent
 from .views import ClaimView
 from ...models import Channel, ChannelType, SendException
+from ...views import UpdateWsForm
 
 
 class WsType(ChannelType):
@@ -25,6 +26,8 @@ class WsType(ChannelType):
     icon = 'icon-cord'
     show_config_page = True
 
+    update_form = UpdateWsForm
+
     claim_blurb = _("Use our pluggable API to connect a website that you already have, and start surveys from there.")
     claim_view = ClaimView
 
@@ -33,8 +36,6 @@ class WsType(ChannelType):
     attachment_support = True
 
     def send(self, channel, msg, text):
-        from temba.flows.models import RuleSet
-
         data = {
             'id': str(msg.id),
             'text': text,
