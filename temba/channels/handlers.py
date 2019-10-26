@@ -3274,6 +3274,7 @@ class TwitterHandler(BaseChannelHandler):
 
         return HttpResponse("Accepted %d messages" % len(msgs), status=200)
 
+
 class WsHandler(BaseChannelHandler):
     courier_url = r'^ws/(?P<uuid>[a-z0-9\-]+)/receive$'
     courier_name = 'courier.ws'
@@ -3286,7 +3287,6 @@ class WsHandler(BaseChannelHandler):
 
     def post(self, request, *args, **kwargs):
         from temba.msgs.models import Msg
-        from temba.flows.models import RuleSet
 
         action = kwargs['action'].lower()
 
