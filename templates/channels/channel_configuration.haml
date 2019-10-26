@@ -1062,6 +1062,17 @@
         id=2599235
     %hr
 
+  -elif object.channel_type == 'WS'
+    %h4
+      -blocktrans
+        To finish, please add this code in your HTML page.
+    %hr
+    %h4
+      -trans "Javascript Code"
+      .important
+        %p
+          -trans "// The code will be here"
+
 -block extra-script
   {{ block.super }}
   <script src="{{ STATIC_URL }}rest_framework/js/prettify-min.js"></script>
@@ -1110,6 +1121,7 @@
       border: 1px solid #ccc;
       padding: 10px 10px 0px 10px;
       margin-bottom: 10px;
+      margin-top: 10px;
     }
 
     .device .number {

@@ -32,6 +32,7 @@ from temba.msgs.models import Msg, SystemLabel, QUEUED, PENDING, WIRED, OUTGOING
 from temba.msgs.views import InboxView
 from temba.orgs.models import Org
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin, AnonMixin
+from temba.flows.models import Flow, FLOW
 from temba.channels.models import ChannelSession
 from temba.utils import analytics
 from twilio import TwilioRestException
@@ -1036,8 +1037,6 @@ class UpdateAndroidForm(UpdateChannelForm):
 
 
 class UpdateTwitterForm(UpdateChannelForm):
-    
-
     class Meta(UpdateChannelForm.Meta):
         fields = 'name', 'address', 'alert_email'
         readonly = ('address',)
@@ -1046,8 +1045,94 @@ class UpdateTwitterForm(UpdateChannelForm):
 
 
 class UpdateWsForm(UpdateChannelForm):
+    logo = forms.FileField(label=_('Logo'), required=False)
+
+    flow = forms.ChoiceField(label=_('Flow'), help_text=_('Which flow will be started'), required=False)
+
+    theme = forms.ChoiceField(label=_('Theme'), required=False)
+
+    chat_header_bg_color = forms.CharField(label=_('Chat Header Background Color'),
+                                           widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    chat_header_text_color = forms.CharField(label=_('Chat Header Text Color'),
+                                             widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    automated_chat_bg = forms.CharField(label=_('Automated Chat Background'),
+                                        widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    automated_chat_txt = forms.CharField(label=_('Automated Chat Text'),
+                                         widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    user_chat_bg = forms.CharField(label=_('User Chat Background'),
+                                   widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    user_chat_txt = forms.CharField(label=_('User Chat Text'),
+                                    widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    def __init__(self, *args, **kwargs):
+        super(UpdateWsForm, self).__init__(*args, **kwargs)
+
+        msgs_active_flows = Flow.objects.filter(is_active=True, flow_type=FLOW).only('uuid', 'name').order_by('name')
+
+        self.fields['theme'].choices = [(theme.get('name'), theme.get('name')) for theme in settings.WIDGET_THEMES]
+        self.fields['flow'].choices = [('', '')] + [(flow.uuid, flow.name) for flow in msgs_active_flows]
+
+        if self.instance.config:
+            config = self.instance.config_json()
+            self.fields['flow'].initial = config.get('flow', '')
+            self.fields['theme'].initial = config.get('theme', '')
+            self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
+                                                                     settings.WIDGET_THEMES[0]['header_bg'])
+            self.fields['chat_header_text_color'].initial = config.get('chat_header_text_color',
+                                                                       settings.WIDGET_THEMES[0]['header_txt'])
+            self.fields['automated_chat_bg'].initial = config.get('automated_chat_bg',
+                                                                  settings.WIDGET_THEMES[0]['automated_chat_bg'])
+            self.fields['automated_chat_txt'].initial = config.get('automated_chat_txt',
+                                                                   settings.WIDGET_THEMES[0]['automated_chat_txt'])
+            self.fields['user_chat_bg'].initial = config.get('user_chat_bg',
+                                                             settings.WIDGET_THEMES[0]['user_chat_bg'])
+            self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
+                                                              settings.WIDGET_THEMES[0]['user_chat_txt'])
+
+    def clean_flow(self):
+        org = self.instance.org
+        flow_uuid = self.cleaned_data.get('flow')
+        if not flow_uuid:
+            raise ValidationError(_('Flow field is required'))
+
+        existing_flow = Flow.objects.filter(org=org, is_active=True, flow_type=FLOW,
+                                            uuid=flow_uuid).only('uuid').first()
+        if not existing_flow:
+            raise ValidationError(_('The flow selected is not valid'))
+
+        return flow_uuid
+
+    def clean_logo(self):
+        channel = self.instance
+        org = channel.org
+        logo = self.cleaned_data.get('logo')
+        config = channel.config_json()
+
+        logo_media = config.get(Channel.CONFIG_WG_LOGO, None)
+
+        if logo:
+            if logo.size > 1000000:
+                raise ValidationError(_('Too big logo for the Widget, it does not accept more than 1MB'))
+
+            extension = logo.name.split('.')[-1]
+            if extension not in ['png', 'jpg', 'jpeg', 'gif']:
+                raise ValidationError(_('Please, upload a logo using one of the following formats: PNG, JPG, '
+                                        'JPEG or GIF'))
+
+            logo_media = org.save_media(logo, extension)
+
+        return logo_media
+
     class Meta(UpdateChannelForm.Meta):
-        fields = 'name', 'address', 'alert_email'
+        config_fields = ['logo', 'flow', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
+                         'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt']
+        fields = 'name', 'logo', 'flow', 'theme', 'chat_header_bg_color', 'chat_header_text_color', \
+                 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt', 'address', 'alert_email'
         readonly = ('address',)
         helps = {'address': _('URL to the WebSocket Server')}
 
@@ -1366,7 +1451,10 @@ class ChannelCRUDL(SmartCRUDL):
             return super(ChannelCRUDL.Update, self).lookup_field_help(field, default=default)
 
         def get_success_url(self):
-            return reverse('channels.channel_read', args=[self.object.uuid])
+            if self.object.channel_type == 'WS':
+                return reverse('channels.channel_configuration', args=[self.object.pk])
+            else:
+                return reverse('channels.channel_read', args=[self.object.uuid])
 
         def get_form_class(self):
             return Channel.get_type_from_code(self.object.channel_type).get_update_form()
@@ -1380,7 +1468,7 @@ class ChannelCRUDL(SmartCRUDL):
             if obj.config:
                 config = json.loads(obj.config)
                 for field in self.form.Meta.config_fields:  # pragma: needs cover
-                    config[field] = bool(self.form.cleaned_data[field])
+                    config[field] = self.form.cleaned_data[field]
                 obj.config = json.dumps(config)
             return obj
 

@@ -1338,3 +1338,19 @@ FCM_CONFIG = dict()
 CREDITS_EXPIRATION = False
 
 WS_URL = 'http://localhost:9091'
+
+WIDGET_PRIMARY_COLOR = '#289F9B'
+WIDGET_SECONDARY_COLOR = '#FFFFFF'
+WIDGET_TERTIARY_COLOR = '#000000'
+
+WIDGET_THEMES = [
+    {
+        'name': 'CCL Standard',
+        'header_bg': WIDGET_PRIMARY_COLOR,
+        'header_txt': WIDGET_SECONDARY_COLOR,
+        'automated_chat_bg': WIDGET_PRIMARY_COLOR,
+        'automated_chat_txt': WIDGET_SECONDARY_COLOR,
+        'user_chat_bg': WIDGET_SECONDARY_COLOR,
+        'user_chat_txt': WIDGET_TERTIARY_COLOR
+    }
+]

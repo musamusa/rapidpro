@@ -215,6 +215,7 @@ class Channel(TembaModel):
     CONFIG_APPLICATION_SID = 'application_sid'
     CONFIG_NUMBER_SID = 'number_sid'
     CONFIG_MESSAGING_SERVICE_SID = 'messaging_service_sid'
+    CONFIG_WG_LOGO = 'logo'
 
     CONFIG_SHORTCODE_MATCHING_PREFIXES = 'matching_prefixes'
 
