@@ -3276,6 +3276,8 @@ class TwitterHandler(BaseChannelHandler):
 
 
 class WsHandler(BaseChannelHandler):
+    courier_url = r'^ws/(?P<uuid>[a-z0-9\-]+)/receive$'
+    courier_name = 'courier.ws'
 
     handler_url = r'^ws/(?P<action>received|register|message-options)/(?P<uuid>[a-z0-9\-]+)/$'
     handler_name = 'handlers.ws_handler'
@@ -3285,7 +3287,6 @@ class WsHandler(BaseChannelHandler):
 
     def post(self, request, *args, **kwargs):
         from temba.msgs.models import Msg
-        from temba.flows.models import RuleSet
 
         action = kwargs['action'].lower()
 
@@ -3326,24 +3327,6 @@ class WsHandler(BaseChannelHandler):
             contact = Contact.get_or_create(channel.org, channel.created_by, name=name, urns=[ws_urn],
                                             channel=channel)
             return HttpResponse(json.dumps({'contact_uuid': contact.uuid}), content_type='application/json')
-
-        elif action == 'message-options':
-            msg_id = self.get_param('id')
-            if msg_id is None:
-                return HttpResponse("Missing 'id' parameter, invalid call.", status=400)
-
-            msg = Msg.objects.filter(pk=msg_id).first()
-
-            rules = {}
-            if msg:
-                try:
-                    step = msg.get_flow_step()
-                    destination = step.get_step().destination
-                    rules = RuleSet.objects.filter(uuid=destination).first().as_json()
-                except:
-                    pass
-
-            return HttpResponse(json.dumps(rules), content_type='application/json')
 
         else:
             return HttpResponse("Not handled", status=400)

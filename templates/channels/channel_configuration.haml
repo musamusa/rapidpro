@@ -1065,22 +1065,13 @@
   -elif object.channel_type == 'WS'
     %h4
       -blocktrans
-        To finish add this code in your HTML page.
-
+        To finish, please add this code in your HTML page.
     %hr
-
     %h4
       -trans "Javascript Code"
-
-    .important
-      %p
-        &lt;link rel=&quot;stylesheet&quot; href=&quot;path/to/style.css&quot;&gt;
-        <br/>
-        &lt;script src=&quot;path/to/widget.js&quot;&gt;&lt;/script&gt;
-        <br/><br/>
-
-        &lt;script type=&quot;text/javascript&quot;&gt;
-        <br/>const app = new CCLWidget({ <br/>&nbsp;&nbsp;socketUrl: '{{ object.config_json.WS_URL }}', <br/>&nbsp;&nbsp;channelUUID: '{{ object.uuid }}', <br/>&nbsp;&nbsp;hostApi: '{{ domain }}', <br/>&nbsp;&nbsp;welcomeMessage: 'Hi, need help?' <br/>});<br/>&lt;/script&gt;
+      .important
+        %p
+          -trans "// The code will be here"
 
 -block extra-script
   {{ block.super }}
@@ -1130,6 +1121,7 @@
       border: 1px solid #ccc;
       padding: 10px 10px 0px 10px;
       margin-bottom: 10px;
+      margin-top: 10px;
     }
 
     .device .number {

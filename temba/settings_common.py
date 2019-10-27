@@ -1342,3 +1342,21 @@ BING_SPELL_CHECKER_ENDPOINT = 'https://api.cognitive.microsoft.com/bing/v7.0/Spe
 SPELL_CHECKER_TEXT_MIN_LENGTH = 5
 SPELL_CHECKER_DEFAULT_SENSITIVITY = 70
 SPELL_CHECKER_MODE = 'spell'
+
+WS_URL = 'http://localhost:9091'
+
+WIDGET_PRIMARY_COLOR = '#289F9B'
+WIDGET_SECONDARY_COLOR = '#FFFFFF'
+WIDGET_TERTIARY_COLOR = '#000000'
+
+WIDGET_THEMES = [
+    {
+        'name': 'CCL Standard',
+        'header_bg': WIDGET_PRIMARY_COLOR,
+        'header_txt': WIDGET_SECONDARY_COLOR,
+        'automated_chat_bg': WIDGET_PRIMARY_COLOR,
+        'automated_chat_txt': WIDGET_SECONDARY_COLOR,
+        'user_chat_bg': WIDGET_SECONDARY_COLOR,
+        'user_chat_txt': WIDGET_TERTIARY_COLOR
+    }
+]

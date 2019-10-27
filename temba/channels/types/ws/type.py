@@ -5,12 +5,14 @@ import time
 import json
 import six
 
+from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from temba.contacts.models import WS_SCHEME
 from temba.msgs.models import WIRED
 from temba.utils.http import HttpEvent
 from .views import ClaimView
 from ...models import Channel, ChannelType, SendException
+from ...views import UpdateWsForm
 
 
 class WsType(ChannelType):
@@ -24,7 +26,9 @@ class WsType(ChannelType):
     icon = 'icon-cord'
     show_config_page = True
 
-    claim_blurb = _("Add a Websocket Server to send and receive messages to Widget users for free.")
+    update_form = UpdateWsForm
+
+    claim_blurb = _("Use our pluggable API to connect a website that you already have, and start surveys from there.")
     claim_view = ClaimView
 
     schemes = [WS_SCHEME]
@@ -32,7 +36,6 @@ class WsType(ChannelType):
     attachment_support = True
 
     def send(self, channel, msg, text):
-
         data = {
             'id': str(msg.id),
             'text': text,
@@ -42,18 +45,21 @@ class WsType(ChannelType):
             'from_no_plus': channel.address.lstrip('+'),
             'channel': str(channel.id)
         }
-
-        url = channel.config[Channel.CONFIG_WS_URL]
         start = time.time()
 
-        headers = {'Content-Type': 'application/json',
-                   'User-agent': 'CCL'}
+        headers = {
+            'Content-Type': 'application/json',
+            'User-agent': 'CCL'
+        }
+
+        if hasattr(msg, 'metadata'):
+            data['metadata'] = msg.metadata
 
         payload = json.dumps(data)
-        event = HttpEvent('POST', url, payload)
+        event = HttpEvent('POST', settings.WS_URL, payload)
 
         try:
-            response = requests.post(url, data=payload, headers=headers, timeout=5)
+            response = requests.post(settings.WS_URL, data=payload, headers=headers, timeout=5)
             event.status_code = response.status_code
             event.response_body = response.text
 
