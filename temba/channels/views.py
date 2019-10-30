@@ -32,7 +32,6 @@ from temba.msgs.models import Msg, SystemLabel, QUEUED, PENDING, WIRED, OUTGOING
 from temba.msgs.views import InboxView
 from temba.orgs.models import Org
 from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin, AnonMixin
-from temba.flows.models import Flow, FLOW
 from temba.channels.models import ChannelSession
 from temba.utils import analytics
 from twilio import TwilioRestException
@@ -1047,7 +1046,8 @@ class UpdateTwitterForm(UpdateChannelForm):
 class UpdateWsForm(UpdateChannelForm):
     logo = forms.FileField(label=_('Logo'), required=False)
 
-    flow = forms.ChoiceField(label=_('Flow'), help_text=_('Which flow will be started'), required=False)
+    welcome_message = forms.CharField(label=_('Welcome Message'),
+                                      widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
 
     theme = forms.ChoiceField(label=_('Theme'), required=False)
 
@@ -1072,15 +1072,12 @@ class UpdateWsForm(UpdateChannelForm):
     def __init__(self, *args, **kwargs):
         super(UpdateWsForm, self).__init__(*args, **kwargs)
 
-        msgs_active_flows = Flow.objects.filter(is_active=True, flow_type=FLOW).only('uuid', 'name').order_by('name')
-
         self.fields['theme'].choices = [(theme.get('name'), theme.get('name')) for theme in settings.WIDGET_THEMES]
-        self.fields['flow'].choices = [('', '')] + [(flow.uuid, flow.name) for flow in msgs_active_flows]
 
         if self.instance.config:
             config = self.instance.config_json()
-            self.fields['flow'].initial = config.get('flow', '')
             self.fields['theme'].initial = config.get('theme', '')
+            self.fields['welcome_message'].initial = config.get('welcome_message', '')
             self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
                                                                      settings.WIDGET_THEMES[0]['header_bg'])
             self.fields['chat_header_text_color'].initial = config.get('chat_header_text_color',
@@ -1093,19 +1090,6 @@ class UpdateWsForm(UpdateChannelForm):
                                                              settings.WIDGET_THEMES[0]['user_chat_bg'])
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
                                                               settings.WIDGET_THEMES[0]['user_chat_txt'])
-
-    def clean_flow(self):
-        org = self.instance.org
-        flow_uuid = self.cleaned_data.get('flow')
-        if not flow_uuid:
-            raise ValidationError(_('Flow field is required'))
-
-        existing_flow = Flow.objects.filter(org=org, is_active=True, flow_type=FLOW,
-                                            uuid=flow_uuid).only('uuid').first()
-        if not existing_flow:
-            raise ValidationError(_('The flow selected is not valid'))
-
-        return flow_uuid
 
     def clean_logo(self):
         channel = self.instance
@@ -1129,9 +1113,9 @@ class UpdateWsForm(UpdateChannelForm):
         return logo_media
 
     class Meta(UpdateChannelForm.Meta):
-        config_fields = ['logo', 'flow', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
+        config_fields = ['logo', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
                          'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt']
-        fields = 'name', 'logo', 'flow', 'theme', 'chat_header_bg_color', 'chat_header_text_color', \
+        fields = 'name', 'logo', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color', \
                  'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt', 'address', 'alert_email'
         readonly = ('address',)
         helps = {'address': _('URL to the WebSocket Server')}
