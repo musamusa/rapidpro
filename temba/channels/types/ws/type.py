@@ -24,7 +24,8 @@ class WsType(ChannelType):
 
     name = _("WebSocket Server")
     icon = 'icon-cord'
-    show_config_page = True
+    show_config_page = False
+    show_edit_page = True
 
     update_form = UpdateWsForm
 
@@ -54,6 +55,9 @@ class WsType(ChannelType):
 
         if hasattr(msg, 'metadata'):
             data['metadata'] = msg.metadata
+
+        if hasattr(msg, 'attachments') and msg.attachments:
+            data['attachments'] = msg.attachments
 
         payload = json.dumps(data)
         event = HttpEvent('POST', settings.WS_URL, payload)

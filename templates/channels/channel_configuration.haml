@@ -93,7 +93,6 @@
 
     %hr
 
-
   -elif object.channel_type == 'SQ'
     %h4
       -blocktrans with number=channel.address
@@ -180,8 +179,6 @@
 
     %code
       https://{{ domain }}{% url 'handlers.nexmo_call_handler' 'answer' object.uuid %}
-
-
 
   -elif object.channel_type == 'IB'
     %h4
@@ -484,7 +481,6 @@
     -for ip_address in ip_addresses
       %code= ip_address
 
-
   -elif object.channel_type == 'DA'
     %h4
       -blocktrans
@@ -537,7 +533,6 @@
 
     -for ip_address in ip_addresses
       %code= ip_address
-
 
   -elif object.channel_type == 'FCM'
     %h4
@@ -657,6 +652,7 @@
         accept-x-kannel-headers = true
         omit-empty = true
         accepted-smsc = YOUR-SMSC
+
 
   -elif object.channel_type == 'JS'
     %h4
@@ -811,7 +807,6 @@
 
     %code
       {{ channel.secret }}
-
 
   -elif object.channel_type == 'VI'
     %h4
@@ -1069,30 +1064,37 @@
     %hr
     %h4
       -trans "Javascript Code"
-      %pre.ws-channel
-        %code
-          &lt;div id="ccl-web-surveyor"&gt;&lt;/div&gt;
-          &lt;script src="path/to/file.js" type="text/javascript">&lt;/script>
-          &lt;script>
-            window.renderSurveyor({
-              socketUrl: '{{ object.address }}',
-              channelUUID: '{{ object.uuid }}',
-              autoOpen: false,
-              hostApi: 'https://{{ request.get_host }}',
-              icon: '{{ object.config_json.logo }}',
-              extra: {},
-              referrer: 'referrer',
-              welcomeMessage: '{{ object.config_json.welcome_message }}',
-              theme: {
-                chatHeaderBackgroundColor: '{{ "#"|add:object.config_json.chat_header_bg_color }}',
-                chatHeaderTextColor: '{{ "#"|add:object.config_json.chat_header_text_color }}',
-                automatedChatBackgroundColor: '{{ "#"|add:object.config_json.automated_chat_bg }}',
-                automatedChatTextColor: '{{ "#"|add:object.config_json.automated_chat_txt }}',
-                userChatBackgroundColor: '{{ "#"|add:object.config_json.user_chat_bg }}',
-                userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}'
-              }
-            }, 'ccl-web-surveyor');
-          &lt;/script>
+    %pre.ws-channel
+      %code
+        &lt;div id="ccl-web-surveyor"&gt;&lt;/div&gt;
+        &lt;script src="{{ widget_compiled_file }}" type="text/javascript">&lt;/script>
+        &lt;script>
+          window.renderSurveyor({
+            socketUrl: '{{ object.address }}',
+            channelUUID: '{{ object.uuid }}',
+            title: '{{ object.config_json.title }}',
+            autoOpen: false,
+            hostApi: 'https://{{ request.get_host }}',
+            icon: '{{ object.config_json.logo }}',
+            extra: {},
+            referrer: 'referrer',
+            welcomeMessage: '{{ object.config_json.welcome_message }}',
+            theme: {
+              chatHeaderBackgroundColor: '{{ "#"|add:object.config_json.chat_header_bg_color }}',
+              chatHeaderTextColor: '{{ "#"|add:object.config_json.chat_header_text_color }}',
+              automatedChatBackgroundColor: '{{ "#"|add:object.config_json.automated_chat_bg }}',
+              automatedChatTextColor: '{{ "#"|add:object.config_json.automated_chat_txt }}',
+              userChatBackgroundColor: '{{ "#"|add:object.config_json.user_chat_bg }}',
+              userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}'
+            }
+          }, 'ccl-web-surveyor');
+        &lt;/script>
+    %h4
+      -blocktrans
+        Note: To make sure your website is adapted for the mobile version, please, check if it has some <code>viewport</code> meta tag like:
+    %code
+      :escaped
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 -block extra-script
   {{ block.super }}
   <script src="{{ STATIC_URL }}rest_framework/js/prettify-min.js"></script>

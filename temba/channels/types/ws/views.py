@@ -37,10 +37,13 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         org = self.request.user.get_org()
         cleaned_data = form.cleaned_data
 
+        channel_name = cleaned_data.get('channel_name')
+
         branding = org.get_branding()
 
         basic_config = {
             'welcome_message': '',
+            'title': '%s %s' % (settings.WIDGET_THEMES[0]['title'], channel_name),
             'theme': settings.WIDGET_THEMES[0]['name'],
             'logo': 'https://%s%s%s' % (settings.HOSTNAME, settings.STATIC_URL, branding.get('favico')),
             'chat_header_bg_color': settings.WIDGET_THEMES[0]['header_bg'],
@@ -51,8 +54,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             'user_chat_txt': settings.WIDGET_THEMES[0]['user_chat_txt']
         }
 
-        self.object = Channel.create(org, self.request.user, None, self.channel_type,
-                                     name=cleaned_data.get('channel_name'), address=settings.WS_URL,
-                                     config=basic_config)
+        self.object = Channel.create(org, self.request.user, None, self.channel_type, name=channel_name,
+                                     address=settings.WS_URL, config=basic_config)
 
         return super(ClaimView, self).form_valid(form)

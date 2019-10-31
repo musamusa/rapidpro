@@ -766,6 +766,8 @@ class ClaimViewMixin(OrgPermsMixin):
     def get_success_url(self):
         if self.channel_type.show_config_page:
             return reverse('channels.channel_configuration', args=[self.object.id])
+        elif self.channel_type.show_edit_page:
+            return reverse('channels.channel_update', args=[self.object.id])
         else:
             return reverse('channels.channel_read', args=[self.object.uuid])
 
@@ -1044,7 +1046,10 @@ class UpdateTwitterForm(UpdateChannelForm):
 
 
 class UpdateWsForm(UpdateChannelForm):
-    logo = forms.FileField(label=_('Logo'), required=False)
+    logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
+
+    title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
+                            widget=forms.TextInput(attrs={'required': ''}))
 
     welcome_message = forms.CharField(label=_('Welcome Message'),
                                       widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
@@ -1077,6 +1082,7 @@ class UpdateWsForm(UpdateChannelForm):
         if self.instance.config:
             config = self.instance.config_json()
             self.fields['theme'].initial = config.get('theme', '')
+            self.fields['title'].initial = config.get('title', '')
             self.fields['welcome_message'].initial = config.get('welcome_message', '')
             self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
                                                                      settings.WIDGET_THEMES[0]['header_bg'])
@@ -1113,10 +1119,11 @@ class UpdateWsForm(UpdateChannelForm):
         return logo_media
 
     class Meta(UpdateChannelForm.Meta):
-        config_fields = ['logo', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
+        config_fields = ['logo', 'title', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
                          'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt']
-        fields = 'name', 'logo', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color', \
-                 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt', 'address', 'alert_email'
+        fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'chat_header_bg_color',\
+                 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
+                 'address', 'alert_email'
         readonly = ('address',)
         helps = {'address': _('URL to the WebSocket Server')}
 
@@ -1683,6 +1690,16 @@ class ChannelCRUDL(SmartCRUDL):
 
     class Configuration(OrgPermsMixin, SmartReadView):
 
+        def get_gear_links(self):
+            links = []
+
+            if self.has_org_perm("channels.channel_update"):
+                links.append(dict(title=_('Edit'),
+                                  style='btn-primary',
+                                  href=reverse('channels.channel_update', args=[self.object.id])))
+
+            return links
+
         def has_permission_view_objects(self):
             channel = Channel.objects.filter(org=self.request.user.get_org(), pk=self.kwargs.get('pk')).first()
             if not channel:
@@ -1715,6 +1732,7 @@ class ChannelCRUDL(SmartCRUDL):
 
             context['domain'] = self.object.callback_domain
             context['ip_addresses'] = settings.IP_ADDRESSES
+            context['widget_compiled_file'] = settings.WIDGET_COMPILED_FILE
 
             return context
 

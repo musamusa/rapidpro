@@ -85,6 +85,7 @@ class ChannelType(six.with_metaclass(ABCMeta)):
     icon = 'icon-channel-external'
     schemes = None
     show_config_page = True
+    show_edit_page = False
 
     claim_blurb = None
     claim_view = None
