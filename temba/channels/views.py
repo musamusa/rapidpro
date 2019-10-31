@@ -764,10 +764,10 @@ class ClaimViewMixin(OrgPermsMixin):
         return kwargs
 
     def get_success_url(self):
-        if self.channel_type.show_config_page:
-            return reverse('channels.channel_configuration', args=[self.object.id])
-        elif self.channel_type.show_edit_page:
+        if self.channel_type.show_edit_page:
             return reverse('channels.channel_update', args=[self.object.id])
+        elif self.channel_type.show_config_page:
+            return reverse('channels.channel_configuration', args=[self.object.id])
         else:
             return reverse('channels.channel_read', args=[self.object.uuid])
 
