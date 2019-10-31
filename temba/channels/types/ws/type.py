@@ -56,6 +56,9 @@ class WsType(ChannelType):
         if hasattr(msg, 'metadata'):
             data['metadata'] = msg.metadata
 
+        if hasattr(msg, 'attachments') and msg.attachments:
+            data['attachments'] = msg.attachments
+
         payload = json.dumps(data)
         event = HttpEvent('POST', settings.WS_URL, payload)
 
