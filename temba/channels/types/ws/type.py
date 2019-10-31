@@ -24,7 +24,8 @@ class WsType(ChannelType):
 
     name = _("WebSocket Server")
     icon = 'icon-cord'
-    show_config_page = True
+    show_config_page = False
+    show_edit_page = True
 
     update_form = UpdateWsForm
 
