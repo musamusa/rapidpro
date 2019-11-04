@@ -1046,6 +1046,9 @@ class UpdateTwitterForm(UpdateChannelForm):
 
 
 class UpdateWsForm(UpdateChannelForm):
+    name = forms.CharField(label=_('Name'), help_text=_('Descriptive label for this channel'),
+                           widget=forms.TextInput(attrs={'required': ''}))
+
     logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
 
     title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
