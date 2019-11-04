@@ -1100,6 +1100,19 @@ class UpdateWsForm(UpdateChannelForm):
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
                                                               settings.WIDGET_THEMES[0]['user_chat_txt'])
 
+    def clean_name(self):
+        org = self.object.org
+        name = self.cleaned_data['name']
+
+        # does a ws channel already exists on this account with that name
+        existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.object.channel_type,
+                                          name=name).first()
+
+        if existing and existing != self.object:
+            raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
+
+        return name
+
     def clean_logo(self):
         channel = self.instance
         org = channel.org

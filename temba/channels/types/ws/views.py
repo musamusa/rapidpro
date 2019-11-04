@@ -19,10 +19,12 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             org = self.request.user.get_org()
             value = self.cleaned_data['channel_name']
 
-            # does a ws channel already exists on this account with that url
-            for channel in Channel.objects.filter(org=org, is_active=True, channel_type=self.channel_type.code):
-                if channel.name == value:
-                    raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
+            # does a ws channel already exists on this account with that name
+            existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.channel_type.code,
+                                              name=value).first()
+
+            if existing:
+                raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
 
             try:
                 requests.get(settings.WS_URL)
