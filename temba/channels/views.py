@@ -11,6 +11,7 @@ import pytz
 import six
 import time
 import requests
+import regex
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -1112,6 +1113,16 @@ class UpdateWsForm(UpdateChannelForm):
             raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
 
         return name
+
+    def clean_title(self):
+        title = self.cleaned_data['title']
+
+        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', title, regex.V0):
+            raise forms.ValidationError('Please make sure the file name only contains '
+                                        'alphanumeric characters [0-9a-zA-Z] and '
+                                        'special characters in -, _')
+
+        return title
 
     def clean_logo(self):
         channel = self.instance
