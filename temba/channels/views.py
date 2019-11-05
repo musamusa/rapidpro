@@ -1420,7 +1420,7 @@ class ChannelCRUDL(SmartCRUDL):
                 if channel.channel_type == 'T' and not channel.is_delegate_sender():
                     messages.info(request, _("We have disconnected your Twilio number. If you do not need this number you can delete it from the Twilio website."))
                 else:
-                    messages.info(request, _("Your phone number has been removed."))
+                    messages.info(request, _("The %s channel has been removed." % channel.name))
 
                 return HttpResponseRedirect(self.get_success_url())
 
