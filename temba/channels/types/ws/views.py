@@ -1,6 +1,7 @@
 from __future__ import unicode_literals, absolute_import
 
 import requests
+import regex
 
 from django import forms
 from django.conf import settings
@@ -18,6 +19,11 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         def clean_channel_name(self):
             org = self.request.user.get_org()
             value = self.cleaned_data['channel_name']
+
+            if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', value, regex.V0):
+                raise forms.ValidationError('Please make sure the file name only contains '
+                                            'alphanumeric characters [0-9a-zA-Z] and '
+                                            'special characters in -, _')
 
             # does a ws channel already exists on this account with that name
             existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.channel_type.code,
