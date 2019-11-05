@@ -39,5 +39,14 @@
       containerCssClass: 'select2-temba-field',
       placeholder: "{% trans 'Select a flow' %}"
     });
+    $('#id_logo').change(function() {
+      var el = $(this);
+      var file = el[0].files[0];
+      var typesAllowed = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif'];
+      if (typesAllowed.indexOf(file.type) < 0) {
+        alert('{% trans "Please, upload a logo using one of the following formats: PNG, JPG, JPEG or GIF." %}');
+        el.val("");
+      }
+    });
   })(jQuery);
 {% endblock %}
