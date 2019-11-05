@@ -1053,7 +1053,7 @@ class UpdateWsForm(UpdateChannelForm):
     logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
 
     title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
-                            widget=forms.TextInput(attrs={'required': ''}))
+                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 50}))
 
     welcome_message = forms.CharField(label=_('Welcome Message'),
                                       widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
@@ -1126,6 +1126,10 @@ class UpdateWsForm(UpdateChannelForm):
             raise forms.ValidationError('Please make sure the file name only contains '
                                         'alphanumeric characters [0-9a-zA-Z] and '
                                         'special characters in -, _')
+
+        if len(title) > 50:
+            raise ValidationError(_("Oops, the maximum length for a title is only 50 characters, "
+                                    "your title has %s." % len(title)))
 
         return title
 
