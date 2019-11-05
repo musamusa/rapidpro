@@ -11,6 +11,7 @@ import pytz
 import six
 import time
 import requests
+import regex
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -1046,10 +1047,13 @@ class UpdateTwitterForm(UpdateChannelForm):
 
 
 class UpdateWsForm(UpdateChannelForm):
+    name = forms.CharField(label=_('Name'), help_text=_('Descriptive label for this channel'),
+                           widget=forms.TextInput(attrs={'required': ''}))
+
     logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
 
     title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
-                            widget=forms.TextInput(attrs={'required': ''}))
+                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 50}))
 
     welcome_message = forms.CharField(label=_('Welcome Message'),
                                       widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
@@ -1096,6 +1100,38 @@ class UpdateWsForm(UpdateChannelForm):
                                                              settings.WIDGET_THEMES[0]['user_chat_bg'])
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
                                                               settings.WIDGET_THEMES[0]['user_chat_txt'])
+
+    def clean_name(self):
+        org = self.object.org
+        name = self.cleaned_data['name']
+
+        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', name, regex.V0):
+            raise forms.ValidationError('Please make sure the file name only contains '
+                                        'alphanumeric characters [0-9a-zA-Z] and '
+                                        'special characters in -, _')
+
+        # does a ws channel already exists on this account with that name
+        existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.object.channel_type,
+                                          name=name).first()
+
+        if existing and existing != self.object:
+            raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
+
+        return name
+
+    def clean_title(self):
+        title = self.cleaned_data['title']
+
+        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', title, regex.V0):
+            raise forms.ValidationError('Please make sure the file name only contains '
+                                        'alphanumeric characters [0-9a-zA-Z] and '
+                                        'special characters in -, _')
+
+        if len(title) > 50:
+            raise ValidationError(_("Oops, the maximum length for a title is only 50 characters, "
+                                    "your title has %s." % len(title)))
+
+        return title
 
     def clean_logo(self):
         channel = self.instance
@@ -1404,7 +1440,7 @@ class ChannelCRUDL(SmartCRUDL):
                 if channel.channel_type == 'T' and not channel.is_delegate_sender():
                     messages.info(request, _("We have disconnected your Twilio number. If you do not need this number you can delete it from the Twilio website."))
                 else:
-                    messages.info(request, _("Your phone number has been removed."))
+                    messages.info(request, _("The %s channel has been removed." % channel.name))
 
                 return HttpResponseRedirect(self.get_success_url())
 
