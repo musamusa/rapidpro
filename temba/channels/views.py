@@ -1053,7 +1053,7 @@ class UpdateWsForm(UpdateChannelForm):
     logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
 
     title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
-                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 50}))
+                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
 
     welcome_message = forms.CharField(label=_('Welcome Message'),
                                       widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
@@ -1107,8 +1107,7 @@ class UpdateWsForm(UpdateChannelForm):
 
         if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', name, regex.V0):
             raise forms.ValidationError('Please make sure the file name only contains '
-                                        'alphanumeric characters [0-9a-zA-Z] and '
-                                        'special characters in -, _')
+                                        'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
         # does a ws channel already exists on this account with that name
         existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.object.channel_type,
@@ -1124,11 +1123,10 @@ class UpdateWsForm(UpdateChannelForm):
 
         if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', title, regex.V0):
             raise forms.ValidationError('Please make sure the file name only contains '
-                                        'alphanumeric characters [0-9a-zA-Z] and '
-                                        'special characters in -, _')
+                                        'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
-        if len(title) > 50:
-            raise ValidationError(_("Oops, the maximum length for a title is only 50 characters, "
+        if len(title) > 40:
+            raise ValidationError(_("Oops, the maximum length for a title is only 40 characters, "
                                     "your title has %s." % len(title)))
 
         return title

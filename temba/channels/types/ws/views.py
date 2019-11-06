@@ -22,8 +22,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
 
             if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', value, regex.V0):
                 raise forms.ValidationError('Please make sure the file name only contains '
-                                            'alphanumeric characters [0-9a-zA-Z] and '
-                                            'special characters in -, _')
+                                            'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
             # does a ws channel already exists on this account with that name
             existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.channel_type.code,
