@@ -21,7 +21,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             value = self.cleaned_data['channel_name']
 
             if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', value, regex.V0):
-                raise forms.ValidationError('Please make sure the file name only contains '
+                raise forms.ValidationError('Please make sure the websocket name only contains '
                                             'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
             # does a ws channel already exists on this account with that name
