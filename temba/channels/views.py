@@ -1106,7 +1106,7 @@ class UpdateWsForm(UpdateChannelForm):
         name = self.cleaned_data['name']
 
         if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', name, regex.V0):
-            raise forms.ValidationError('Please make sure the file name only contains '
+            raise forms.ValidationError('Please make sure the websocket name only contains '
                                         'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
         # does a ws channel already exists on this account with that name
@@ -1120,10 +1120,6 @@ class UpdateWsForm(UpdateChannelForm):
 
     def clean_title(self):
         title = self.cleaned_data['title']
-
-        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', title, regex.V0):
-            raise forms.ValidationError('Please make sure the file name only contains '
-                                        'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
 
         if len(title) > 40:
             raise ValidationError(_("Oops, the maximum length for a title is only 40 characters, "
