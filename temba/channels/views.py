@@ -1060,6 +1060,9 @@ class UpdateWsForm(UpdateChannelForm):
 
     theme = forms.ChoiceField(label=_('Theme'), required=False)
 
+    widget_bg_color = forms.CharField(label=_('Widget Background Color'),
+                                      widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
     chat_header_bg_color = forms.CharField(label=_('Chat Header Background Color'),
                                            widget=forms.TextInput(attrs={'class': 'jscolor'}))
 
@@ -1088,6 +1091,8 @@ class UpdateWsForm(UpdateChannelForm):
             self.fields['theme'].initial = config.get('theme', '')
             self.fields['title'].initial = config.get('title', '')
             self.fields['welcome_message'].initial = config.get('welcome_message', '')
+            self.fields['widget_bg_color'].initial = config.get('widget_bg_color',
+                                                                settings.WIDGET_THEMES[0]['widget_bg'])
             self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
                                                                      settings.WIDGET_THEMES[0]['header_bg'])
             self.fields['chat_header_text_color'].initial = config.get('chat_header_text_color',
@@ -1149,9 +1154,10 @@ class UpdateWsForm(UpdateChannelForm):
         return logo_media
 
     class Meta(UpdateChannelForm.Meta):
-        config_fields = ['logo', 'title', 'welcome_message', 'theme', 'chat_header_bg_color', 'chat_header_text_color',
-                         'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt']
-        fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'chat_header_bg_color',\
+        config_fields = ['logo', 'title', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',
+                         'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg',
+                         'user_chat_txt']
+        fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',\
                  'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
                  'address', 'alert_email'
         readonly = ('address',)

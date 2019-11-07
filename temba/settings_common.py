@@ -1342,12 +1342,14 @@ WS_URL = 'http://localhost:9091'
 WIDGET_PRIMARY_COLOR = '289F9B'
 WIDGET_SECONDARY_COLOR = 'FFFFFF'
 WIDGET_TERTIARY_COLOR = '000000'
+WIDGET_BG_COLOR = 'D8F3F2'
 WIDGET_COMPILED_FILE = ''
 
 WIDGET_THEMES = [
     {
         'name': 'CCL Standard',
         'title': 'Chat with',
+        'widget_bg': WIDGET_BG_COLOR,
         'header_bg': WIDGET_PRIMARY_COLOR,
         'header_txt': WIDGET_SECONDARY_COLOR,
         'automated_chat_bg': WIDGET_PRIMARY_COLOR,
