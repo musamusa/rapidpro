@@ -1078,6 +1078,7 @@
             icon: '{{ object.config_json.logo }}',
             welcomeMessage: '{{ object.config_json.welcome_message|adapt_for_widget }}',
             theme: {
+              widgetBackgroundColor: '{{ "#"|add:object.config_json.widget_bg_color }}',
               chatHeaderBackgroundColor: '{{ "#"|add:object.config_json.chat_header_bg_color }}',
               chatHeaderTextColor: '{{ "#"|add:object.config_json.chat_header_text_color }}',
               automatedChatBackgroundColor: '{{ "#"|add:object.config_json.automated_chat_bg }}',
