@@ -2201,7 +2201,7 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
     $scope.action.lang = Flow.base_language
 
   # scope prep for webhook form
-  $scope.methods = ['GET', 'POST']
+  $scope.methods = ['GET', 'POST', 'PUT', 'DELETE']
   if not $scope.action.action
     $scope.action.action = 'GET'
 

@@ -299,13 +299,16 @@ class WebHookEvent(SmartModel):
                 # some hosts deny generic user agents, use Temba as our user agent
                 if action == 'GET':
                     response = requests.get(webhook_url, headers=requests_headers, timeout=10)
+                elif action == 'DELETE':
+                    response = requests.delete(webhook_url, headers=requests_headers, timeout=10)
                 else:
                     post_args = dict(url=webhook_url, headers=requests_headers, timeout=10)
-                    if force_use_data or not webhook_body:
-                        post_args.update(dict(data=data))
+                    other_args = dict(data=data) if force_use_data or not webhook_body else dict(json=data)
+                    post_args.update(**other_args)
+                    if action == 'PUT':
+                        response = requests.put(**post_args)
                     else:
-                        post_args.update(dict(json=data))
-                    response = requests.post(**post_args)
+                        response = requests.post(**post_args)
 
                 body = response.text
                 if body:
