@@ -307,6 +307,8 @@ class WebHookEvent(SmartModel):
                     post_args.update(**other_args)
                     if action == 'PUT':
                         response = requests.put(**post_args)
+                    elif action == 'PATCH':
+                        response = requests.patch(**post_args)
                     else:
                         response = requests.post(**post_args)
 
