@@ -33,7 +33,7 @@ class WsType(ChannelType):
     claim_view = ClaimView
 
     schemes = [WS_SCHEME]
-    max_length = 1600
+    max_length = 2000
     attachment_support = True
 
     def send(self, channel, msg, text):
