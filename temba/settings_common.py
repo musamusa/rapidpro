@@ -1029,6 +1029,7 @@ CHANNEL_TYPES = [
     "temba.channels.types.zenvia.ZenviaType",
     "temba.channels.types.i2sms.I2SMSType",
     "temba.channels.types.clicksend.ClickSendType",
+    "temba.channels.types.websocket.WebSocketType",
 ]
 
 # -----------------------------------------------------------------------------------
@@ -1109,3 +1110,19 @@ ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
 
 # Maximum active ContactFields users can have in an Org
 MAX_ACTIVE_CONTACTFIELDS_PER_ORG = 255
+
+WIDGET_COMPILED_FILE = "https://ccl-web-surveyor.s3-us-west-1.amazonaws.com/v1.x/ccl-web-surveyor.min.js"
+
+WIDGET_DEFAULT_THEME = "ccl_standard"
+WIDGET_THEMES = {
+    "ccl_standard": {
+        "name": "CCL Standard",
+        "widget_bg": "D8F3F2",
+        "header_bg": "289F9B",
+        "header_txt": "FFFFFF",
+        "automated_chat_bg": "289F9B",
+        "automated_chat_txt": "FFFFFF",
+        "user_chat_bg": "FFFFFF",
+        "user_chat_txt": "000000"
+    }
+}

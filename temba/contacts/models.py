@@ -62,6 +62,7 @@ VIBER_SCHEME = "viber"
 FCM_SCHEME = "fcm"
 WHATSAPP_SCHEME = "whatsapp"
 WECHAT_SCHEME = "wechat"
+WEBSOCKET_SCHEME = "ws"
 
 FACEBOOK_PATH_REF_PREFIX = "ref:"
 
@@ -80,6 +81,7 @@ URN_SCHEME_CONFIG = (
     (WECHAT_SCHEME, _("WeChat identifier"), WECHAT_SCHEME),
     (FCM_SCHEME, _("Firebase Cloud Messaging identifier"), FCM_SCHEME),
     (WHATSAPP_SCHEME, _("WhatsApp identifier"), WHATSAPP_SCHEME),
+    (WEBSOCKET_SCHEME, _("WebSocket identifier"), 'ws', WEBSOCKET_SCHEME),
 )
 
 
@@ -350,6 +352,10 @@ class URN(object):
     @classmethod
     def from_wechat(cls, path):
         return cls.from_parts(WECHAT_SCHEME, path)
+
+    @classmethod
+    def from_ws(cls, path):
+        return cls.from_parts(WEBSOCKET_SCHEME, path)
 
 
 class UserContactFieldsQuerySet(models.QuerySet):
