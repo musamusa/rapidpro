@@ -1974,14 +1974,27 @@ class ChannelCRUDL(SmartCRUDL):
     class Configuration(OrgPermsMixin, SmartReadView):
         slug_url_kwarg = "uuid"
 
+        def get_gear_links(self):
+            links = []
+
+            if self.has_org_perm("channels.channel_update"):
+                links.append(dict(title=_("Edit"),
+                                  style="btn-primary",
+                                  href=reverse("channels.channel_update", args=[self.object.id])))
+
+            return links
+
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
             context["domain"] = self.object.callback_domain
             context["ip_addresses"] = settings.IP_ADDRESSES
 
+            context_dict = dict(widget_compiled_file=settings.WIDGET_COMPILED_FILE)
+
             # populate with our channel type
             channel_type = Channel.get_type_from_code(self.object.channel_type)
-            context["configuration_template"] = channel_type.get_configuration_template(self.object)
+            context["configuration_template"] = channel_type.get_configuration_template(self.object,
+                                                                                        context=context_dict)
             context["configuration_blurb"] = channel_type.get_configuration_blurb(self.object)
             context["configuration_urls"] = channel_type.get_configuration_urls(self.object)
             context["show_public_addresses"] = channel_type.show_public_addresses

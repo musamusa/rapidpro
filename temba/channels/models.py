@@ -198,15 +198,18 @@ class ChannelType(metaclass=ABCMeta):
         """
         return self.attachment_support
 
-    def get_configuration_context_dict(self, channel):
-        return dict(channel=channel, ip_addresses=settings.IP_ADDRESSES)
+    def get_configuration_context_dict(self, channel, context=None):
+        context_dict = dict(channel=channel, ip_addresses=settings.IP_ADDRESSES)
+        if context:
+            context_dict.update(context)
+        return context_dict
 
-    def get_configuration_template(self, channel):
+    def get_configuration_template(self, channel, context=None):
         try:
             return (
                 Engine.get_default()
                 .get_template("channels/types/%s/config.html" % self.slug)
-                .render(context=Context(self.get_configuration_context_dict(channel)))
+                .render(context=Context(self.get_configuration_context_dict(channel=channel, context=context)))
             )
         except TemplateDoesNotExist:
             return ""
