@@ -1303,6 +1303,9 @@ class UpdateWebSocketForm(UpdateChannelForm):
 
     logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
 
+    logo_style = forms.ChoiceField(label=_("Logo Style"),
+                                   help_text=_("This is related to how we will display the widget when it's closed"))
+
     title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
                             widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
 
@@ -1340,11 +1343,14 @@ class UpdateWebSocketForm(UpdateChannelForm):
 
         self.fields['theme'].choices = [(theme, settings.WIDGET_THEMES[theme]["name"]) for theme in list(settings.WIDGET_THEMES.keys())]
 
+        self.fields["logo_style"].choices = [("circle", _("Circle")), ("rectangle", _("Rectangle"))]
+
         if self.instance.config:
             config = self.instance.config
             default_theme = settings.WIDGET_THEMES.get(settings.WIDGET_DEFAULT_THEME, {})
             self.fields['theme'].initial = config.get('theme', '')
             self.fields['title'].initial = config.get('title', '')
+            self.fields['logo_style'].initial = config.get('logo_style', 'circle')
             self.fields['welcome_message'].initial = config.get('welcome_message', '')
             self.fields['widget_bg_color'].initial = config.get('widget_bg_color', default_theme.get("widget_bg"))
             self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
@@ -1407,12 +1413,12 @@ class UpdateWebSocketForm(UpdateChannelForm):
         return logo_media
 
     class Meta(UpdateChannelForm.Meta):
-        config_fields = ['logo', 'title', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',
-                         'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg',
-                         'user_chat_txt', 'chat_timeout']
-        fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',\
-                 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
-                 'chat_timeout', 'alert_email'
+        config_fields = ['logo', 'logo_style', 'title', 'welcome_message', 'theme', 'widget_bg_color',
+                         'chat_header_bg_color', 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt',
+                         'user_chat_bg', 'user_chat_txt', 'chat_timeout']
+        fields = 'name', 'title', 'logo', 'logo_style', 'welcome_message', 'theme', 'widget_bg_color',\
+                 'chat_header_bg_color', 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt',\
+                 'user_chat_bg', 'user_chat_txt', 'chat_timeout', 'alert_email'
         readonly = []
 
 
