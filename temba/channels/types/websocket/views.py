@@ -41,8 +41,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         default_theme = settings.WIDGET_THEMES.get(settings.WIDGET_DEFAULT_THEME, {})
 
         basic_config = {
-            "welcome_message": "",
             "title": f"Chat with {channel_name}",
+            "welcome_message_default": "",
             "theme": settings.WIDGET_DEFAULT_THEME,
             'logo': f"https://{settings.HOSTNAME}{settings.STATIC_URL}{branding.get('favico')}",
             'chat_header_bg_color': default_theme.get("header_bg"),
@@ -53,6 +53,9 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             'user_chat_txt': default_theme.get("user_chat_txt"),
             'chat_timeout': 120
         }
+        languages = org.languages.all().order_by("orgs")
+        for lang in languages:
+            basic_config[f"welcome_message_{lang.iso_code}"] = ""
 
         self.object = Channel.create(org, self.request.user, None, self.channel_type, name=channel_name,
                                      config=basic_config)

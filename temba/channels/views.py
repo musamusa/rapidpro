@@ -1301,43 +1301,6 @@ class UpdateWebSocketForm(UpdateChannelForm):
     name = forms.CharField(label=_('Name'), help_text=_('Descriptive label for this channel'),
                            widget=forms.TextInput(attrs={'required': ''}))
 
-    logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
-
-    logo_style = forms.ChoiceField(label=_("Logo Style"),
-                                   help_text=_("This is related to how we will display the widget when it's closed"))
-
-    title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
-                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
-
-    welcome_message = forms.CharField(label=_('Welcome Message'),
-                                      widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
-
-    theme = forms.ChoiceField(label=_('Theme'), required=False)
-
-    widget_bg_color = forms.CharField(label=_('Widget Background Color'),
-                                      widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    chat_header_bg_color = forms.CharField(label=_('Chat Header Background Color'),
-                                           widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    chat_header_text_color = forms.CharField(label=_('Chat Header Text Color'),
-                                             widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    automated_chat_bg = forms.CharField(label=_('Automated Chat Background'),
-                                        widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    automated_chat_txt = forms.CharField(label=_('Automated Chat Text'),
-                                         widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    user_chat_bg = forms.CharField(label=_('User Chat Background'),
-                                   widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    user_chat_txt = forms.CharField(label=_('User Chat Text'),
-                                    widget=forms.TextInput(attrs={'class': 'jscolor'}))
-
-    chat_timeout = forms.CharField(label=_('Timeout (in seconds)'),
-                                   widget=forms.NumberInput(attrs={'max': '10000', 'min': '10'}))
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1351,7 +1314,6 @@ class UpdateWebSocketForm(UpdateChannelForm):
             self.fields['theme'].initial = config.get('theme', '')
             self.fields['title'].initial = config.get('title', '')
             self.fields['logo_style'].initial = config.get('logo_style', 'circle')
-            self.fields['welcome_message'].initial = config.get('welcome_message', '')
             self.fields['widget_bg_color'].initial = config.get('widget_bg_color', default_theme.get("widget_bg"))
             self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
                                                                      default_theme.get("header_bg"))
@@ -1364,6 +1326,14 @@ class UpdateWebSocketForm(UpdateChannelForm):
             self.fields['user_chat_bg'].initial = config.get('user_chat_bg', default_theme.get("user_chat_bg"))
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt', default_theme.get("user_chat_txt"))
             self.fields['chat_timeout'].initial = config.get('chat_timeout', 120)
+
+            languages = self.object.org.languages.all().order_by("orgs")
+
+            if not languages:
+                self.fields['welcome_message_default'].initial = config.get('welcome_message_default', '')
+
+            for lang in languages:
+                self.fields[f'welcome_message_{lang.iso_code}'].initial = config.get(f'welcome_message_{lang.iso_code}', '')
 
     def clean_name(self):
         org = self.object.org
@@ -1412,13 +1382,66 @@ class UpdateWebSocketForm(UpdateChannelForm):
 
         return logo_media
 
+    def add_config_fields(self):
+        self.fields['logo'] = forms.FileField(label=_('Logo'), required=False,
+                                              help_text=_('We recommend to upload an image with 64x64px'))
+
+        self.fields['logo_style'] = forms.ChoiceField(label=_("Logo Style"),
+                                                      help_text=_( "This is related to how we will display the widget when it's closed"))
+
+        self.fields['title'] = forms.CharField(label=_('Chat Title'),
+                                               help_text=_('It will appear on the header of the webchat'),
+                                               widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
+
+        self.fields["welcome_message_default"] = forms.CharField(label=_('Welcome Message'),
+                                                                 widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
+
+        org = self.object.org
+        languages = org.languages.all().order_by("orgs")
+        for lang in languages:
+            self.fields[f"welcome_message_{lang.iso_code}"] = forms.CharField(label=_('Welcome Message'),
+                                                                              widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
+
+        self.fields['theme'] = forms.ChoiceField(label=_('Theme'), required=False)
+
+        self.fields['widget_bg_color'] = forms.CharField(label=_('Widget Background Color'),
+                                                         widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['chat_header_bg_color'] = forms.CharField(label=_('Chat Header Background Color'),
+                                                              widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['chat_header_text_color'] = forms.CharField(label=_('Chat Header Text Color'),
+                                                                widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['automated_chat_bg'] = forms.CharField(label=_('Automated Chat Background'),
+                                                           widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['automated_chat_txt'] = forms.CharField(label=_('Automated Chat Text'),
+                                                            widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['user_chat_bg'] = forms.CharField(label=_('User Chat Background'),
+                                                      widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['user_chat_txt'] = forms.CharField(label=_('User Chat Text'),
+                                                       widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+        self.fields['chat_timeout'] = forms.CharField(label=_('Timeout (in seconds)'),
+                                                      widget=forms.NumberInput(attrs={'max': '10000', 'min': '10'}))
+
+        del self.fields['country']
+        del self.fields['address']
+
+        unlisted_fields = ['name', 'alert_email']
+        if languages:
+            unlisted_fields.append('welcome_message_default')
+            del self.fields['welcome_message_default']
+
+        for field in list(self.fields):
+            if field in unlisted_fields:
+                continue
+            self.Meta.config_fields.append(field)
+
     class Meta(UpdateChannelForm.Meta):
-        config_fields = ['logo', 'logo_style', 'title', 'welcome_message', 'theme', 'widget_bg_color',
-                         'chat_header_bg_color', 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt',
-                         'user_chat_bg', 'user_chat_txt', 'chat_timeout']
-        fields = 'name', 'title', 'logo', 'logo_style', 'welcome_message', 'theme', 'widget_bg_color',\
-                 'chat_header_bg_color', 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt',\
-                 'user_chat_bg', 'user_chat_txt', 'chat_timeout', 'alert_email'
         readonly = []
 
 
@@ -1803,8 +1826,16 @@ class ChannelCRUDL(SmartCRUDL):
         success_message = ""
         submit_button_name = _("Save Changes")
 
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            if self.org:
+                languages = self.org.languages.all().order_by("orgs")
+                context["languages"] = languages
+            return context
+
         def derive_title(self):
-            return _("%s Channel") % self.object.get_channel_type_display()
+            channel_type_display = self.object.get_channel_type_display() if self.object.channel_type == "WS" else f"{self.object.get_channel_type_display()} Channel"
+            return _("%s") % channel_type_display
 
         def derive_readonly(self):
             return self.form.Meta.readonly if hasattr(self, "form") else []

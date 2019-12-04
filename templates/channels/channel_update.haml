@@ -22,6 +22,26 @@
         min-height: 100px;
     }
 
+    .welcome-message-languages a {
+      display: inline-block;
+      margin: 2px 0;
+      padding: 0 10px;
+      border-right: 1px solid #569D9B;
+    }
+
+    .welcome-message-languages a:first-child {
+      padding: 0 10px 0 0;
+    }
+
+    .welcome-message-languages a:last-child {
+      padding: 0 0 0 10px;
+      border-right: none;
+    }
+
+    .welcome-message-languages a.active {
+      color: #000000;
+    }
+
 {% block extra-script %}
 <script src="{{ STATIC_URL }}js/jscolor.js"></script>
 :javascript
@@ -46,6 +66,26 @@
       containerCssClass: 'select2-temba-field',
       placeholder: "{% trans 'Select a logo style' %}"
     });
+
+    // adding languages to the form
+    {% if object.channel_type == "WS" and languages %}
+    $(document).ready(function() {
+      var welcomeMessageField = document.getElementsByClassName("field_welcome_message");
+      var divLanguages = document.createElement("div");
+      divLanguages.classList.add("welcome-message-languages");
+      {% for lang in languages %}
+        var divLangItem = document.createElement("a");
+        divLangItem.href = "javascript:;";
+        divLangItem.text = "{{ lang }}";
+        {% if forloop.counter0 == 0 %}
+        divLangItem.classList.add("active");
+        
+        {% endif %}
+        divLanguages.appendChild(divLangItem);
+      {% endfor %}
+      welcomeMessageField[0].appendChild(divLanguages);
+    });
+    {% endif %}
 
   })(jQuery);
 

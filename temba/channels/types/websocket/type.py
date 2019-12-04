@@ -27,3 +27,6 @@ class WebSocketType(ChannelType):
     schemes = [WEBSOCKET_SCHEME]
     max_length = 2000
     attachment_support = True
+
+    async_activation = False
+    quick_reply_text_size = 50
