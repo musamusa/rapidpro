@@ -94,6 +94,8 @@
         for (lang in allLanguages) {
           var divLangItem = document.createElement("a");
           divLangItem.href = "javascript:;";
+          divLangItem.setAttribute("data-iso-code", allLanguages[lang]["iso_code"]);
+          divLangItem.onclick = function() { changeLangField($(this)) };
           divLangItem.text = allLanguages[lang]["name"];
 
           if (lang == 0) {
@@ -104,9 +106,22 @@
         }
       }
 
+      $.each($("div[class^='control-group field_welcome_message_']"), function (index) {
+        if (index !== 0) {
+          $(this).addClass("hide");
+        }
+      });
+
     });
     {% endif %}
 
   })(jQuery);
+
+  function changeLangField(el) {
+    $(".ref-welcome-message-languages a").removeClass("active");
+    $("a[data-iso-code='" + el.data('iso-code') + "']").addClass("active");
+    $("div[class^='control-group field_welcome_message_']").addClass('hide');
+    $(".field_welcome_message_" + el.data('iso-code')).removeClass('hide');
+  }
 
 {% endblock %}
