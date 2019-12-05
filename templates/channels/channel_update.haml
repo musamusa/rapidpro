@@ -29,16 +29,16 @@
       border-right: 1px solid #569D9B;
     }
 
-    .welcome-message-languages a:first-child {
+    .ref-welcome-message-languages a:first-child {
       padding: 0 10px 0 0;
     }
 
-    .welcome-message-languages a:last-child {
+    .ref-welcome-message-languages a:last-child {
       padding: 0 0 0 10px;
       border-right: none;
     }
 
-    .welcome-message-languages a.active {
+    .ref-welcome-message-languages a.active {
       color: #000000;
     }
 
@@ -70,20 +70,40 @@
     // adding languages to the form
     {% if object.channel_type == "WS" and languages %}
     $(document).ready(function() {
-      var welcomeMessageField = document.getElementsByClassName("field_welcome_message");
-      var divLanguages = document.createElement("div");
-      divLanguages.classList.add("welcome-message-languages");
+      var allLanguages = [];
+
       {% for lang in languages %}
-        var divLangItem = document.createElement("a");
-        divLangItem.href = "javascript:;";
-        divLangItem.text = "{{ lang }}";
-        {% if forloop.counter0 == 0 %}
-        divLangItem.classList.add("active");
-        
-        {% endif %}
-        divLanguages.appendChild(divLangItem);
+      allLanguages.push({"iso_code": "{{ lang.iso_code }}", "name": "{{ lang.name }}"});
       {% endfor %}
-      welcomeMessageField[0].appendChild(divLanguages);
+
+      var divLanguages;
+      var welcomeMessageField;
+      var allDivLanguages = [];
+
+      for (lang in allLanguages) {
+        divLanguages = document.createElement("div");
+        divLanguages.classList.add("welcome-message-languages-" + allLanguages[lang]["iso_code"]);
+        divLanguages.classList.add("ref-welcome-message-languages");
+
+        welcomeMessageField = document.getElementsByClassName("field_welcome_message_" + allLanguages[lang]["iso_code"]);
+        welcomeMessageField[0].appendChild(divLanguages);
+        allDivLanguages.push(divLanguages);
+      }
+
+      for (divLang in allDivLanguages) {
+        for (lang in allLanguages) {
+          var divLangItem = document.createElement("a");
+          divLangItem.href = "javascript:;";
+          divLangItem.text = allLanguages[lang]["name"];
+
+          if (lang == 0) {
+            divLangItem.classList.add("active");
+          }
+
+          allDivLanguages[divLang].appendChild(divLangItem);
+        }
+      }
+
     });
     {% endif %}
 
