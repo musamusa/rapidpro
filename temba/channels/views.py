@@ -1387,7 +1387,7 @@ class UpdateWebSocketForm(UpdateChannelForm):
                                               help_text=_('We recommend to upload an image with 64x64px'))
 
         self.fields['logo_style'] = forms.ChoiceField(label=_("Logo Style"),
-                                                      help_text=_( "This is related to how we will display the widget when it's closed"))
+                                                      help_text=_("This is related to how we will display the widget when it's closed"))
 
         self.fields['title'] = forms.CharField(label=_('Chat Title'),
                                                help_text=_('It will appear on the header of the webchat'),

@@ -3,7 +3,7 @@ import regex
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse
 from django.utils.translation import ugettext_lazy as _
 from django.urls import reverse
 from smartmin.views import SmartFormView, SmartReadView
