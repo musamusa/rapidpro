@@ -9,13 +9,14 @@ class WebSocketType(ChannelType):
     """
     A WebSocket channel
     """
-    code = 'WS'
+
+    code = "WS"
     category = ChannelType.Category.API
 
     courier_url = r"^ws/(?P<uuid>[a-z0-9\-]+)/receive$"
 
     name = _("WebSocket Channel")
-    icon = 'icon-cord'
+    icon = "icon-cord"
     show_config_page = True
     show_edit_page = True
 

@@ -13,19 +13,22 @@ from ...views import ClaimViewMixin
 
 class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
-        channel_name = forms.CharField(label=_('WebSocket Name'), max_length=64)
+        channel_name = forms.CharField(label=_("WebSocket Name"), max_length=64)
 
         def clean_channel_name(self):
             org = self.request.user.get_org()
-            value = self.cleaned_data['channel_name']
+            value = self.cleaned_data["channel_name"]
 
-            if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', value, regex.V0):
-                raise forms.ValidationError('Please make sure the websocket name only contains '
-                                            'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
+            if not regex.match(r"^[A-Za-z0-9_.\-*() ]+$", value, regex.V0):
+                raise forms.ValidationError(
+                    "Please make sure the websocket name only contains "
+                    "alphanumeric characters [0-9a-zA-Z], hyphens, and underscores"
+                )
 
             # does a ws channel already exists on this account with that name
-            existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.channel_type.code,
-                                              name=value).first()
+            existing = Channel.objects.filter(
+                org=org, is_active=True, channel_type=self.channel_type.code, name=value
+            ).first()
 
             if existing:
                 raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
@@ -46,21 +49,22 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             "title": f"Chat with {channel_name}",
             "welcome_message_default": "",
             "theme": settings.WIDGET_DEFAULT_THEME,
-            'logo': f"https://{settings.HOSTNAME}{settings.STATIC_URL}{branding.get('favico')}",
-            'chat_header_bg_color': default_theme.get("header_bg"),
-            'chat_header_text_color': default_theme.get("header_txt"),
-            'automated_chat_bg': default_theme.get("automated_chat_bg"),
-            'automated_chat_txt': default_theme.get("automated_chat_txt"),
-            'user_chat_bg': default_theme.get("user_chat_bg"),
-            'user_chat_txt': default_theme.get("user_chat_txt"),
-            'chat_timeout': 120
+            "logo": f"https://{settings.HOSTNAME}{settings.STATIC_URL}{branding.get('favico')}",
+            "chat_header_bg_color": default_theme.get("header_bg"),
+            "chat_header_text_color": default_theme.get("header_txt"),
+            "automated_chat_bg": default_theme.get("automated_chat_bg"),
+            "automated_chat_txt": default_theme.get("automated_chat_txt"),
+            "user_chat_bg": default_theme.get("user_chat_bg"),
+            "user_chat_txt": default_theme.get("user_chat_txt"),
+            "chat_timeout": 120,
         }
         languages = org.languages.all().order_by("orgs")
         for lang in languages:
             basic_config[f"welcome_message_{lang.iso_code}"] = ""
 
-        self.object = Channel.create(org, self.request.user, None, self.channel_type, name=channel_name,
-                                     config=basic_config)
+        self.object = Channel.create(
+            org, self.request.user, None, self.channel_type, name=channel_name, config=basic_config
+        )
 
         return super().form_valid(form)
 
@@ -103,7 +107,7 @@ class ConfigurationView(SmartReadView):
                     "automatedChatBackgroundColor": f"#{channel.config.get('automated_chat_bg')}",
                     "automatedChatTextColor": f"#{channel.config.get('automated_chat_txt')}",
                     "userChatBackgroundColor": f"#{channel.config.get('user_chat_bg')}",
-                    "userChatTextColor": f"#{channel.config.get('user_chat_txt')}"
-                }
+                    "userChatTextColor": f"#{channel.config.get('user_chat_txt')}",
+                },
             }
         return JsonResponse(response)

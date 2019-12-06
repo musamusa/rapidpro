@@ -931,7 +931,7 @@ class ClaimViewMixin(OrgPermsMixin):
 
     def get_success_url(self):
         if self.channel_type.show_edit_page:
-            return reverse('channels.channel_update', args=[self.object.id])
+            return reverse("channels.channel_update", args=[self.object.id])
         elif self.channel_type.show_config_page:
             return reverse("channels.channel_configuration", args=[self.object.uuid])
         else:
@@ -1298,54 +1298,68 @@ class UpdateChannelForm(forms.ModelForm):
 
 
 class UpdateWebSocketForm(UpdateChannelForm):
-    name = forms.CharField(label=_('Name'), help_text=_('Descriptive label for this channel'),
-                           widget=forms.TextInput(attrs={'required': ''}))
+    name = forms.CharField(
+        label=_("Name"),
+        help_text=_("Descriptive label for this channel"),
+        widget=forms.TextInput(attrs={"required": ""}),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['theme'].choices = [(theme, settings.WIDGET_THEMES[theme]["name"]) for theme in list(settings.WIDGET_THEMES.keys())]
+        self.fields["theme"].choices = [
+            (theme, settings.WIDGET_THEMES[theme]["name"]) for theme in list(settings.WIDGET_THEMES.keys())
+        ]
 
         self.fields["logo_style"].choices = [("circle", _("Circle")), ("rectangle", _("Rectangle"))]
 
         if self.instance.config:
             config = self.instance.config
             default_theme = settings.WIDGET_THEMES.get(settings.WIDGET_DEFAULT_THEME, {})
-            self.fields['theme'].initial = config.get('theme', '')
-            self.fields['title'].initial = config.get('title', '')
-            self.fields['logo_style'].initial = config.get('logo_style', 'circle')
-            self.fields['widget_bg_color'].initial = config.get('widget_bg_color', default_theme.get("widget_bg"))
-            self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
-                                                                     default_theme.get("header_bg"))
-            self.fields['chat_header_text_color'].initial = config.get('chat_header_text_color',
-                                                                       default_theme.get("header_txt"))
-            self.fields['automated_chat_bg'].initial = config.get('automated_chat_bg',
-                                                                  default_theme.get("automated_chat_bg"))
-            self.fields['automated_chat_txt'].initial = config.get('automated_chat_txt',
-                                                                   default_theme.get("automated_chat_txt"))
-            self.fields['user_chat_bg'].initial = config.get('user_chat_bg', default_theme.get("user_chat_bg"))
-            self.fields['user_chat_txt'].initial = config.get('user_chat_txt', default_theme.get("user_chat_txt"))
-            self.fields['chat_timeout'].initial = config.get('chat_timeout', 120)
+            self.fields["theme"].initial = config.get("theme", "")
+            self.fields["title"].initial = config.get("title", "")
+            self.fields["logo_style"].initial = config.get("logo_style", "circle")
+            self.fields["widget_bg_color"].initial = config.get("widget_bg_color", default_theme.get("widget_bg"))
+            self.fields["chat_header_bg_color"].initial = config.get(
+                "chat_header_bg_color", default_theme.get("header_bg")
+            )
+            self.fields["chat_header_text_color"].initial = config.get(
+                "chat_header_text_color", default_theme.get("header_txt")
+            )
+            self.fields["automated_chat_bg"].initial = config.get(
+                "automated_chat_bg", default_theme.get("automated_chat_bg")
+            )
+            self.fields["automated_chat_txt"].initial = config.get(
+                "automated_chat_txt", default_theme.get("automated_chat_txt")
+            )
+            self.fields["user_chat_bg"].initial = config.get("user_chat_bg", default_theme.get("user_chat_bg"))
+            self.fields["user_chat_txt"].initial = config.get("user_chat_txt", default_theme.get("user_chat_txt"))
+            self.fields["chat_timeout"].initial = config.get("chat_timeout", 120)
 
             languages = self.object.org.languages.all().order_by("orgs")
 
             if not languages:
-                self.fields['welcome_message_default'].initial = config.get('welcome_message_default', '')
+                self.fields["welcome_message_default"].initial = config.get("welcome_message_default", "")
 
             for lang in languages:
-                self.fields[f'welcome_message_{lang.iso_code}'].initial = config.get(f'welcome_message_{lang.iso_code}', '')
+                self.fields[f"welcome_message_{lang.iso_code}"].initial = config.get(
+                    f"welcome_message_{lang.iso_code}", ""
+                )
 
     def clean_name(self):
         org = self.object.org
-        name = self.cleaned_data['name']
+        name = self.cleaned_data["name"]
 
-        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', name, regex.V0):
-            raise forms.ValidationError('Please make sure the websocket name only contains '
-                                        'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
+        if not regex.match(r"^[A-Za-z0-9_.\-*() ]+$", name, regex.V0):
+            raise forms.ValidationError(
+                "Please make sure the websocket name only contains "
+                "alphanumeric characters [0-9a-zA-Z], hyphens, and underscores"
+            )
 
         # does a ws channel already exists on this account with that name
-        existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.object.channel_type,
-                                          name=name).first()
+        existing = Channel.objects.filter(
+            org=org, is_active=True, channel_type=self.object.channel_type, name=name
+        ).first()
 
         if existing and existing != self.object:
             raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
@@ -1353,88 +1367,104 @@ class UpdateWebSocketForm(UpdateChannelForm):
         return name
 
     def clean_title(self):
-        title = self.cleaned_data['title']
+        title = self.cleaned_data["title"]
 
         if len(title) > 40:
-            raise ValidationError(_("Oops, the maximum length for a title is only 40 characters, "
-                                    "your title has %s." % len(title)))
+            raise ValidationError(
+                _("Oops, the maximum length for a title is only 40 characters, " "your title has %s." % len(title))
+            )
 
         return title
 
     def clean_logo(self):
         channel = self.instance
         org = channel.org
-        logo = self.cleaned_data.get('logo')
+        logo = self.cleaned_data.get("logo")
         config = channel.config
 
         logo_media = config.get(Channel.CONFIG_WG_LOGO, None)
 
         if logo:
             if logo.size > 1000000:
-                raise ValidationError(_('Too big logo for the Widget, it does not accept more than 1MB'))
+                raise ValidationError(_("Too big logo for the Widget, it does not accept more than 1MB"))
 
-            extension = logo.name.split('.')[-1]
-            if extension not in ['png', 'jpg', 'jpeg', 'gif']:
-                raise ValidationError(_('Please, upload a logo using one of the following formats: PNG, JPG, '
-                                        'JPEG or GIF'))
+            extension = logo.name.split(".")[-1]
+            if extension not in ["png", "jpg", "jpeg", "gif"]:
+                raise ValidationError(
+                    _("Please, upload a logo using one of the following formats: PNG, JPG, " "JPEG or GIF")
+                )
 
             logo_media = org.save_media(logo, extension)
 
         return logo_media
 
     def add_config_fields(self):
-        self.fields['logo'] = forms.FileField(label=_('Logo'), required=False,
-                                              help_text=_('We recommend to upload an image with 64x64px'))
+        self.fields["logo"] = forms.FileField(
+            label=_("Logo"), required=False, help_text=_("We recommend to upload an image with 64x64px")
+        )
 
-        self.fields['logo_style'] = forms.ChoiceField(label=_("Logo Style"),
-                                                      help_text=_("This is related to how we will display the widget when it's closed"))
+        self.fields["logo_style"] = forms.ChoiceField(
+            label=_("Logo Style"), help_text=_("This is related to how we will display the widget when it's closed")
+        )
 
-        self.fields['title'] = forms.CharField(label=_('Chat Title'),
-                                               help_text=_('It will appear on the header of the webchat'),
-                                               widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
+        self.fields["title"] = forms.CharField(
+            label=_("Chat Title"),
+            help_text=_("It will appear on the header of the webchat"),
+            widget=forms.TextInput(attrs={"required": "", "maxlength": 40}),
+        )
 
-        self.fields["welcome_message_default"] = forms.CharField(label=_('Welcome Message'),
-                                                                 widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
+        self.fields["welcome_message_default"] = forms.CharField(
+            label=_("Welcome Message"), widget=forms.Textarea(attrs={"style": "height: 110px", "required": ""})
+        )
 
         org = self.object.org
         languages = org.languages.all().order_by("orgs")
         for lang in languages:
-            self.fields[f"welcome_message_{lang.iso_code}"] = forms.CharField(label=_('Welcome Message'),
-                                                                              widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
+            self.fields[f"welcome_message_{lang.iso_code}"] = forms.CharField(
+                label=_("Welcome Message"), widget=forms.Textarea(attrs={"style": "height: 110px", "required": ""})
+            )
 
-        self.fields['theme'] = forms.ChoiceField(label=_('Theme'), required=False)
+        self.fields["theme"] = forms.ChoiceField(label=_("Theme"), required=False)
 
-        self.fields['widget_bg_color'] = forms.CharField(label=_('Widget Background Color'),
-                                                         widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["widget_bg_color"] = forms.CharField(
+            label=_("Widget Background Color"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['chat_header_bg_color'] = forms.CharField(label=_('Chat Header Background Color'),
-                                                              widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["chat_header_bg_color"] = forms.CharField(
+            label=_("Chat Header Background Color"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['chat_header_text_color'] = forms.CharField(label=_('Chat Header Text Color'),
-                                                                widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["chat_header_text_color"] = forms.CharField(
+            label=_("Chat Header Text Color"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['automated_chat_bg'] = forms.CharField(label=_('Automated Chat Background'),
-                                                           widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["automated_chat_bg"] = forms.CharField(
+            label=_("Automated Chat Background"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['automated_chat_txt'] = forms.CharField(label=_('Automated Chat Text'),
-                                                            widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["automated_chat_txt"] = forms.CharField(
+            label=_("Automated Chat Text"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['user_chat_bg'] = forms.CharField(label=_('User Chat Background'),
-                                                      widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["user_chat_bg"] = forms.CharField(
+            label=_("User Chat Background"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['user_chat_txt'] = forms.CharField(label=_('User Chat Text'),
-                                                       widget=forms.TextInput(attrs={'class': 'jscolor'}))
+        self.fields["user_chat_txt"] = forms.CharField(
+            label=_("User Chat Text"), widget=forms.TextInput(attrs={"class": "jscolor"})
+        )
 
-        self.fields['chat_timeout'] = forms.CharField(label=_('Timeout (in seconds)'),
-                                                      widget=forms.NumberInput(attrs={'max': '10000', 'min': '10'}))
+        self.fields["chat_timeout"] = forms.CharField(
+            label=_("Timeout (in seconds)"), widget=forms.NumberInput(attrs={"max": "10000", "min": "10"})
+        )
 
-        del self.fields['country']
-        del self.fields['address']
+        del self.fields["country"]
+        del self.fields["address"]
 
-        unlisted_fields = ['name', 'alert_email']
+        unlisted_fields = ["name", "alert_email"]
         if languages:
-            unlisted_fields.append('welcome_message_default')
-            del self.fields['welcome_message_default']
+            unlisted_fields.append("welcome_message_default")
+            del self.fields["welcome_message_default"]
 
         for field in list(self.fields):
             if field in unlisted_fields:
@@ -1834,7 +1864,11 @@ class ChannelCRUDL(SmartCRUDL):
             return context
 
         def derive_title(self):
-            channel_type_display = self.object.get_channel_type_display() if self.object.channel_type == "WS" else f"{self.object.get_channel_type_display()} Channel"
+            channel_type_display = (
+                self.object.get_channel_type_display()
+                if self.object.channel_type == "WS"
+                else f"{self.object.get_channel_type_display()} Channel"
+            )
             return _("%s") % channel_type_display
 
         def derive_readonly(self):
@@ -1851,7 +1885,9 @@ class ChannelCRUDL(SmartCRUDL):
             return super().lookup_field_help(field, default=default)
 
         def get_success_url(self):
-            viewname = 'channels.channel_configuration' if self.object.channel_type == 'WS' else 'channels.channel_read'
+            viewname = (
+                "channels.channel_configuration" if self.object.channel_type == "WS" else "channels.channel_read"
+            )
             return reverse(viewname=viewname, args=[self.object.uuid])
 
         def get_form_class(self):
@@ -2018,9 +2054,13 @@ class ChannelCRUDL(SmartCRUDL):
             links = []
 
             if self.has_org_perm("channels.channel_update"):
-                links.append(dict(title=_("Edit"),
-                                  style="btn-primary",
-                                  href=reverse("channels.channel_update", args=[self.object.id])))
+                links.append(
+                    dict(
+                        title=_("Edit"),
+                        style="btn-primary",
+                        href=reverse("channels.channel_update", args=[self.object.id]),
+                    )
+                )
 
             return links
 
@@ -2033,8 +2073,9 @@ class ChannelCRUDL(SmartCRUDL):
 
             # populate with our channel type
             channel_type = Channel.get_type_from_code(self.object.channel_type)
-            context["configuration_template"] = channel_type.get_configuration_template(self.object,
-                                                                                        context=context_dict)
+            context["configuration_template"] = channel_type.get_configuration_template(
+                self.object, context=context_dict
+            )
             context["configuration_blurb"] = channel_type.get_configuration_blurb(self.object)
             context["configuration_urls"] = channel_type.get_configuration_urls(self.object)
             context["show_public_addresses"] = channel_type.show_public_addresses

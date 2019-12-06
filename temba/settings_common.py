@@ -1123,6 +1123,6 @@ WIDGET_THEMES = {
         "automated_chat_bg": "289F9B",
         "automated_chat_txt": "FFFFFF",
         "user_chat_bg": "FFFFFF",
-        "user_chat_txt": "000000"
+        "user_chat_txt": "000000",
     }
 }

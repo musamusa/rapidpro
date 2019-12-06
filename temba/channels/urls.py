@@ -34,5 +34,7 @@ urlpatterns = [
     url(r"^c/", include(courier_urls)),
     url(r"^handlers/", include(handler_urls)),
     url(r"^channels/types/", include(type_urls)),
-    url(r"^channels/ws/(?P<uuid>[0-9a-f-]+)/configuration", ConfigurationView.as_view(), name='websocket_configuration')
+    url(
+        r"^channels/ws/(?P<uuid>[0-9a-f-]+)/configuration", ConfigurationView.as_view(), name="websocket_configuration"
+    ),
 ]
