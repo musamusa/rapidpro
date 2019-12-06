@@ -3,8 +3,10 @@ import regex
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.http import JsonResponse, Http404
 from django.utils.translation import ugettext_lazy as _
-from smartmin.views import SmartFormView
+from django.urls import reverse
+from smartmin.views import SmartFormView, SmartReadView
 from ...models import Channel
 from ...views import ClaimViewMixin
 
@@ -61,3 +63,47 @@ class ClaimView(ClaimViewMixin, SmartFormView):
                                      config=basic_config)
 
         return super().form_valid(form)
+
+
+class ConfigurationView(SmartReadView):
+    slug_url_kwarg = "uuid"
+
+    def get_object(self, queryset=None):
+        return Channel.objects.filter(uuid=self.kwargs.get("uuid"), is_active=True, channel_type="WS").first()
+
+    def get(self, request, *args, **kwargs):
+        channel = self.get_object()
+        if not channel:
+            return JsonResponse(dict(error=_("Channel not found")), status=404)
+
+        if not channel.config:
+            response = dict(info=_("No configuration on this channel"))
+        else:
+            welcome_message = {}
+
+            languages = channel.org.languages.all().order_by("orgs")
+            for lang in languages:
+                welcome_message[f"{lang.iso_code}"] = channel.config.get(f"welcome_message_{lang.iso_code}")
+
+            if not languages:
+                welcome_message["default"] = channel.config.get("welcome_message_default")
+
+            response = {
+                "socketUrl": f"https://{channel.callback_domain}{reverse('courier.ws', args=[channel.uuid])}",
+                "channelUUID": channel.uuid,
+                "title": channel.config.get("title"),
+                "autoOpen": False,
+                "hostApi": f"https://{channel.callback_domain}",
+                "icon": channel.config.get("logo"),
+                "welcomeMessage": welcome_message,
+                "theme": {
+                    "widgetBackgroundColor": f"#{channel.config.get('widget_bg_color')}",
+                    "chatHeaderBackgroundColor": f"#{channel.config.get('chat_header_bg_color')}",
+                    "chatHeaderTextColor": f"#{channel.config.get('chat_header_text_color')}",
+                    "automatedChatBackgroundColor": f"#{channel.config.get('automated_chat_bg')}",
+                    "automatedChatTextColor": f"#{channel.config.get('automated_chat_txt')}",
+                    "userChatBackgroundColor": f"#{channel.config.get('user_chat_bg')}",
+                    "userChatTextColor": f"#{channel.config.get('user_chat_txt')}"
+                }
+            }
+        return JsonResponse(response)
