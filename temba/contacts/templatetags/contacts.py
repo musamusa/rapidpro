@@ -15,6 +15,7 @@ from temba.contacts.models import (
     TWITTER_SCHEME,
     TWITTERID_SCHEME,
     WHATSAPP_SCHEME,
+    WEBSOCKET_SCHEME,
     ContactField,
     ContactURN,
 )
@@ -35,6 +36,7 @@ URN_SCHEME_ICONS = {
     EXTERNAL_SCHEME: "icon-channel-external",
     FCM_SCHEME: "icon-fcm",
     WHATSAPP_SCHEME: "icon-whatsapp",
+    WEBSOCKET_SCHEME: "icon-cord",
 }
 
 ACTIVITY_ICONS = {
