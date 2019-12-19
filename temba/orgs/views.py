@@ -686,8 +686,11 @@ class OrgCRUDL(SmartCRUDL):
             flows = Flow.objects.filter(id__in=self.request.POST.getlist("flows"), org=org, is_active=True)
             campaigns = Campaign.objects.filter(id__in=self.request.POST.getlist("campaigns"), org=org, is_active=True)
 
-            shorten_url_rulesets = RuleSet.objects.filter(flow__id__in=[flow.id for flow in flows],
-                                                          ruleset_type=RuleSet.TYPE_SHORTEN_URL).only("config").order_by("id")
+            shorten_url_rulesets = (
+                RuleSet.objects.filter(flow__id__in=[flow.id for flow in flows], ruleset_type=RuleSet.TYPE_SHORTEN_URL)
+                .only("config")
+                .order_by("id")
+            )
             links = []
             if shorten_url_rulesets:
                 links_uuid = [item.config[RuleSet.TYPE_SHORTEN_URL]["id"] for item in shorten_url_rulesets]
