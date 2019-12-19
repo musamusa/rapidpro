@@ -272,6 +272,7 @@ class Channel(TembaModel):
     """
 
     TYPE_ANDROID = "A"
+    TYPE_WS = "WS"
 
     # keys for various config options stored in the channel config dict
     CONFIG_BASE_URL = "base_url"

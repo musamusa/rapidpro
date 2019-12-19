@@ -1126,3 +1126,5 @@ WIDGET_THEMES = {
         "user_chat_txt": "000000",
     }
 }
+
+WEBSOCKET_SERVER_URL = "http://localhost:9090"

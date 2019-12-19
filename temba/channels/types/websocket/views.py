@@ -63,7 +63,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             basic_config[f"welcome_message_{lang.iso_code}"] = ""
 
         self.object = Channel.create(
-            org, self.request.user, None, self.channel_type, name=channel_name, config=basic_config
+            org, self.request.user, None, self.channel_type, name=channel_name, config=basic_config,
+            address=settings.WEBSOCKET_SERVER_URL
         )
 
         return super().form_valid(form)
