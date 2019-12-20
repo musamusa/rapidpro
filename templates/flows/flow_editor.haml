@@ -32,6 +32,7 @@
 
 -block extra-script
   {{ block.super }}
+  %script{type:'text/javascript', src:"https://ccl-web-surveyor.s3-us-west-1.amazonaws.com/v1.x/ccl-web-surveyor.min.js"}
 
   -if org_perms.flows.flow_delete
     :javascript
@@ -252,6 +253,25 @@
       {% endif %}
     })
 
+    window.renderSurveyor({
+      socketUrl: 'https://websocket.communityconnectlabs.com',
+      channelUUID: 'a2885aa6-7a7b-4c88-a8bf-44ad540a93f3',
+      title: 'InternalBot_Flows',
+      autoOpen: false,
+      hostApi: 'https://live.communityconnectlabs.com',
+      icon: 'https://live.communityconnectlabs.com/sitestatic/brands/rapidpro/icon.png',
+      welcomeMessage: 'Welcome to CCL\'s help bot. If you want to open a support ticket, type Support, if you want to ask a question, just type it.',
+      theme: {
+        widgetBackgroundColor: '#D8F3F2',
+        chatHeaderBackgroundColor: '#289F9B',
+        chatHeaderTextColor: '#FFFFFF',
+        automatedChatBackgroundColor: '#289F9B',
+        automatedChatTextColor: '#FFFFFF',
+        userChatBackgroundColor: '#FFFFFF',
+        userChatTextColor: '#000000'
+      }
+    }, 'ccl-web-surveyor');
+
 
   -compress js
     %script{src:"{{ STATIC_URL }}coffee/flows/app.coffee", type:'text/coffeescript'}
@@ -312,6 +332,8 @@
         -trans "Run in"
         %br
         -trans "Simulator"
+
+  #ccl-web-surveyor
 
   #revision-mask{ng-show:'showRevisions', ng-cloak:''}
   #revisions.draggable{ng-controller:'RevisionController', ng-show:'showRevisions', ng-cloak:''}
@@ -776,4 +798,13 @@
       :plain
         @import "flow_editor.less";
         @import "simulator.less";
+        #ccl-web-surveyor {
+          position: relative;
+          z-index: 10000;
+          word-break: break-word !important;
+        }
+        #ccl-web-surveyor a {
+          color: #FFFFFF !important;
+          text-decoration: underline !important;
+        }
     {% endlessblock %}
