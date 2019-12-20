@@ -200,7 +200,7 @@
     window.renderSurveyor({
       socketUrl: 'https://websocket.communityconnectlabs.com',
       channelUUID: 'a2885aa6-7a7b-4c88-a8bf-44ad540a93f3',
-      title: 'Chat with InternalBot_Flows',
+      title: 'InternalBot_Flows',
       autoOpen: false,
       hostApi: 'https://live.communityconnectlabs.com',
       icon: 'https://live.communityconnectlabs.com/sitestatic/brands/rapidpro/icon.png',
@@ -280,12 +280,13 @@
     });
 
 -block extra-style
-  -compress css
+  :css
     #ccl-web-surveyor {
       position: relative;
       z-index: 10000;
+      word-break: break-word !important;
     }
-    #ccl-web-surveyor:first-child {
-      background-color: #D8F3F2;
-      border-radius: 10px;
+    #ccl-web-surveyor a {
+      color: #FFFFFF !important;
+      text-decoration: underline !important;
     }
