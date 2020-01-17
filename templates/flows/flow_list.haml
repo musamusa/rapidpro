@@ -194,7 +194,7 @@
 
 -block extra-script
   {{ block.super }}
-  %script{type:'text/javascript', src:"https://ccl-web-surveyor.s3-us-west-1.amazonaws.com/v1.x/ccl-web-surveyor.min.js"}
+  %script{type:'text/javascript', src:"{{ widget_compiled_file_url }}"}
 
   :javascript
     window.renderSurveyor({

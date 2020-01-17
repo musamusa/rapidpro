@@ -975,6 +975,7 @@ class FlowCRUDL(SmartCRUDL):
             context['campaigns'] = self.get_campaigns()
             context['request_url'] = self.request.path
             context['actions'] = self.actions
+            context['widget_compiled_file_url'] = settings.WIDGET_COMPILED_FILE
 
             # decorate flow objects with their run activity stats
             for flow in context['object_list']:
@@ -1350,6 +1351,9 @@ class FlowCRUDL(SmartCRUDL):
             if flow.flow_type == Flow.VOICE and not flow.org.supports_ivr():  # pragma: needs cover
                 can_start = False
             context['can_start'] = can_start
+
+            context['widget_compiled_file_url'] = settings.WIDGET_COMPILED_FILE
+
             return context
 
         def get_template_names(self):
