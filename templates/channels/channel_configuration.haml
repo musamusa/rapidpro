@@ -1085,7 +1085,10 @@
               automatedChatTextColor: '{{ "#"|add:object.config_json.automated_chat_txt }}',
               userChatBackgroundColor: '{{ "#"|add:object.config_json.user_chat_bg }}',
               userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}',
-              logoStyle: '{{ object.config_json.logo_style }}'
+              logoStyle: '{{ object.config_json.logo_style }}',
+              sidePadding: '{{ object.config_json.side_padding }}px',
+              bottomPadding: '{{ object.config_json.bottom_padding }}px',
+              sideOfScreen: '{{ object.config_json.side_of_screen }}'
             }
           }, 'ccl-web-surveyor');
         &lt;/script>

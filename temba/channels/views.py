@@ -1084,11 +1084,20 @@ class UpdateWsForm(UpdateChannelForm):
     logo_style = forms.ChoiceField(label=_("Logo Style"),
                                    help_text=_("This is related to how we will display the widget when it's closed"))
 
+    side_padding = forms.CharField(label=_('Side Padding (# of Pixels)'), widget=forms.NumberInput())
+
+    bottom_padding = forms.CharField(label=_('Bottom Padding (# of Pixels)'), widget=forms.NumberInput())
+
+    side_of_screen = forms.ChoiceField(label=_("Side of Screen"),
+                                       help_text=_("This is related to the side of the screen that we will display the "
+                                                   "widget"))
+
     def __init__(self, *args, **kwargs):
         super(UpdateWsForm, self).__init__(*args, **kwargs)
 
         self.fields['theme'].choices = [(theme.get('name'), theme.get('name')) for theme in settings.WIDGET_THEMES]
         self.fields["logo_style"].choices = [("circle", _("Circle")), ("rectangle", _("Rectangle"))]
+        self.fields["side_of_screen"].choices = [("right", _("Right")), ("left", _("Left"))]
 
         if self.instance.config:
             config = self.instance.config_json()
@@ -1110,6 +1119,9 @@ class UpdateWsForm(UpdateChannelForm):
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
                                                               settings.WIDGET_THEMES[0]['user_chat_txt'])
             self.fields["logo_style"].initial = config.get("logo_style", "circle")
+            self.fields["side_padding"].initial = config.get("side_padding", "20")
+            self.fields["bottom_padding"].initial = config.get("bottom_padding", "20")
+            self.fields["side_of_screen"].initial = config.get("side_of_screen", "right")
 
     def clean_name(self):
         org = self.object.org
@@ -1161,10 +1173,10 @@ class UpdateWsForm(UpdateChannelForm):
     class Meta(UpdateChannelForm.Meta):
         config_fields = ['logo', 'title', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',
                          'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg',
-                         'user_chat_txt', 'logo_style']
+                         'user_chat_txt', 'logo_style', 'side_padding', 'bottom_padding', 'side_of_screen']
         fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',\
                  'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
-                 'logo_style', 'address', 'alert_email'
+                 'logo_style', 'side_padding', 'bottom_padding', 'side_of_screen', 'address', 'alert_email'
         readonly = ('address',)
         helps = {'address': _('URL to the WebSocket Server')}
 
