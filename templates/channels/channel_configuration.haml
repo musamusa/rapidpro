@@ -1086,8 +1086,9 @@
               userChatBackgroundColor: '{{ "#"|add:object.config_json.user_chat_bg }}',
               userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}',
               logoStyle: '{{ object.config_json.logo_style }}',
-              sidePadding: '{{ object.config_json.side_padding }}px',
-              bottomPadding: '{{ object.config_json.bottom_padding }}px',
+              chatButtonHeight: '{{ object.config_json.chat_button_height|add_suffix:"px" }}',
+              sidePadding: '{{ object.config_json.side_padding|add_suffix:"px" }}',
+              bottomPadding: '{{ object.config_json.bottom_padding|add_suffix:"px" }}',
               sideOfScreen: '{{ object.config_json.side_of_screen }}'
             }
           }, 'ccl-web-surveyor');

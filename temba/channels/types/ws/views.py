@@ -61,6 +61,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             'user_chat_txt': settings.WIDGET_THEMES[0]['user_chat_txt'],
             'widget_bg_color': settings.WIDGET_THEMES[0]['widget_bg'],
             'logo_style': settings.WIDGET_THEMES[0]['logo_style'],
+            'chat_button_height': settings.WIDGET_THEMES[0]['chat_button_height'],
             'side_padding': settings.WIDGET_THEMES[0]['side_padding'],
             'bottom_padding': settings.WIDGET_THEMES[0]['bottom_padding'],
             'side_of_screen': settings.WIDGET_THEMES[0]['side_of_screen']
