@@ -1361,6 +1361,11 @@ WIDGET_THEMES = [
         'automated_chat_bg': WIDGET_PRIMARY_COLOR,
         'automated_chat_txt': WIDGET_SECONDARY_COLOR,
         'user_chat_bg': WIDGET_SECONDARY_COLOR,
-        'user_chat_txt': WIDGET_TERTIARY_COLOR
+        'user_chat_txt': WIDGET_TERTIARY_COLOR,
+        'logo_style': 'circle',
+        'chat_button_height': '64',
+        'side_padding': '20',
+        'bottom_padding': '20',
+        'side_of_screen': 'right'
     }
 ]

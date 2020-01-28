@@ -58,7 +58,13 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             'automated_chat_bg': settings.WIDGET_THEMES[0]['automated_chat_bg'],
             'automated_chat_txt': settings.WIDGET_THEMES[0]['automated_chat_txt'],
             'user_chat_bg': settings.WIDGET_THEMES[0]['user_chat_bg'],
-            'user_chat_txt': settings.WIDGET_THEMES[0]['user_chat_txt']
+            'user_chat_txt': settings.WIDGET_THEMES[0]['user_chat_txt'],
+            'widget_bg_color': settings.WIDGET_THEMES[0]['widget_bg'],
+            'logo_style': settings.WIDGET_THEMES[0]['logo_style'],
+            'chat_button_height': settings.WIDGET_THEMES[0]['chat_button_height'],
+            'side_padding': settings.WIDGET_THEMES[0]['side_padding'],
+            'bottom_padding': settings.WIDGET_THEMES[0]['bottom_padding'],
+            'side_of_screen': settings.WIDGET_THEMES[0]['side_of_screen']
         }
 
         self.object = Channel.create(org, self.request.user, None, self.channel_type, name=channel_name,

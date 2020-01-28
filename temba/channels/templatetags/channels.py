@@ -13,3 +13,8 @@ def channel_icon(channel):
 @register.filter
 def adapt_for_widget(text):
     return text.replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r")
+
+
+@register.filter
+def add_suffix(text, suffix):
+    return "%s%s" % (text, suffix) if text else ""
