@@ -2161,10 +2161,13 @@ class Org(SmartModel):
             temp.flush()
 
             file = File(temp)
-            command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
-                           "-define deskew:auto-crop=true {destination}".format(source=file.file.name,
-                                                                                destination=file.file.name)
-            subprocess.call(command_line.split(' '))
+            try:
+                command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
+                               "-define deskew:auto-crop=true {destination}".format(source=file.file.name,
+                                                                                    destination=file.file.name)
+                subprocess.call(command_line.split(' '))
+            except Exception:
+                pass
 
             # save our file off
             downloaded = self.save_media(file, extension or extension_from_url)
