@@ -36,6 +36,7 @@ from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin, AnonMi
 from temba.channels.models import ChannelSession
 from temba.utils import analytics
 from twilio import TwilioRestException
+from PIL import Image
 from .models import Channel, ChannelEvent, SyncEvent, Alert, ChannelLog, ChannelCount
 
 
@@ -1791,6 +1792,21 @@ class ChannelCRUDL(SmartCRUDL):
             context['domain'] = self.object.callback_domain
             context['ip_addresses'] = settings.IP_ADDRESSES
             context['widget_compiled_file'] = settings.WIDGET_COMPILED_FILE
+
+            if self.object.channel_type == 'WS':
+                config = self.object.config_json()
+                logo_img = config.get('logo', None)
+                if logo_img:
+                    # if using S3 as file storage
+                    if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                        media_file = Org.get_temporary_file_from_url(logo_img)
+                        im = Image.open(media_file)
+                    else:
+                        logo_path = logo_img.split(settings.HOSTNAME)[-1].replace('/media', '', 1)
+                        logo_path = '%s%s' % (settings.MEDIA_ROOT, logo_path)
+                        im = Image.open(logo_path)
+                    logo_w, logo_h = im.size
+                    context['ws_logo_size'] = {'width': logo_w, 'height': logo_h}
 
             return context
 

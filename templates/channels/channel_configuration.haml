@@ -1090,6 +1090,10 @@
               sidePadding: '{{ object.config_json.side_padding|add_suffix:"px" }}',
               bottomPadding: '{{ object.config_json.bottom_padding|add_suffix:"px" }}',
               sideOfScreen: '{{ object.config_json.side_of_screen }}'
+            },
+            meta: {
+              width: '{{ ws_logo_size.width|add_suffix:"px" }}',
+              height: '{{ ws_logo_size.height|add_suffix:"px" }}'
             }
           }, 'ccl-web-surveyor');
         &lt;/script>
