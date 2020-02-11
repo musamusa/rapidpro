@@ -1358,3 +1358,6 @@ WIDGET_THEMES = [
         'user_chat_txt': WIDGET_TERTIARY_COLOR
     }
 ]
+
+RECAPTCHA_SITE_KEY = ''
+RECAPTCHA_SECRET_KEY = ''
