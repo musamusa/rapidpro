@@ -9,7 +9,7 @@
   <div class="span7 offset2">
     <div class="page-header"><h2>Sign in</h2></div>
 
-    <form method="post" class="form-stacked" id="login-form">
+    <form method="post" class="form-stacked" id="login-form" onsubmit="return validateRecaptcha();">
       {% for field, errors in form.errors.items %}
       {% if field == '__all__' %}
       <div class="alert alert-error form-errors">
@@ -33,9 +33,13 @@
           <label for="password">Password</label>
           <div class="input"><input type="password" name="password" id="id_password"></div>
         </div>
+
+        <div id="recaptcha"></div>
+
         {% csrf_token %}
         <input type="submit" class="btn btn-primary" value="Login">
         <span style="margin-left:170px;"><a href="/users/user/forget/">Forgot Password?</a></span>
+
       </fieldset>
     </form>
   </div>
@@ -45,13 +49,32 @@
 
 {% block extra-style %}
 <style>
-hr.top-bar {
-  display: none;
-}
+  hr.top-bar {
+    display: none;
+  }
 
-li {
-  list-style: none;
-  margin-left: 0px;
-}
+  li {
+    list-style: none;
+    margin-left: 0;
+  }
+
+  #recaptcha {
+    margin: 5px 0 10px 0;
+  }
 </style>
+{% endblock %}
+
+{% block extra-script %}
+  <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_secrete_key }}"></script>
+  <script>
+    function validateRecaptcha() {
+      const response = grecaptcha.getResponse();
+      return response.length !== 0;
+    }
+    grecaptcha.ready(() => {
+      grecaptcha.render('recaptcha', {
+        'sitekey': '{{ recaptcha_site_key }}'
+      });
+    });
+  </script>
 {% endblock %}
