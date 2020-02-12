@@ -479,6 +479,7 @@ PERMISSIONS = {
                    'pdf_export',
                    'lookups_api',
                    'giftcards_api',
+                   'facebook_topics',
                    ),
 
     'flows.flowimage': ('read',

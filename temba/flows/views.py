@@ -602,7 +602,7 @@ class FlowCRUDL(SmartCRUDL):
                'upload_action_recording', 'read', 'editor', 'results', 'run_table', 'json', 'broadcast', 'activity',
                'activity_chart', 'filter', 'campaign', 'completion', 'revisions', 'recent_messages',
                'upload_media_action', 'pdf_export', 'launch', 'launch_keyword', 'launch_schedule',
-               'lookups_api', 'giftcards_api', 'salesforce_fields', 'launch_surveyor')
+               'lookups_api', 'giftcards_api', 'salesforce_fields', 'launch_surveyor', 'facebook_topics')
 
     model = Flow
 
@@ -1344,6 +1344,8 @@ class FlowCRUDL(SmartCRUDL):
                 context['mutable'] = True
 
             context['has_airtime_service'] = bool(self.object.org.is_connected_to_transferto())
+
+            context['has_facebook_channel'] = bool(self.object.org.has_facebook_channel())
 
             can_start = True
             if flow.flow_type == Flow.VOICE and not flow.org.supports_ivr():  # pragma: needs cover
@@ -2409,6 +2411,16 @@ class FlowCRUDL(SmartCRUDL):
                 collection_full_name = collection_full_name.replace('-', '')
                 collections.append(dict(id=collection_full_name, text=collection))
             return JsonResponse(dict(results=collections))
+
+    class FacebookTopics(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
+        def get(self, request, *args, **kwargs):
+            topics = [
+                {'id': 'CONFIRMED_EVENT_UPDATE', 'text': 'Event'},
+                {'id': 'POST_PURCHASE_UPDATE', 'text': 'Purchase'},
+                {'id': 'ACCOUNT_UPDATE', 'text': 'Account'},
+                {'id': 'HUMAN_AGENT', 'text': 'Agent'}
+            ]
+            return JsonResponse(dict(results=topics))
 
     class SalesforceFields(OrgQuerysetMixin, OrgPermsMixin, SmartListView):
         def get(self, request, *args, **kwargs):

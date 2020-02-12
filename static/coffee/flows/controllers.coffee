@@ -101,6 +101,7 @@ app.controller 'FlowController', [ '$scope', '$rootScope', '$timeout', '$log', '
   $rootScope.ivr = window.ivr
   $rootScope.ussd = window.ussd
   $rootScope.hasAirtimeService = window.hasAirtimeService
+  $rootScope.hasFacebookConnected = window.hasFacebookConnected
 
   $scope.getContactFieldName = (ruleset) ->
     if not ruleset._contactFieldName

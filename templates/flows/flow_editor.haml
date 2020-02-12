@@ -72,6 +72,7 @@
     window.mediaURL = '{{media_url}}';
     window.hasAirtimeService = {{has_airtime_service|lower}};
     window.connectAirtimeServiceURL = '{% url "orgs.org_home" %}#id-transferto';
+    window.hasFacebookConnected = {{has_facebook_channel|lower}};
 
     $('.draggable').draggable();
     // TODO: All inline javascript below should be replaced with corresponding angular implementations

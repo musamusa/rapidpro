@@ -941,6 +941,9 @@ class Org(SmartModel):
         else:
             return False
 
+    def has_facebook_channel(self):
+        return self.channels.filter(channel_type='FB', is_active=True).count() > 0
+
     def remove_transferto_account(self, user):
         if self.config:
             config = self.config_json()
