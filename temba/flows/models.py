@@ -6047,8 +6047,9 @@ class ReplyAction(Action):
     SEND_ALL = 'send_all'
     QUICK_REPLIES = 'quick_replies'
     APPLY_OPTIONS = 'apply_options'
+    TOPIC = 'topic'
 
-    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, send_all=False):
+    def __init__(self, uuid, msg=None, media=None, quick_replies=None, apply_options=None, send_all=False, topic=None):
         super(ReplyAction, self).__init__(uuid)
 
         self.msg = msg
@@ -6056,6 +6057,7 @@ class ReplyAction(Action):
         self.send_all = send_all
         self.quick_replies = quick_replies if quick_replies else []
         self.apply_options = apply_options if apply_options else {}
+        self.topic = topic if topic else {}
 
     @classmethod
     def from_json(cls, org, json_obj):
@@ -6072,11 +6074,11 @@ class ReplyAction(Action):
 
         return cls(json_obj.get(cls.UUID), msg=json_obj.get(cls.MESSAGE), media=json_obj.get(cls.MEDIA, None),
                    quick_replies=json_obj.get(cls.QUICK_REPLIES), apply_options=json_obj.get(cls.APPLY_OPTIONS),
-                   send_all=json_obj.get(cls.SEND_ALL, False))
+                   send_all=json_obj.get(cls.SEND_ALL, False), topic=json_obj.get(cls.TOPIC))
 
     def as_json(self):
         return dict(type=self.TYPE, uuid=self.uuid, msg=self.msg, media=self.media, quick_replies=self.quick_replies,
-                    apply_options=self.apply_options, send_all=self.send_all)
+                    apply_options=self.apply_options, send_all=self.send_all, topic=self.topic)
 
     @staticmethod
     def get_translated_quick_replies(metadata, run):
@@ -6135,7 +6137,7 @@ class ReplyAction(Action):
                 replies = msg.reply(text, user, trigger_send=False, expressions_context=context,
                                     connection=run.connection, msg_type=self.MSG_TYPE, quick_replies=quick_replies,
                                     attachments=attachments, send_all=self.send_all, created_on=created_on,
-                                    apply_options=apply_options)
+                                    apply_options=apply_options, topic=self.topic.get('id', None))
             else:
                 # if our run has been responded to or any of our parent runs have
                 # been responded to consider us interactive with high priority
@@ -6143,7 +6145,8 @@ class ReplyAction(Action):
                 replies = run.contact.send(text, user, trigger_send=False, expressions_context=context,
                                            connection=run.connection, msg_type=self.MSG_TYPE, attachments=attachments,
                                            quick_replies=quick_replies, created_on=created_on, all_urns=self.send_all,
-                                           high_priority=high_priority, apply_options=apply_options)
+                                           high_priority=high_priority, apply_options=apply_options,
+                                           topic=self.topic.get('id', None))
         return replies
 
 

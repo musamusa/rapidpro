@@ -2279,6 +2279,21 @@ NodeEditorController = ($rootScope, $scope, $modalInstance, $timeout, $log, Flow
       $scope.action.apply_options['option_false'] = {}
       $scope.action.apply_options.option_false[$scope.base_language] = "No"
 
+    if $scope.action._topic
+      topicText = null
+      for topic in Flow.facebook_topics
+        if (topic.id != $scope.action._topic)
+          continue
+        topicText = topic.text
+
+      $scope.action.topic = {
+        id: $scope.action._topic,
+        text: topicText
+      }
+      delete $scope.action._topic
+    else
+      $scope.action.topic = {}
+
     Flow.saveAction(actionset, $scope.action)
     $modalInstance.close()
 

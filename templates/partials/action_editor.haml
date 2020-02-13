@@ -93,9 +93,10 @@
   <ng-form name="action_editor">
     %span{ng-if:'config.type == "reply"'}
       -include 'partials/invalid_fields.haml'
-      %input{ng-model:"action.fb_tag", search:"true", init-text:"[[action.fb_tag.text]]", name:"fb_tag",
-             placeholder:"Select a topic to use over Facebook", init-id:"[[action.fb_tag.id]]",
-             select-server:"/flow/facebook_topics/", type:"hidden", ng-show:"hasFacebookConnected", allow-clear:"true"}
+      %input{ng-model:"action._topic", search:"true", name:"topic", init-text:"[[action.topic.text]]",
+             placeholder:"Select a topic to use over Facebook", init-id:"[[action.topic.id]]",
+             select-server:"/flow/facebook_topics/", ng-if:"hasFacebookConnected", allow-clear:"true",
+             data-topic:"topic"}
       %span{auto-complete:"",msg:"action.msg",type:"sms",data-message:"message"}
       %button{ng-click:'saveMessage(message, "reply", showAttachVariable)',class:"submit hide"}
       .media{ng-hide:'action.uploading'}
