@@ -79,6 +79,10 @@
     margin: 5px 0 2px 0 !important;
   }
 
+  .select2-search-choice-close {
+    margin: 3px 5px 0 0 !important;
+  }
+
 .modal-header.title
   %span{ng-model:"config",data-icon:"show",class:"modal-title action-name"}><
 .modal-body
@@ -89,6 +93,10 @@
   <ng-form name="action_editor">
     %span{ng-if:'config.type == "reply"'}
       -include 'partials/invalid_fields.haml'
+      %input{ng-model:"action._topic", search:"true", name:"topic", init-text:"[[action.topic.text]]",
+             placeholder:"Select a topic to use over Facebook", init-id:"[[action.topic.id]]",
+             select-server:"/flow/facebook_topics/", ng-if:"hasFacebookConnected", allow-clear:"true",
+             data-topic:"topic"}
       %span{auto-complete:"",msg:"action.msg",type:"sms",data-message:"message"}
       %button{ng-click:'saveMessage(message, "reply", showAttachVariable)',class:"submit hide"}
       .media{ng-hide:'action.uploading'}

@@ -194,6 +194,7 @@ app.directive "selectServer", ["$timeout", "$http", ($timeout, $http) ->
     element.select2
       placeholder: attrs.placeholder
       minimumResultsForSearch: minimumResultsForSearch
+      allowClear: attrs.allowClear
       ajax:
         url: attrs.selectServer
         dataType: "json"

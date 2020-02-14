@@ -1177,12 +1177,13 @@ class Msg(models.Model):
         return sorted_logs[0] if sorted_logs else None
 
     def reply(self, text, user, trigger_send=False, expressions_context=None, connection=None, attachments=None, msg_type=None,
-              send_all=False, created_on=None, quick_replies=None, apply_options=None):
+              send_all=False, created_on=None, quick_replies=None, apply_options=None, topic=None):
 
         return self.contact.send(text, user, trigger_send=trigger_send, expressions_context=expressions_context,
                                  response_to=self if self.id else None, connection=connection, attachments=attachments,
                                  msg_type=msg_type or self.msg_type, created_on=created_on, all_urns=send_all,
-                                 high_priority=True, quick_replies=quick_replies, apply_options=apply_options)
+                                 high_priority=True, quick_replies=quick_replies, apply_options=apply_options,
+                                 topic=topic)
 
     def update(self, cmd):
         """
@@ -1467,7 +1468,7 @@ class Msg(models.Model):
     def create_outgoing(cls, org, user, recipient, text, broadcast=None, channel=None, high_priority=False,
                         created_on=None, response_to=None, expressions_context=None, status=PENDING, insert_object=True,
                         attachments=None, topup_id=None, msg_type=INBOX, connection=None, quick_replies=None,
-                        apply_options=None):
+                        apply_options=None, topic=None):
 
         if not org or not user:  # pragma: no cover
             raise ValueError("Trying to create outgoing message with no org or user")
@@ -1588,6 +1589,9 @@ class Msg(models.Model):
                 if value:
                     apply_options.get('options')[counter] = value
             metadata = json.dumps(dict(apply_options=apply_options))
+
+        if topic:
+            metadata = json.dumps(dict(topic=topic))
 
         msg_args = dict(contact=contact,
                         contact_urn=contact_urn,
