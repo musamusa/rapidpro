@@ -67,6 +67,8 @@ class FacebookType(ChannelType):
         if topic:
             payload['tag'] = topic
             payload['messaging_type'] = 'MESSAGE_TAG'
+        else:
+            payload['messaging_type'] = 'RESPONSE'
 
         # this is a ref facebook id, temporary just for this message
         if URN.is_path_fb_ref(msg.urn_path):
