@@ -382,6 +382,9 @@ class @ConfirmationModal extends @Modal
     secondary = @ele.find('.secondary')
     secondary.on('click', -> modal.dismiss())
     secondary.show()
+    close = @ele.find('.close')
+    close.on('click', -> modal.dismiss())
+    close.show()
 
   hideSecondaryButton: ->
     @ele.find('.secondary').hide()
@@ -403,6 +406,10 @@ class @ConfirmationModal extends @Modal
       secondary = @ele.find('.secondary')
       secondary.on 'click', ->
         modal.listeners.onSecondary(modal)
+    if modal.listeners.onClose
+      close = @ele.find('.close')
+      close.on 'click', ->
+        modal.listeners.onClose(modal)
 
 # -------------------------------------------------------------------
 # A modal populated with a PJAX element

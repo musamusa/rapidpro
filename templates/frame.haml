@@ -264,12 +264,40 @@
         {% endif %}
       {% endif %}
 
+      function _onCloseTriggerConfirmationModal(_s2_element, removed) {
+        $(_s2_element).closest('#active-modal').css('pointer-events', 'initial').css('opacity', '1');
+        var currenctValue = _s2_element.val();
+        currenctValue = currenctValue.split(",");
+        if (currenctValue.length == 1 && currenctValue[0] == "") {
+          currenctValue = [removed]
+        } else {
+          currenctValue.push(removed);
+        }
+        _s2_element.val(currenctValue).trigger('change');
+      }
+
       function removalConfirmation(removal, buttonName) {
         modal = new ConfirmationModal($('.' + removal + ' > .title').html(), $('.' + removal + ' > .body').html());
         modal.addClass('alert');
         modal.setListeners({onPrimary: function(){
           $('#' + removal + '-form').click();
         }}, false);
+        modal.setPrimaryButton(buttonName);
+        modal.show();
+      }
+
+      function removalConfirmationFlowTrigger(removal, buttonName, _s2_element, removed) {
+        modal = new ConfirmationModal($('.' + removal + ' > .title').html(), $('.' + removal + ' > .body').html());
+        modal.addClass('alert');
+        modal.setListeners({
+          onClose: function(){ _onCloseTriggerConfirmationModal(_s2_element, removed) },
+          onPrimary: function(){
+            _s2_element.closest('#active-modal').css('pointer-events', 'initial').css('opacity', '1');
+            modal.dismiss();
+          },
+          onSecondary: function(){ _onCloseTriggerConfirmationModal(_s2_element, removed) }
+        }, false);
+
         modal.setPrimaryButton(buttonName);
         modal.show();
       }
