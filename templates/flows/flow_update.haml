@@ -1,6 +1,6 @@
 -extends 'smartmin/update.html'
 
-{% load smartmin temba compress%}
+{% load smartmin temba compress i18n %}
 
 -block pre-form
   :css
@@ -8,13 +8,19 @@
       background: none !important;
     }
 
+  .hide{'class': 'remove-trigger'}
+    .title
+      -trans "Remove"
+    .body
+      -trans "Are you sure you want to remove this trigger word?"
+    %a.posterize{'href': 'javascript:;'}
 
 
 -block modal-script
   {{block.super}}
 
   :javascript
-    
+
     $(document).ready(function() {
 
       select2div('#id_expires_after_minutes', '520px');
@@ -34,6 +40,12 @@
         minimumResultsForSearch: -1,
         placeholder: "Add a keyword to begin this flow (optional)",
         containerCssClass: "select2-temba-field"
+      }).on('change', function (e) {
+        if (e.removed) {
+          const removedTrigger = e.removed.id;
+          $(this).closest('#active-modal').css('pointer-events', 'none').css('opacity', '0.3');
+          removalConfirmationFlowTrigger("remove-trigger", "Remove", $(this), removedTrigger);
+        }
       });
 
     });
