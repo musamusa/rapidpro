@@ -16,6 +16,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
         channel_name = forms.CharField(label=_('WebSocket Name'), max_length=64)
 
+        address = forms.URLField(label=_('WebSocket Address'), max_length=255, initial=settings.WS_URL)
+
         def clean_channel_name(self):
             org = self.request.user.get_org()
             value = self.cleaned_data['channel_name']
@@ -38,13 +40,25 @@ class ClaimView(ClaimViewMixin, SmartFormView):
 
             return value
 
+        def clean_address(self):
+            address = self.cleaned_data['address']
+
+            try:
+                requests.get(address)
+            except Exception as e:
+                raise ValidationError(e.message)
+
+            return address
+
     form_class = Form
+    exclude = [] if settings.WS_ALLOW_CHANGE_ADDRESS else ['address']
 
     def form_valid(self, form):
         org = self.request.user.get_org()
         cleaned_data = form.cleaned_data
 
         channel_name = cleaned_data.get('channel_name')
+        address = cleaned_data.get('address', settings.WS_URL)
 
         branding = org.get_branding()
 
@@ -68,6 +82,6 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         }
 
         self.object = Channel.create(org, self.request.user, None, self.channel_type, name=channel_name,
-                                     address=settings.WS_URL, config=basic_config)
+                                     address=address, config=basic_config)
 
         return super(ClaimView, self).form_valid(form)
