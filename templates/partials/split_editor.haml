@@ -40,12 +40,20 @@
         %label.enable-checkbox
           %input{type:'checkbox', ng-model:'formData.spell_checker'}
           -trans "Enable spelling correction"
-          %a.icon-nav-help-inverted
+          %a.custom-tooltip{href:"https://azure.microsoft.com/en-us/services/cognitive-services/spell-check/", target:"_new"}
+            .icon-nav-help-inverted
+            %span.tooltiptext
+              -blocktrans
+                This feature will automatically correct typos and misspellings by users in multiple languages. The language for the spell checker is based on the language set for the user.
+                Corrections occur before the categorization rules. For example, if user types “thankks” it would be corrected to “thanks”. Click on the help icon to see more about.
 
         .correction-sensitivity{ng-show:'formData.spell_checker'}
           %label.title
             -trans "Correction Sensitivity"
-            %a.icon-nav-help-inverted
+            %a.custom-tooltip
+              .icon-nav-help-inverted
+              %span.tooltiptext.custom-sensitivity
+                -trans "This slider bar enables you to control the sensitivity of the correction. Like all spell checkers, it does not always make the correction you would want it to make. The higher the sensitivity, the more corrections will be made. Lower sensitivity will only make more obvious corrections."
           -trans "High"
           %input{type:'range', id:'start', name:'correction-sensitivity', min:'70', max:'99', ng-model:'formData.spelling_correction_sensitivity'}
           -trans "Low"
