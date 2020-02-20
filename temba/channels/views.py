@@ -11,6 +11,7 @@ import pytz
 import six
 import time
 import requests
+import regex
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -764,7 +765,9 @@ class ClaimViewMixin(OrgPermsMixin):
         return kwargs
 
     def get_success_url(self):
-        if self.channel_type.show_config_page:
+        if self.channel_type.show_edit_page:
+            return reverse('channels.channel_update', args=[self.object.id])
+        elif self.channel_type.show_config_page:
             return reverse('channels.channel_configuration', args=[self.object.id])
         else:
             return reverse('channels.channel_read', args=[self.object.uuid])
@@ -1043,6 +1046,124 @@ class UpdateTwitterForm(UpdateChannelForm):
         helps = {'address': _('Twitter handle of this channel')}
 
 
+class UpdateWsForm(UpdateChannelForm):
+    name = forms.CharField(label=_('Name'), help_text=_('Descriptive label for this channel'),
+                           widget=forms.TextInput(attrs={'required': ''}))
+
+    logo = forms.FileField(label=_('Logo'), required=False, help_text=_('We recommend to upload an image with 64x64px'))
+
+    title = forms.CharField(label=_('Chat Title'), help_text=_('It will appear on the header of the webchat'),
+                            widget=forms.TextInput(attrs={'required': '', 'maxlength': 40}))
+
+    welcome_message = forms.CharField(label=_('Welcome Message'),
+                                      widget=forms.Textarea(attrs={'style': 'height: 110px', 'required': ''}))
+
+    theme = forms.ChoiceField(label=_('Theme'), required=False)
+
+    widget_bg_color = forms.CharField(label=_('Widget Background Color'),
+                                      widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    chat_header_bg_color = forms.CharField(label=_('Chat Header Background Color'),
+                                           widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    chat_header_text_color = forms.CharField(label=_('Chat Header Text Color'),
+                                             widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    automated_chat_bg = forms.CharField(label=_('Automated Chat Background'),
+                                        widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    automated_chat_txt = forms.CharField(label=_('Automated Chat Text'),
+                                         widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    user_chat_bg = forms.CharField(label=_('User Chat Background'),
+                                   widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    user_chat_txt = forms.CharField(label=_('User Chat Text'),
+                                    widget=forms.TextInput(attrs={'class': 'jscolor'}))
+
+    def __init__(self, *args, **kwargs):
+        super(UpdateWsForm, self).__init__(*args, **kwargs)
+
+        self.fields['theme'].choices = [(theme.get('name'), theme.get('name')) for theme in settings.WIDGET_THEMES]
+
+        if self.instance.config:
+            config = self.instance.config_json()
+            self.fields['theme'].initial = config.get('theme', '')
+            self.fields['title'].initial = config.get('title', '')
+            self.fields['welcome_message'].initial = config.get('welcome_message', '')
+            self.fields['widget_bg_color'].initial = config.get('widget_bg_color',
+                                                                settings.WIDGET_THEMES[0]['widget_bg'])
+            self.fields['chat_header_bg_color'].initial = config.get('chat_header_bg_color',
+                                                                     settings.WIDGET_THEMES[0]['header_bg'])
+            self.fields['chat_header_text_color'].initial = config.get('chat_header_text_color',
+                                                                       settings.WIDGET_THEMES[0]['header_txt'])
+            self.fields['automated_chat_bg'].initial = config.get('automated_chat_bg',
+                                                                  settings.WIDGET_THEMES[0]['automated_chat_bg'])
+            self.fields['automated_chat_txt'].initial = config.get('automated_chat_txt',
+                                                                   settings.WIDGET_THEMES[0]['automated_chat_txt'])
+            self.fields['user_chat_bg'].initial = config.get('user_chat_bg',
+                                                             settings.WIDGET_THEMES[0]['user_chat_bg'])
+            self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
+                                                              settings.WIDGET_THEMES[0]['user_chat_txt'])
+
+    def clean_name(self):
+        org = self.object.org
+        name = self.cleaned_data['name']
+
+        if not regex.match(r'^[A-Za-z0-9_.\-*() ]+$', name, regex.V0):
+            raise forms.ValidationError('Please make sure the websocket name only contains '
+                                        'alphanumeric characters [0-9a-zA-Z], hyphens, and underscores')
+
+        # does a ws channel already exists on this account with that name
+        existing = Channel.objects.filter(org=org, is_active=True, channel_type=self.object.channel_type,
+                                          name=name).first()
+
+        if existing and existing != self.object:
+            raise ValidationError(_("A WebSocket channel for this name already exists on your account."))
+
+        return name
+
+    def clean_title(self):
+        title = self.cleaned_data['title']
+
+        if len(title) > 40:
+            raise ValidationError(_("Oops, the maximum length for a title is only 40 characters, "
+                                    "your title has %s." % len(title)))
+
+        return title
+
+    def clean_logo(self):
+        channel = self.instance
+        org = channel.org
+        logo = self.cleaned_data.get('logo')
+        config = channel.config_json()
+
+        logo_media = config.get(Channel.CONFIG_WG_LOGO, None)
+
+        if logo:
+            if logo.size > 1000000:
+                raise ValidationError(_('Too big logo for the Widget, it does not accept more than 1MB'))
+
+            extension = logo.name.split('.')[-1]
+            if extension not in ['png', 'jpg', 'jpeg', 'gif']:
+                raise ValidationError(_('Please, upload a logo using one of the following formats: PNG, JPG, '
+                                        'JPEG or GIF'))
+
+            logo_media = org.save_media(logo, extension)
+
+        return logo_media
+
+    class Meta(UpdateChannelForm.Meta):
+        config_fields = ['logo', 'title', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',
+                         'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg',
+                         'user_chat_txt']
+        fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',\
+                 'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
+                 'address', 'alert_email'
+        readonly = ('address',)
+        helps = {'address': _('URL to the WebSocket Server')}
+
+
 TYPE_UPDATE_FORM_CLASSES = {
     Channel.TYPE_ANDROID: UpdateAndroidForm,
 }
@@ -1319,7 +1440,7 @@ class ChannelCRUDL(SmartCRUDL):
                 if channel.channel_type == 'T' and not channel.is_delegate_sender():
                     messages.info(request, _("We have disconnected your Twilio number. If you do not need this number you can delete it from the Twilio website."))
                 else:
-                    messages.info(request, _("Your phone number has been removed."))
+                    messages.info(request, _("The %s channel has been removed." % channel.name))
 
                 return HttpResponseRedirect(self.get_success_url())
 
@@ -1357,7 +1478,10 @@ class ChannelCRUDL(SmartCRUDL):
             return super(ChannelCRUDL.Update, self).lookup_field_help(field, default=default)
 
         def get_success_url(self):
-            return reverse('channels.channel_read', args=[self.object.uuid])
+            if self.object.channel_type == 'WS':
+                return reverse('channels.channel_configuration', args=[self.object.pk])
+            else:
+                return reverse('channels.channel_read', args=[self.object.uuid])
 
         def get_form_class(self):
             return Channel.get_type_from_code(self.object.channel_type).get_update_form()
@@ -1371,7 +1495,7 @@ class ChannelCRUDL(SmartCRUDL):
             if obj.config:
                 config = json.loads(obj.config)
                 for field in self.form.Meta.config_fields:  # pragma: needs cover
-                    config[field] = bool(self.form.cleaned_data[field])
+                    config[field] = self.form.cleaned_data[field]
                 obj.config = json.dumps(config)
             return obj
 
@@ -1602,6 +1726,16 @@ class ChannelCRUDL(SmartCRUDL):
 
     class Configuration(OrgPermsMixin, SmartReadView):
 
+        def get_gear_links(self):
+            links = []
+
+            if self.has_org_perm("channels.channel_update"):
+                links.append(dict(title=_('Edit'),
+                                  style='btn-primary',
+                                  href=reverse('channels.channel_update', args=[self.object.id])))
+
+            return links
+
         def has_permission_view_objects(self):
             channel = Channel.objects.filter(org=self.request.user.get_org(), pk=self.kwargs.get('pk')).first()
             if not channel:
@@ -1634,6 +1768,7 @@ class ChannelCRUDL(SmartCRUDL):
 
             context['domain'] = self.object.callback_domain
             context['ip_addresses'] = settings.IP_ADDRESSES
+            context['widget_compiled_file'] = settings.WIDGET_COMPILED_FILE
 
             return context
 

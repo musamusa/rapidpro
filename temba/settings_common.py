@@ -1257,6 +1257,7 @@ CHANNEL_TYPES = [
     'temba.channels.types.vumi_ussd.VumiUSSDType',
     'temba.channels.types.yo.YoType',
     'temba.channels.types.zenvia.ZenviaType',
+    'temba.channels.types.ws.WsType',
 ]
 
 # -----------------------------------------------------------------------------------
@@ -1335,6 +1336,28 @@ FCM_HOST = 'https://fcm.googleapis.com/v1/projects/%s/messages:send' % FCM_PROJE
 FCM_CONFIG = dict()
 
 CREDITS_EXPIRATION = False
+
+WS_URL = 'http://localhost:9091'
+
+WIDGET_PRIMARY_COLOR = '289F9B'
+WIDGET_SECONDARY_COLOR = 'FFFFFF'
+WIDGET_TERTIARY_COLOR = '000000'
+WIDGET_BG_COLOR = 'D8F3F2'
+WIDGET_COMPILED_FILE = ''
+
+WIDGET_THEMES = [
+    {
+        'name': 'CCL Standard',
+        'title': 'Chat with',
+        'widget_bg': WIDGET_BG_COLOR,
+        'header_bg': WIDGET_PRIMARY_COLOR,
+        'header_txt': WIDGET_SECONDARY_COLOR,
+        'automated_chat_bg': WIDGET_PRIMARY_COLOR,
+        'automated_chat_txt': WIDGET_SECONDARY_COLOR,
+        'user_chat_bg': WIDGET_SECONDARY_COLOR,
+        'user_chat_txt': WIDGET_TERTIARY_COLOR
+    }
+]
 
 BING_SPELL_CHECKER_API_KEY = '<ENTER-KEY-HERE>'
 BING_SPELL_CHECKER_ENDPOINT = 'https://api.cognitive.microsoft.com/bing/v7.0/SpellCheck'

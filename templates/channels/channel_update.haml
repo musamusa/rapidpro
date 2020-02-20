@@ -18,6 +18,7 @@
       margin-bottom:15px;
     }
 {% block extra-script %}
+<script src="{{ STATIC_URL }}js/jscolor.js"></script>
 :javascript
   (function($) {
     // change the value of the first option to be empty so that select2 placeholder works
@@ -28,6 +29,24 @@
       containerCssClass: 'select2-temba-field',
       placeholder: "{% trans 'Select a Country' %}"
     });
+    $('#id_theme').select2({
+      width: '370px',
+      containerCssClass: 'select2-temba-field',
+      placeholder: "{% trans 'Select a theme' %}"
+    });
+    $('#id_flow').select2({
+      width: '370px',
+      containerCssClass: 'select2-temba-field',
+      placeholder: "{% trans 'Select a flow' %}"
+    });
+    $('#id_logo').change(function() {
+      var el = $(this);
+      var file = el[0].files[0];
+      var typesAllowed = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif'];
+      if (typesAllowed.indexOf(file.type) < 0) {
+        alert('{% trans "Please, upload a logo using one of the following formats: PNG, JPG, JPEG or GIF." %}');
+        el.val("");
+      }
+    });
   })(jQuery);
-
 {% endblock %}
