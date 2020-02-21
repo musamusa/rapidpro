@@ -574,6 +574,9 @@ app.factory 'Flow', ['$rootScope', '$window', '$http', '$timeout', '$interval', 
       $http.get('/flow/lookups_api/').success (data) ->
         Flow.lookup_dbs = data.results
 
+      $http.get('/flow/facebook_topics/').success (data) ->
+        Flow.facebook_topics = data.results
+
       @opNames =
         'lt': '< '
         'gt': '> '

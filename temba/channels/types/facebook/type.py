@@ -63,6 +63,13 @@ class FacebookType(ChannelType):
         if quick_replies:
             payload['message']['quick_replies'] = formatted_replies
 
+        topic = metadata.get('topic', None)
+        if topic:
+            payload['tag'] = topic
+            payload['messaging_type'] = 'MESSAGE_TAG'
+        else:
+            payload['messaging_type'] = 'RESPONSE'
+
         # this is a ref facebook id, temporary just for this message
         if URN.is_path_fb_ref(msg.urn_path):
             payload['recipient'] = dict(user_ref=URN.fb_ref_from_path(msg.urn_path))

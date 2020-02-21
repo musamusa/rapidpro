@@ -1980,7 +1980,7 @@ class Contact(TembaModel):
 
     def send(self, text, user, trigger_send=True, response_to=None, expressions_context=None, connection=None,
              quick_replies=None, attachments=None, msg_type=None, created_on=None, all_urns=False, high_priority=False,
-             apply_options=None):
+             apply_options=None, topic=None):
         from temba.msgs.models import Msg, INBOX, PENDING, SENT, UnreachableException
 
         status = SENT if created_on else PENDING
@@ -1997,7 +1997,7 @@ class Contact(TembaModel):
                                           response_to=response_to, expressions_context=expressions_context,
                                           connection=connection, attachments=attachments, msg_type=msg_type or INBOX,
                                           status=status, quick_replies=quick_replies, created_on=created_on,
-                                          high_priority=high_priority, apply_options=apply_options)
+                                          high_priority=high_priority, apply_options=apply_options, topic=topic)
                 if msg is not None:
                     msgs.append(msg)
             except UnreachableException:
