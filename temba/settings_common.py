@@ -1364,3 +1364,6 @@ WIDGET_THEMES = [
         'side_of_screen': 'right'
     }
 ]
+
+RECAPTCHA_SITE_KEY = ''
+RECAPTCHA_SECRET_KEY = ''
