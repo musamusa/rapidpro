@@ -1703,6 +1703,56 @@
   color: #999;
 }
 
+.custom-tooltip {
+  position: relative;
+  display: inline-block;
+
+  .tooltiptext {
+    visibility: hidden;
+    width: 400px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 120%;
+    left: 50%;
+    margin-left: -204px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #555 transparent transparent transparent;
+    }
+
+    &.custom-sensitivity {
+      margin-left: -375px;
+
+      &::after {
+        left: auto;
+        right: 30px;
+      }
+    }
+  }
+
+  &:hover {
+    .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+}
+
 
 .rule-editor {
 
@@ -1828,6 +1878,68 @@
                 }
               }
             }
+          }
+        }
+      }
+    }
+
+    #enable-spelling-correction {
+      width: 100%;
+      padding: 0 10px;
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+
+      label.enable-checkbox {
+        margin-left: 10px;
+        width: 45%;
+        text-align: left;
+        display: inline-block;
+
+        input[type='checkbox'] {
+          width: auto;
+          margin: 0 5px 0 0;
+        }
+
+        a {
+          text-decoration: none;
+          color: #000000;
+
+          &:hover {
+            text-decoration: none;
+          }
+        }
+      }
+
+      .correction-sensitivity {
+        width: 50%;
+        float: right;
+        margin-top: -16px;
+
+        label {
+          width: 100%;
+          text-align: center;
+          display: block;
+
+          &.title {
+            margin-bottom: -2px;
+          }
+
+          a {
+            text-decoration: none;
+            color: #000000;
+
+            &:hover {
+              text-decoration: none;
+            }
+          }
+        }
+
+        input[type='range'] {
+          width: 75%;
+
+          &:focus {
+            outline: none;
           }
         }
       }
