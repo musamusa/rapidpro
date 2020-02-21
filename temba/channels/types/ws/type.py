@@ -60,10 +60,10 @@ class WsType(ChannelType):
             data['attachments'] = msg.attachments
 
         payload = json.dumps(data)
-        event = HttpEvent('POST', settings.WS_URL, payload)
+        event = HttpEvent('POST', channel.address, payload)
 
         try:
-            response = requests.post(settings.WS_URL, data=payload, headers=headers, timeout=5)
+            response = requests.post(channel.address, data=payload, headers=headers, timeout=5)
             event.status_code = response.status_code
             event.response_body = response.text
 

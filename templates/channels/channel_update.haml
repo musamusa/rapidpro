@@ -34,10 +34,15 @@
       containerCssClass: 'select2-temba-field',
       placeholder: "{% trans 'Select a theme' %}"
     });
-    $('#id_flow').select2({
+    $('#id_logo_style').select2({
       width: '370px',
       containerCssClass: 'select2-temba-field',
-      placeholder: "{% trans 'Select a flow' %}"
+      placeholder: "{% trans 'Select a logo style' %}"
+    });
+    $('#id_side_of_screen').select2({
+      width: '370px',
+      containerCssClass: 'select2-temba-field',
+      placeholder: "{% trans 'Select the side of screen' %}"
     });
     $('#id_logo').change(function() {
       var el = $(this);

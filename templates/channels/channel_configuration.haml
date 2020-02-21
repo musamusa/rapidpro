@@ -1084,7 +1084,16 @@
               automatedChatBackgroundColor: '{{ "#"|add:object.config_json.automated_chat_bg }}',
               automatedChatTextColor: '{{ "#"|add:object.config_json.automated_chat_txt }}',
               userChatBackgroundColor: '{{ "#"|add:object.config_json.user_chat_bg }}',
-              userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}'
+              userChatTextColor: '{{ "#"|add:object.config_json.user_chat_txt }}',
+              logoStyle: '{{ object.config_json.logo_style }}',
+              chatButtonHeight: '{{ object.config_json.chat_button_height|add_suffix:"px" }}',
+              sidePadding: '{{ object.config_json.side_padding|add_suffix:"px" }}',
+              bottomPadding: '{{ object.config_json.bottom_padding|add_suffix:"px" }}',
+              sideOfScreen: '{{ object.config_json.side_of_screen }}'
+            },
+            meta: {
+              width: '{{ ws_logo_size.width|add_suffix:"px" }}',
+              height: '{{ ws_logo_size.height|add_suffix:"px" }}'
             }
           }, 'ccl-web-surveyor');
         &lt;/script>

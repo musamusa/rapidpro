@@ -2161,7 +2161,6 @@ class Org(SmartModel):
             temp.flush()
 
             file = File(temp)
-
             try:
                 command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
                                "-define deskew:auto-crop=true {destination}".format(source=file.file.name,

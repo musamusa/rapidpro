@@ -36,6 +36,7 @@ from temba.orgs.views import OrgPermsMixin, OrgObjPermsMixin, ModalMixin, AnonMi
 from temba.channels.models import ChannelSession
 from temba.utils import analytics
 from twilio import TwilioRestException
+from PIL import Image
 from .models import Channel, ChannelEvent, SyncEvent, Alert, ChannelLog, ChannelCount
 
 
@@ -1081,10 +1082,25 @@ class UpdateWsForm(UpdateChannelForm):
     user_chat_txt = forms.CharField(label=_('User Chat Text'),
                                     widget=forms.TextInput(attrs={'class': 'jscolor'}))
 
+    logo_style = forms.ChoiceField(label=_("Logo Style"),
+                                   help_text=_("This is related to how we will display the widget when it's closed"))
+
+    chat_button_height = forms.CharField(label=_('Chat Button Height (in pixels)'), widget=forms.NumberInput())
+
+    side_padding = forms.CharField(label=_('Side Padding (# of Pixels)'), widget=forms.NumberInput())
+
+    bottom_padding = forms.CharField(label=_('Bottom Padding (# of Pixels)'), widget=forms.NumberInput())
+
+    side_of_screen = forms.ChoiceField(label=_("Side of Screen"),
+                                       help_text=_("This is related to the side of the screen that we will display the "
+                                                   "widget"))
+
     def __init__(self, *args, **kwargs):
         super(UpdateWsForm, self).__init__(*args, **kwargs)
 
         self.fields['theme'].choices = [(theme.get('name'), theme.get('name')) for theme in settings.WIDGET_THEMES]
+        self.fields["logo_style"].choices = [("circle", _("Circle")), ("rectangle", _("Rectangle"))]
+        self.fields["side_of_screen"].choices = [("right", _("Right")), ("left", _("Left"))]
 
         if self.instance.config:
             config = self.instance.config_json()
@@ -1105,6 +1121,11 @@ class UpdateWsForm(UpdateChannelForm):
                                                              settings.WIDGET_THEMES[0]['user_chat_bg'])
             self.fields['user_chat_txt'].initial = config.get('user_chat_txt',
                                                               settings.WIDGET_THEMES[0]['user_chat_txt'])
+            self.fields['logo_style'].initial = config.get('logo_style', 'circle')
+            self.fields['chat_button_height'].initial = config.get('chat_button_height', '64')
+            self.fields['side_padding'].initial = config.get('side_padding', '20')
+            self.fields['bottom_padding'].initial = config.get('bottom_padding', '20')
+            self.fields['side_of_screen'].initial = config.get('side_of_screen', 'right')
 
     def clean_name(self):
         org = self.object.org
@@ -1156,10 +1177,12 @@ class UpdateWsForm(UpdateChannelForm):
     class Meta(UpdateChannelForm.Meta):
         config_fields = ['logo', 'title', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',
                          'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg',
-                         'user_chat_txt']
+                         'user_chat_txt', 'logo_style', 'chat_button_height', 'side_padding', 'bottom_padding',
+                         'side_of_screen']
         fields = 'name', 'title', 'logo', 'welcome_message', 'theme', 'widget_bg_color', 'chat_header_bg_color',\
                  'chat_header_text_color', 'automated_chat_bg', 'automated_chat_txt', 'user_chat_bg', 'user_chat_txt',\
-                 'address', 'alert_email'
+                 'logo_style', 'chat_button_height', 'side_padding', 'bottom_padding', 'side_of_screen', 'address',\
+                 'alert_email'
         readonly = ('address',)
         helps = {'address': _('URL to the WebSocket Server')}
 
@@ -1769,6 +1792,25 @@ class ChannelCRUDL(SmartCRUDL):
             context['domain'] = self.object.callback_domain
             context['ip_addresses'] = settings.IP_ADDRESSES
             context['widget_compiled_file'] = settings.WIDGET_COMPILED_FILE
+
+            if self.object.channel_type == 'WS':
+                config = self.object.config_json()
+                logo_img = config.get('logo', None)
+                if logo_img:
+                    # if using S3 as file storage
+                    if settings.DEFAULT_FILE_STORAGE == 'storages.backends.s3boto3.S3Boto3Storage':
+                        media_file = Org.get_temporary_file_from_url(logo_img)
+                        im = Image.open(media_file)
+                    else:
+                        # checking if the file comes from sitestatic folder
+                        media_replace = '/sitestatic' if 'sitestatic/brands' in logo_img else '/media'
+                        static_root = settings.STATIC_ROOT.replace('sitestatic', 'static') if settings.DEBUG else settings.STATIC_ROOT
+                        media_root = static_root if 'sitestatic/brands' in logo_img else settings.MEDIA_ROOT
+                        logo_path = logo_img.split(settings.HOSTNAME)[-1].replace(media_replace, '', 1)
+                        logo_path = '%s%s' % (media_root, logo_path)
+                        im = Image.open(logo_path)
+                    logo_w, logo_h = im.size
+                    context['ws_logo_size'] = {'width': logo_w, 'height': logo_h}
 
             return context
 
