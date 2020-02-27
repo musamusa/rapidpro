@@ -6972,9 +6972,14 @@ class PhotoTest(Test):
                 if k in ExifTags.TAGS
             } if exif_data else {}
 
+            try:
+                exif = json.dumps(exif)
+            except Exception:
+                exif = None
+
             file_name = media_path.split('/', -1)[-1]
 
-            image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=json.dumps(exif),
+            image_args = dict(org=org, flow=run.flow, contact=run.contact, path=media_path, exif=exif,
                               path_thumbnail=media_thumbnail_path, name=file_name, created_by=run.flow.created_by,
                               modified_by=run.flow.created_by)
             flow_image = FlowImage.objects.create(**image_args)
