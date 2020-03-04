@@ -454,7 +454,7 @@ class InferOrgMixin(object):
 
 class PhoneRequiredForm(forms.ModelForm):
     tel = forms.CharField(max_length=15, label="Phone Number", required=True,
-                          help_text='Your cell phone will be used to make safe login using Twilio Authy')
+                          help_text='Your phone number will be used to make safe login using Twilio Authy')
 
     def clean_tel(self):
         if 'tel' in self.cleaned_data:
