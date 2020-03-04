@@ -2463,6 +2463,7 @@ class UserSettings(models.Model):
                                 help_text=_('Your preferred language'))
     tel = models.CharField(verbose_name=_("Phone Number"), max_length=16, null=True, blank=True,
                            help_text=_("Phone number for testing and recording voice flows"))
+    authy_id = models.CharField(verbose_name=_("Authy ID"), max_length=255, null=True, blank=True)
 
     def get_tel_formatted(self):
         if self.tel:
