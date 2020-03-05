@@ -116,7 +116,7 @@ s3cmd==2.0.2
 s3transfer==0.1.10
 selenium==3.4.3
 six==1.11.0
-smartmin==1.11.5
+git+https://github.com/greatnonprofits-nfp/smartmin.git@feature/authy
 sorl-thumbnail==12.5.0
 sqlparse==0.2.3
 stop-words==2015.2.23.1
