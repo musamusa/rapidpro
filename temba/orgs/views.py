@@ -453,13 +453,17 @@ class InferOrgMixin(object):
 
 
 class PhoneRequiredForm(forms.ModelForm):
-    tel = forms.CharField(max_length=15, label="Phone Number", required=True)
+    tel = forms.CharField(max_length=15, label="Phone Number", required=True,
+                          help_text='Your phone number will be used to make safe login using Twilio Authy')
 
     def clean_tel(self):
         if 'tel' in self.cleaned_data:
             tel = self.cleaned_data['tel']
             if not tel:  # pragma: needs cover
                 return tel
+
+            if not tel.startswith('+'):
+                tel = '+%s' % tel
 
             import phonenumbers
             try:
@@ -490,8 +494,36 @@ class UserSettingsCRUDL(SmartCRUDL):
 
         fields = ('tel',)
         form_class = PhoneRequiredForm
-        submit_button_name = _("Start Call")
+        submit_button_name = _("Update")
         success_url = '@orgs.usersettings_phone'
+
+        def pre_save(self, obj):
+            obj = super(UserSettingsCRUDL.Phone, self).pre_save(obj)
+            tel = self.form.cleaned_data.get('tel', None)
+
+            if tel:
+                import phonenumbers
+
+                phone = phonenumbers.parse(tel)
+                country_code = phone.country_code
+                phone_without_cc = tel.replace('+%s' % country_code, '')
+
+                # Making sure that username (email) does not have + because Twilio considers as invalid email
+                user_email = obj.user.username.replace('+', '_')
+                payload = "user%5Bemail%5D={}&user%5Bcellphone%5D={}&user%5Bcountry_code%5D={}".format(user_email,
+                                                                                                       phone_without_cc,
+                                                                                                       country_code)
+                create_user_header = {
+                    'x-authy-api-key': settings.AUTHY_API_KEY
+                }
+                create_user_header.update({'content-type': 'application/x-www-form-urlencoded'})
+                authy_url_api = 'https://api.authy.com/protected/json/users/new'
+                response = requests.request("POST", authy_url_api, data=payload, headers=create_user_header)
+                response_json = response.json()
+                if response_json.get('success'):
+                    obj.authy_id = response_json['user']['id']
+                    obj.save(update_fields=['authy_id'])
+            return obj
 
 
 class OrgCRUDL(SmartCRUDL):

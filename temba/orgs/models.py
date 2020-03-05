@@ -2168,7 +2168,6 @@ class Org(SmartModel):
             temp.flush()
 
             file = File(temp)
-
             try:
                 command_line = "magick {source} -quality 90 -auto-orient -resize 1920x1920> " \
                                "-define deskew:auto-crop=true {destination}".format(source=file.file.name,
@@ -2464,6 +2463,7 @@ class UserSettings(models.Model):
                                 help_text=_('Your preferred language'))
     tel = models.CharField(verbose_name=_("Phone Number"), max_length=16, null=True, blank=True,
                            help_text=_("Phone number for testing and recording voice flows"))
+    authy_id = models.CharField(verbose_name=_("Authy ID"), max_length=255, null=True, blank=True)
 
     def get_tel_formatted(self):
         if self.tel:

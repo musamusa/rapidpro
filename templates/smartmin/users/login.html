@@ -23,7 +23,7 @@
 
         <div class="clearfix ">
           <label for="username">Email Address</label>
-          <div class="input"><input id="id_username" type="text" name="username" maxlength="254"></div>
+          <div class="input"><input id="id_username" type="text" name="username" maxlength="254" value="{{ request.POST.username }}"></div>
           {% if field.error %}
           <span class="help-inline">{{ field.error }}</span>
           {% endif %}
@@ -31,10 +31,27 @@
 
         <div class="clearfix ">
           <label for="password">Password</label>
-          <div class="input"><input type="password" name="password" id="id_password"></div>
+          <div class="input"><input type="password" name="password" id="id_password" value="{{ request.POST.password }}"></div>
         </div>
 
+        {% if no_cellphone %}
+        <div class="clearfix ">
+          <label for="cellphone">Phone Number</label>
+          <div class="input"><input type="text" name="tel" id="id_tel" value=""></div>
+          <span class="help-inline help-cell-phone">Ex. +250788123123</span>
+        </div>
+        {% endif %}
+
+        {% if no_authy_code %}
+          <div class="clearfix ">
+            <label for="authy_code">Authy Code</label>
+            <div class="input"><input type="text" name="authy_code" id="id_authy_code" value=""></div>
+          </div>
+        {% endif %}
+
+        {% if not no_recaptcha %}
         <div id="recaptcha"></div>
+        {% endif %}
 
         {% csrf_token %}
         <input type="submit" class="btn btn-primary" value="Login">
@@ -61,10 +78,16 @@
   #recaptcha {
     margin: 5px 0 10px 0;
   }
+
+  .help-cell-phone {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+  }
 </style>
 {% endblock %}
 
 {% block extra-script %}
+  {% if not no_recaptcha %}
   <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_secrete_key }}"></script>
   <script>
     function validateRecaptcha() {
@@ -77,4 +100,5 @@
       });
     });
   </script>
+  {% endif %}
 {% endblock %}

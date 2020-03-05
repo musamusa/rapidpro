@@ -24,6 +24,10 @@
   .field.formax-vertical
     {% render_field 'language' %}
 
+  .field.formax-vertical
+    %a{href:"{% url 'orgs.usersettings_phone' %}"}
+      -trans "Update phone number"
+
   %br
 
 -block summary
