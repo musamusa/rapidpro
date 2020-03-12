@@ -9,7 +9,7 @@ import phonenumbers
 import regex
 import six
 import time
-import urllib2
+import urllib, urllib2
 import requests
 import zipfile
 import boto3
@@ -35,6 +35,7 @@ from enum import Enum
 from six.moves import range
 from smartmin.models import SmartModel
 from sorl.thumbnail import get_thumbnail
+
 from temba.airtime.models import AirtimeTransfer
 from temba.assets.models import register_asset_store
 from temba.contacts.models import Contact, ContactGroup, ContactField, ContactURN, URN, TEL_SCHEME, NEW_CONTACT_VARIABLE
@@ -3886,8 +3887,8 @@ class RuleSet(models.Model):
                         return rule, value, None
 
         elif self.ruleset_type == RuleSet.TYPE_SHORTEN_URL:
-            url = 'https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=%s' % settings.FDL_API_KEY
-            headers = {'Content-Type': 'application/json'}
+            url = '%s/yourls-api.php' % settings.YOURLS_URL
+            headers = {'Content-Type': 'multipart/form-data'}
 
             config = self.config_json()[RuleSet.TYPE_SHORTEN_URL]
             item_uuid = config.get('id')
@@ -3895,17 +3896,22 @@ class RuleSet(models.Model):
 
             if item:
                 long_url = '%s?contact=%s' % (item.get_url(), run.contact.uuid)
-                data = json.dumps({'longDynamicLink': '%s/?link=%s' % (settings.FDL_URL, long_url),
-                                   'suffix': {'option': 'SHORT'}})
+                data = {
+                    'url': long_url,
+                    'format': 'json',
+                    'action': 'shorturl',
+                    'username': settings.YOURLS_USERNAME,
+                    'password': settings.YOURLS_PASSWORD
+                }
 
-                response = requests.post(url, data=data, headers=headers, timeout=10)
+                response = requests.get('%s?%s' % (url, urllib.urlencode(data)), headers=headers, timeout=10)
 
                 for rule in self.get_rules():
                     (result, value) = rule.matches(run, msg, context, str(response.status_code))
                     response_json = response.json()
                     run.update_fields(response_json)
                     if result > 0:
-                        short_url = response_json.get('shortLink')
+                        short_url = response_json.get('shorturl')
                         return rule, short_url, None
             else:
                 return None, None, None
