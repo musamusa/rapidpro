@@ -37,16 +37,27 @@
         {% if no_cellphone %}
         <div class="clearfix ">
           <label for="cellphone">Phone Number</label>
-          <div class="input"><input type="text" name="tel" id="id_tel" value=""></div>
-          <span class="help-inline help-cell-phone">Ex. +14154354423</span>
+          <div class="input">
+            <select name="country_code" id="id_country_code">
+              {% for country in countries %}
+                <option value="{{ country.value }}">{{ country.text }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="tel" id="id_tel" value="">
+          </div>
+          <span class="help-inline help-cell-phone">Ex. 4154354423</span>
         </div>
         {% endif %}
 
         {% if no_authy_code %}
-          <div class="clearfix ">
+          <div class="clearfix sms_code">
             <label for="authy_code">SMS Code</label>
-            <div class="input"><input type="text" name="authy_code" id="id_authy_code" value=""></div>
+            <div class="input">
+              <input type="text" name="authy_code" id="id_authy_code" value="">
+            </div>
+            <a href="javascript:resendCode();">Resend code</a>
           </div>
+          <input type="hidden" name="change_phone_number" value="" id="change_phone_number">
         {% endif %}
 
         {% if not no_recaptcha %}
@@ -55,17 +66,23 @@
 
         {% csrf_token %}
         <input type="submit" class="btn btn-primary" value="Login">
-        <span style="margin-left:170px;"><a href="/users/user/forget/">Forgot Password?</a></span>
+        {% if no_authy_code %}
+          <span style="margin-left:144px;"><a href="javascript:changePhoneNumberProcess();">Change phone number?</a></span>
+        {% else %}
+          <span style="margin-left:170px;"><a href="/users/user/forget/">Forgot Password?</a></span>
+        {% endif %}
 
       </fieldset>
     </form>
-  </div>
-
 </div>
 {% endblock %}
 
 {% block extra-style %}
 <style>
+  .sms_code {
+    margin-bottom: 12px;
+  }
+
   hr.top-bar {
     display: none;
   }
@@ -83,10 +100,42 @@
     margin: 0 0 10px 0;
     font-size: 12px;
   }
+
+  #s2id_id_country_code {
+    margin-top: -6px;
+  }
+
+  #s2id_id_country_code a.select2-choice {
+    padding: 3px 5px 4px 5px;
+  }
+
+  #id_tel {
+    width: 206px;
+  }
+
+  #form-change-phone-number {
+    margin: 20px 0 0 0;
+  }
 </style>
 {% endblock %}
 
 {% block extra-script %}
+  <script>
+    function changePhoneNumberProcess() {
+      $('#change_phone_number').val('true');
+      $('form#login-form').removeAttr('onsubmit');
+      $('form#login-form').submit();
+    }
+    function resendCode() {
+      $('form#login-form').removeAttr('onsubmit');
+      $('form#login-form').submit();
+    }
+    $(function(){
+      $("#id_country_code").select2({
+        width:'140px',
+      });
+    });
+  </script>
   {% if not no_recaptcha %}
   <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_secrete_key }}"></script>
   <script>
