@@ -53,7 +53,7 @@
           <div class="clearfix sms_code">
             <label for="authy_code">SMS Code</label>
             <div class="input">
-              <input type="text" name="authy_code" id="id_authy_code" value="">
+              <input type="text" name="authy_code" id="id_authy_code" value="" required>
             </div>
             <a href="javascript:resendCode();">Resend code</a>
           </div>
@@ -120,7 +120,11 @@
 {% endblock %}
 
 {% block extra-script %}
+  <script src="{{ STATIC_URL }}js/jquery.mask.min.js"></script>
   <script>
+    $(document).ready(function() {
+      $('#id_tel').mask('00000000000');
+    });
     function changePhoneNumberProcess() {
       $('#change_phone_number').val('true');
       $('form#login-form').removeAttr('onsubmit');
@@ -128,6 +132,7 @@
     }
     function resendCode() {
       $('form#login-form').removeAttr('onsubmit');
+      $('#id_authy_code').val('');
       $('form#login-form').submit();
     }
     $(function(){
