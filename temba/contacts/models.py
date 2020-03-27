@@ -2237,7 +2237,7 @@ class UserContactGroupManager(models.Manager):
 @six.python_2_unicode_compatible
 class ContactGroup(TembaModel):
     MAX_NAME_LEN = 64
-    MAX_ORG_CONTACTGROUPS = 250
+    MAX_ORG_CONTACTGROUPS = 5000
 
     TYPE_ALL = 'A'
     TYPE_BLOCKED = 'B'
