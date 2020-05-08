@@ -6,6 +6,8 @@
 
 
 -block extra-style
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}css/bootstrap-datetimepicker.min.css", media:'all'}
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}fonts/awesome/css/font-awesome.min.css", media:'all'}
   :css
     #trigger_flow .control-group .control-label, 
     #trigger_omnibox .control-group .control-label {
@@ -27,22 +29,179 @@
       width: 520px;
     }
 
-    #start-datetime {
-
+    #schedule-options {
+      width: 520px;
     }
 
+    #start-datetime {
+      width: calc(100% - 20px);
+      padding: 0;
+      margin-left: 20px;
+    }
+
+    #recurrence {
+      width: 520px;
+    }
+
+    .col-md-6 {
+      width: 48%;
+    }
+
+    .datepicker {
+      float: left;
+    }
+
+    .timepicker {
+      float: right;
+      margin: 50px 0 0 0;
+    }
+
+    .bootstrap-datetimepicker-widget table td {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget table td.separator {
+      width: 20px;
+    }
+
+    .bootstrap-datetimepicker-widget .timepicker-hour, .bootstrap-datetimepicker-widget .timepicker-minute, .bootstrap-datetimepicker-widget .timepicker-second {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget a[data-action] {
+      padding: 0;
+    }
+
+    .timepicker-picker a.btn {
+      background-color: transparent !important;
+      border: none;
+      background-image: none;
+      box-shadow: none;
+    }
+
+    .timepicker-picker a.btn span {
+      line-height: 40px;
+      height: 40px;
+      width: 45px;
+      background-color: transparent !important;
+    }
+
+    .weekly-repeat-options .btn-group .btn {
+      margin: 2px;
+      border-radius: 5px;
+    }
+
+    .weekly-repeat-options .btn-group .btn.active {
+      color: #e6e6e6;
+      background-color: #569D9B;
+    }
+
+    .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
+      background-color: #569D9B;
+      color: #FFFFFF;
+    }
+
+  
+-block modal-extra-style
+  {{ block.super }}
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}css/bootstrap-datetimepicker.min.css", media:'all'}
+  %link{type:'text/css', rel:'stylesheet', href:"{{ STATIC_URL }}fonts/awesome/css/font-awesome.min.css", media:'all'}
+  :css
+    #trigger_flow .control-group .control-label, 
+    #trigger_omnibox .control-group .control-label {
+      float: none;
+      text-align: left;
+      width: 160px;
+    }
+
+    #trigger_flow .control-group .controls, 
+    #trigger_omnibox .control-group .controls {
+      margin-left: 0px;
+    }
+
+    .col-md-6 {
+      width: 48%;
+    }
+
+    .datepicker {
+      float: left;
+    }
+
+    .timepicker {
+      float: right;
+      margin: 50px 0 0 0;
+    }
+
+    .bootstrap-datetimepicker-widget table td {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget table td.separator {
+      width: 20px;
+    }
+
+    .bootstrap-datetimepicker-widget .timepicker-hour, .bootstrap-datetimepicker-widget .timepicker-minute, .bootstrap-datetimepicker-widget .timepicker-second {
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
+    }
+
+    .bootstrap-datetimepicker-widget a[data-action] {
+      padding: 0;
+    }
+
+    .timepicker-picker a.btn {
+      background-color: transparent !important;
+      border: none;
+      background-image: none;
+      box-shadow: none;
+    }
+
+    .timepicker-picker a.btn span {
+      line-height: 40px;
+      height: 40px;
+      width: 45px;
+      background-color: transparent !important;
+    }
+
+    .weekly-repeat-options .btn-group .btn {
+      margin: 2px;
+      border-radius: 5px;
+    }
+
+    .weekly-repeat-options .btn-group .btn.active {
+      color: #e6e6e6;
+      background-color: #569D9B;
+    }
+
+    .bootstrap-datetimepicker-widget table td.active, .bootstrap-datetimepicker-widget table td.active:hover {
+      background-color: #569D9B;
+      color: #FFFFFF;
+    }
 
 -block extra-script
   {{ block.super }}
+  %script{src:"{% url 'django.views.i18n.javascript_catalog' %}"}
+  %script{src:"{{ STATIC_URL }}js/bootstrap-datetimepicker.min.js"}
   %script{src:"{{ STATIC_URL }}js/schedules-ui.js"}
+  %script{src:"{{ STATIC_URL }}js/flow-parameters.js"}
 
-  <script src="{% url 'django.views.i18n.javascript_catalog' %}"></script>
   :javascript
     var user_tz = "{{ user_tz }}";
     var user_tz_offset = {{ user_tz_offset }};
 
     $(document).ready(function() {
         select2div("#id_schedule_flow", "520px", '{% trans "Flow to start" %}');
+        {% if flow_readonly %}
+          $("#id_schedule_flow").attr('readonly', 'readonly');
+        {% endif %}
+
         var initialDate;
         {% if form.start_datetime_value.value %}
           initialDate = new Date({{form.start_datetime_value.value}} * 1000);
@@ -55,10 +214,14 @@
             minDate.setHours(minDate.getHours() + 1);
         }
 
-        initializeDatetimePicker(minDate, initialDate, false);
+        initializeBootstrapDatetimePicker(minDate, initialDate, false);
 
         $('#id_schedule_flow').on('change', function (e) {
-          var flowId = (e.added.id !== '' ? parseInt(e.added.id) : null);
+          if (e.added) {
+            var flowId = e.added.id !== '' ? parseInt(e.added.id): null;
+          } else {
+            var flowId = $(this).val() !== '' ? parseInt($(this).val()) : null;
+          }
           if (flowId) {
             var api_url = "{% url 'flows.flow_flow_parameters' %}?flow_id=" + flowId;
             $.getJSON(api_url).done(function(data) {
@@ -68,6 +231,9 @@
             buildTriggerFlowParams([], [], 'schedule');
           }
         });
+        $('#id_schedule_flow').trigger('change');
+
+        $('#id_schedule_repeat_period').select2({containerCssClass: "select2-temba-field", minimumResultsForSearch: -1});
 
         $('li#id-trigger-schedule input[type="submit"]').on('click', function(event) {
           var form = $(this).parent('form');
@@ -88,14 +254,30 @@
 
 -block modal-script
   {{ block.super }}
+  %script{src:"{% url 'django.views.i18n.javascript_catalog' %}"}
+  %script{src:"{{ STATIC_URL }}js/bootstrap-datetimepicker.min.js"}
   %script{src:"{{ STATIC_URL }}js/schedules-ui.js"}
+  %script{src:"{{ STATIC_URL }}js/flow-parameters.js"}
 
-  <script src="{% url 'django.views.i18n.javascript_catalog' %}"></script>
   :javascript
     var user_tz = "{{ user_tz }}";
     var user_tz_offset = {{ user_tz_offset }};
 
+    function updateDailySelection() {
+      var selected = '';
+      $('.weekly-repeat-options > .btn-group > .btn').each(function() {
+        if ($(this).hasClass('active')) {
+          selected += $(this).attr('value');
+        }
+      });
+      $('#repeat-days-value').val(selected);
+    }
+
     $(document).ready(function() {
+        select2div("#id_schedule_flow", "520px", '{% trans "Flow to start" %}');
+        {% if flow_readonly %}
+          $("#id_schedule_flow").attr('readonly', 'readonly');
+        {% endif %}
         var initialDate;
         {% if form.start_datetime_value.value %}
           initialDate = new Date({{form.start_datetime_value.value}} * 1000);
@@ -108,7 +290,42 @@
             minDate.setHours(minDate.getHours() + 1);
         }
 
-        initializeDatetimePicker(minDate, initialDate, false);
+        initializeBootstrapDatetimePicker(minDate, initialDate, false);
+
+        $('#id_schedule_flow').on('change', function (e) {
+          if (e.added) {
+            var flowId = e.added.id !== '' ? parseInt(e.added.id): null;
+          } else {
+            var flowId = $(this).val() !== '' ? parseInt($(this).val()) : null;
+          }
+
+          if (flowId) {
+            var api_url = "{% url 'flows.flow_flow_parameters' %}?flow_id=" + flowId;
+            $.getJSON(api_url).done(function(data) {
+              buildTriggerFlowParams(data.results, [], 'schedule');
+            });
+          } else {
+            buildTriggerFlowParams([], [], 'schedule');
+          }
+        });
+        $('#id_schedule_flow').trigger('change');
+
+        $('#id_schedule_repeat_period').select2({containerCssClass: "select2-temba-field", minimumResultsForSearch: -1});
+
+        $('li#id-trigger-schedule input[type="submit"]').on('click', function(event) {
+          var form = $(this).parent('form');
+          var error = validateFlowParams(form);
+          if (error) {
+            event.preventDefault();
+            $(this).removeClass('disabled');
+          }
+        });
+
+        {% if param_fields %}
+          var flowParamsFields = "{{ flow_parameters_fields }}".split(",");
+          var flowParamsValues = "{{ flow_parameters_values }}".split(",");
+          buildTriggerFlowParams(flowParamsFields, flowParamsValues, 'schedule');
+        {% endif %}
     });
 
 -block fields

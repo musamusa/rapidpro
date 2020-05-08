@@ -42,6 +42,7 @@ class BaseTriggerForm(forms.ModelForm):
         self.fields["flow"].queryset = flows.order_by("flow_type", "name")
         if initial_flow:
             self.fields['flow'].initial = initial_flow
+            self.fields['flow'].widget.attrs['readonly'] = True
 
     def clean_keyword(self):
         keyword = self.cleaned_data.get("keyword")
@@ -248,6 +249,7 @@ class ScheduleTriggerForm(BaseScheduleForm, forms.ModelForm):
         self.fields["flow"].queryset = flows.order_by("name")
         if initial_flow:
             self.fields['flow'].initial = initial_flow
+            self.fields['flow'].widget.attrs['readonly'] = True
         
 
     def clean_omnibox(self):
@@ -622,6 +624,9 @@ class TriggerCRUDL(SmartCRUDL):
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
 
+            flow_field = self.form.fields.get('flow')
+            context["flow_readonly"] = flow_field.widget.attrs.get('readonly') if flow_field else False
+
             params_context = flow_params_context(self.request)
             context.update(params_context)
 
@@ -696,6 +701,9 @@ class TriggerCRUDL(SmartCRUDL):
             context = super().get_context_data(**kwargs)
             context["user_tz"] = get_current_timezone_name()
             context["user_tz_offset"] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() // 60)
+            
+            flow_field = self.form.fields.get('flow')
+            context["flow_readonly"] = flow_field.widget.attrs.get('readonly') if flow_field else False
 
             params_context = flow_params_context(self.request)
             context.update(params_context)
@@ -748,9 +756,18 @@ class TriggerCRUDL(SmartCRUDL):
 
             self.post_save(trigger)
 
-            response = self.render_to_response(self.get_context_data(form=form))
-            response["REDIRECT"] = self.get_success_url()
-            return response
+            if "HTTP_X_PJAX" not in self.request.META:
+                return HttpResponseRedirect(self.get_success_url())
+            else:  # pragma: no cover
+                response = self.render_to_response(
+                    self.get_context_data(
+                        form=form,
+                        success_url=self.get_success_url(),
+                        success_script=getattr(self, "success_script", None),
+                    )
+                )
+                response["Temba-Success"] = self.get_success_url()
+                return response
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
