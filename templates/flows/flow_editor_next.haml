@@ -252,7 +252,7 @@
       $(".launch-rulesflow").live('click', function() {
         var onActions = {
           onSuccess: function(data) {
-            $('html').scope().pending = 'P';
+            $('html').scope().is_starting = true;
           },
           onFormLoaded: function() {},
           onPrimary: function() {
@@ -270,20 +270,9 @@
         var modal = new Modax(gettext('Start Flow'), '{% url "flows.flow_broadcast" object.pk %}');
         var onActions = {
           onSuccess: function(data) {
-            $('html').scope().pending = 'P';
+            window.triggerActivityUpdate();
           },
-          onFormLoaded: function() { },
-          onPrimary: function() {
-            var form = modal.ele.find('form');
-            var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
-            if (error) {
-              modal.focusFirstInput();
-              var divForm = $('.modal-body').find('input.invalid');
-              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
-            } else {
-              modal.submit();
-            }
-          }
+          onFormLoaded: function() { }
         }
         // check if there is no channel, change the primary button behavior to redirect to channel creation
         {% if not can_start or not has_outgoing_channel %}
@@ -299,26 +288,12 @@
         var modal = new Modax(gettext('Trigger Flow'), '{% url "triggers.trigger_keyword" %}?flow={{object.uuid}}');
         var onActions = {
           onSuccess: function(data) { 
-            $('html').scope().pending_others = 'KW';
-            setTimeout(function(){ $('html').scope().pending_others = null }, 60000);
+            window.triggerActivityUpdate();
           },
-          onFormLoaded: function() { },
-          onPrimary: function() {
-            var form = modal.ele.find('form');
-            var error = validateEmbeddedDataForTriggerWords(form);
-            if (error) {
-              modal.focusFirstInput();
-              var divForm = $('.modal-body').find('input.invalid');
-              var fieldName = divForm[0].name;
-              var keywordValue = fieldName.replace('embedded_field_', '').replace('embedded_value_', '');
-              $('#embedded_keyword').val(keywordValue).trigger('change');
-              $('.embed-row-content.active').removeClass('active');
-              $('.embed-row-content-' + keywordValue).addClass('active');
-              divForm[0].focus();
-              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
-            } else {
-              modal.submit();
-            }
+          onFormLoaded: function() { 
+            $('#id_keyword_match_type').select2({containerCssClass: "select2-temba-field", minimumResultsForSearch: -1});
+            select2div("#id_keyword_flow", "520px", '{% trans "Flow to start" %}');
+            $('#id_keyword_groups').select2({containerCssClass: "select2-temba-field"});
           }
         }
         // check if there is no channel, change the primary button behavior to redirect to channel creation
@@ -335,21 +310,9 @@
         var modal = new Modax(gettext('Scheduled Launch'), '{% url "triggers.trigger_schedule" %}?flow={{object.uuid}}');
         var onActions = {
           onSuccess: function(data) {
-            $('html').scope().pending_others = 'SC';
-            setTimeout(function(){ $('html').scope().pending_others = null }, 60000);
+            window.triggerActivityUpdate();
           },
-          onFormLoaded: function() { },
-          onPrimary: function() {
-            var form = modal.ele.find('form');
-            var error = validateEmbeddedData(form, 'embedded_field', 'embedded_value');
-            if (error) {
-              modal.focusFirstInput();
-              var divForm = $('.modal-body').find('input.invalid');
-              $('.modal-body').scrollTop(divForm[0].offsetTop - 10);
-            } else {
-              modal.submit();
-            }
-          }
+          onFormLoaded: function() { }
         }
         // check if there is no channel, change the primary button behavior to redirect to channel creation
         {% if not can_start or not has_outgoing_channel %}

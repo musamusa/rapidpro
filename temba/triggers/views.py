@@ -34,9 +34,14 @@ class BaseTriggerForm(forms.ModelForm):
     flow = forms.ModelChoiceField(Flow.objects.filter(pk__lt=0), label=_("Flow"), required=True)
 
     def __init__(self, user, flows, *args, **kwargs):
+        initial_flow = flows.filter(uuid=kwargs.pop('flow', None)).first()
+
         super().__init__(*args, **kwargs)
+
         self.user = user
         self.fields["flow"].queryset = flows.order_by("flow_type", "name")
+        if initial_flow:
+            self.fields['flow'].initial = initial_flow
 
     def clean_keyword(self):
         keyword = self.cleaned_data.get("keyword")
@@ -240,11 +245,15 @@ class ScheduleTriggerForm(BaseScheduleForm, forms.ModelForm):
     )
 
     def __init__(self, user, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.user = user
         flows = Flow.get_triggerable_flows(user.get_org())
+        initial_flow = flows.filter(uuid=kwargs.pop('flow', None)).first()
 
+        super().__init__(*args, **kwargs)
+        
         self.fields["flow"].queryset = flows
+        if initial_flow:
+            self.fields['flow'].initial = initial_flow
 
     def clean_omnibox(self):
         return omnibox_deserialize(self.user.get_org(), self.cleaned_data["omnibox"])
@@ -569,7 +578,7 @@ class TriggerCRUDL(SmartCRUDL):
             kwargs["user"] = self.request.user
             return kwargs
 
-    class Keyword(CreateTrigger):
+    class Keyword(ModalMixin, CreateTrigger):
         form_class = KeywordTriggerForm
 
         def pre_save(self, obj, *args, **kwargs):
@@ -584,6 +593,8 @@ class TriggerCRUDL(SmartCRUDL):
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["auto_id"] = "id_keyword_%s"
+            flow_uuid = self.request.GET.get("flow")
+            kwargs.update({"flow": flow_uuid} if flow_uuid else {})
             return kwargs
 
     class Register(CreateTrigger):
@@ -647,7 +658,7 @@ class TriggerCRUDL(SmartCRUDL):
             response["REDIRECT"] = self.get_success_url()
             return response
 
-    class Schedule(CreateTrigger):
+    class Schedule(ModalMixin, CreateTrigger):
         form_class = ScheduleTriggerForm
         title = _("Create Schedule")
 
@@ -704,6 +715,8 @@ class TriggerCRUDL(SmartCRUDL):
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["auto_id"] = "id_schedule_%s"
+            flow_uuid = self.request.GET.get("flow")
+            kwargs.update({"flow": flow_uuid} if flow_uuid else {})
             return kwargs
 
     class InboundCall(CreateTrigger):

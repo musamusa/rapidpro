@@ -1,4 +1,5 @@
 -extends 'smartmin/form.html'
+-load smartmin
 -load i18n
 
 -block form-span
@@ -56,6 +57,31 @@
         initializeDatetimePicker(minDate, initialDate, false);
     });
 
+
+-block modal-script
+  {{ block.super }}
+  %script{src:"{{ STATIC_URL }}js/schedules-ui.js"}
+
+  <script src="{% url 'django.views.i18n.javascript_catalog' %}"></script>
+  :javascript
+    var user_tz = "{{ user_tz }}";
+    var user_tz_offset = {{ user_tz_offset }};
+
+    $(document).ready(function() {
+        var initialDate;
+        {% if form.start_datetime_value.value %}
+          initialDate = new Date({{form.start_datetime_value.value}} * 1000);
+        {% endif %}
+        
+        var minDate = new Date();
+        var minutes = minDate.getMinutes();
+        if (minutes > 0) {
+            minDate.setMinutes(0);
+            minDate.setHours(minDate.getHours() + 1);
+        }
+
+        initializeDatetimePicker(minDate, initialDate, false);
+    });
 
 -block fields
   -load smartmin
