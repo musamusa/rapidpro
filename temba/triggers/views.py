@@ -34,15 +34,15 @@ class BaseTriggerForm(forms.ModelForm):
     flow = forms.ModelChoiceField(Flow.objects.filter(pk__lt=0), label=_("Flow"), required=True)
 
     def __init__(self, user, flows, *args, **kwargs):
-        initial_flow = flows.filter(uuid=kwargs.pop('flow', None)).first()
+        initial_flow = flows.filter(uuid=kwargs.pop("flow", None)).first()
 
         super().__init__(*args, **kwargs)
 
         self.user = user
         self.fields["flow"].queryset = flows.order_by("flow_type", "name")
         if initial_flow:
-            self.fields['flow'].initial = initial_flow
-            self.fields['flow'].widget.attrs['readonly'] = True
+            self.fields["flow"].initial = initial_flow
+            self.fields["flow"].widget.attrs["readonly"] = True
 
     def clean_keyword(self):
         keyword = self.cleaned_data.get("keyword")
@@ -242,15 +242,14 @@ class ScheduleTriggerForm(BaseScheduleForm, forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         self.user = user
         flows = Flow.get_triggerable_flows(user.get_org())
-        initial_flow = flows.filter(uuid=kwargs.pop('flow', None)).first()
+        initial_flow = flows.filter(uuid=kwargs.pop("flow", None)).first()
 
         super().__init__(*args, **kwargs)
-        
+
         self.fields["flow"].queryset = flows.order_by("name")
         if initial_flow:
-            self.fields['flow'].initial = initial_flow
-            self.fields['flow'].widget.attrs['readonly'] = True
-        
+            self.fields["flow"].initial = initial_flow
+            self.fields["flow"].widget.attrs["readonly"] = True
 
     def clean_omnibox(self):
         return omnibox_deserialize(self.user.get_org(), self.cleaned_data["omnibox"])
@@ -624,8 +623,8 @@ class TriggerCRUDL(SmartCRUDL):
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
 
-            flow_field = self.form.fields.get('flow')
-            context["flow_readonly"] = flow_field.widget.attrs.get('readonly') if flow_field else False
+            flow_field = self.form.fields.get("flow")
+            context["flow_readonly"] = flow_field.widget.attrs.get("readonly") if flow_field else False
 
             params_context = flow_params_context(self.request)
             context.update(params_context)
@@ -701,9 +700,9 @@ class TriggerCRUDL(SmartCRUDL):
             context = super().get_context_data(**kwargs)
             context["user_tz"] = get_current_timezone_name()
             context["user_tz_offset"] = int(timezone.localtime(timezone.now()).utcoffset().total_seconds() // 60)
-            
-            flow_field = self.form.fields.get('flow')
-            context["flow_readonly"] = flow_field.widget.attrs.get('readonly') if flow_field else False
+
+            flow_field = self.form.fields.get("flow")
+            context["flow_readonly"] = flow_field.widget.attrs.get("readonly") if flow_field else False
 
             params_context = flow_params_context(self.request)
             context.update(params_context)

@@ -25,13 +25,11 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Max, Min, Sum
 from django.db.models.functions import Lower
-from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_text
 from django.utils.text import slugify
-from django.utils.timezone import get_current_timezone_name
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import FormView
@@ -40,7 +38,6 @@ from temba import mailroom
 from temba.archives.models import Archive
 from temba.channels.models import Channel
 from temba.classifiers.models import Classifier
-from temba.contacts.fields import OmniboxField
 from temba.contacts.models import FACEBOOK_SCHEME, TEL_SCHEME, WHATSAPP_SCHEME, ContactField, ContactGroup, ContactURN
 from temba.contacts.omnibox import omnibox_deserialize
 from temba.flows import legacy
@@ -52,7 +49,6 @@ from temba.mailroom import FlowValidationException
 from temba.orgs.models import Org, LOOKUPS, GIFTCARDS
 from temba.orgs.views import ModalMixin, OrgObjPermsMixin, OrgPermsMixin
 from temba.schedules.views import BaseScheduleForm
-from temba.schedules.models import Schedule
 from temba.templates.models import Template
 from temba.triggers.models import Trigger
 from temba.utils import analytics, json, on_transaction_commit, str_to_bool, build_flow_parameters
@@ -1978,7 +1974,7 @@ class FlowCRUDL(SmartCRUDL):
                         required=False,
                         initial=flow_param,
                         label=None,
-                        widget=forms.TextInput(attrs={"readonly": True})
+                        widget=forms.TextInput(attrs={"readonly": True}),
                     )
                     self.fields[f"flow_param_value_{counter}"] = forms.CharField(required=False)
                     if f"flow_param_field_{counter}" not in FlowCRUDL.Broadcast.flow_params_fields:
@@ -2063,10 +2059,7 @@ class FlowCRUDL(SmartCRUDL):
                 value_fields = [item for item in cleaned if "flow_param_value" in item]
                 for value_field in value_fields:
                     if not cleaned.get(value_field):
-                        self.add_error(
-                            value_field,
-                            ValidationError(_("You must specify the value for this field.")),
-                        )
+                        self.add_error(value_field, ValidationError(_("You must specify the value for this field.")))
 
                 # check whether there are any flow starts that are incomplete
                 if self.flow.is_starting():
@@ -2097,12 +2090,10 @@ class FlowCRUDL(SmartCRUDL):
 
         def derive_fields(self):
             return (
-                "omnibox",
-                "restart_participants",
-                "include_active",
-                "start_type",
-                "contact_query"
-            ) + tuple(self.flow_params_fields) + tuple(self.flow_params_values)
+                ("omnibox", "restart_participants", "include_active", "start_type", "contact_query")
+                + tuple(self.flow_params_fields)
+                + tuple(self.flow_params_values)
+            )
 
         def has_facebook_topic(self, flow):
             if not flow.is_legacy():
@@ -2158,7 +2149,10 @@ class FlowCRUDL(SmartCRUDL):
             context["warnings"] = warnings
             context["run_count"] = run_stats["total"]
             context["complete_count"] = run_stats["completed"]
-            flow_params_fields = [(self.flow_params_fields[count], self.flow_params_values[count]) for count in range(len(self.flow_params_values))]
+            flow_params_fields = [
+                (self.flow_params_fields[count], self.flow_params_values[count])
+                for count in range(len(self.flow_params_values))
+            ]
             context["flow_params_fields"] = flow_params_fields
             return context
 
@@ -2179,9 +2173,7 @@ class FlowCRUDL(SmartCRUDL):
             contacts = []
             contact_query = None
 
-            flow_params = build_flow_parameters(
-                self.request.POST, self.flow_params_fields, self.flow_params_values
-            )
+            flow_params = build_flow_parameters(self.request.POST, self.flow_params_fields, self.flow_params_values)
 
             if start_type == "query":
                 contact_query = form.cleaned_data["contact_query"]
@@ -2242,11 +2234,11 @@ class FlowCRUDL(SmartCRUDL):
 
             class Meta:
                 model = Flow
-                exclude = '__all__'
+                exclude = "__all__"
 
         form_class = LaunchForm
         submit_button_name = _("Add Contacts to Flow")
-        slug_url_kwarg = 'id'
+        slug_url_kwarg = "id"
 
         def get_context_data(self, *args, **kwargs):
             context = super().get_context_data(*args, **kwargs)
