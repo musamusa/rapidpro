@@ -10,6 +10,7 @@ from celery.signals import worker_process_init
 
 from temba.channels.views import register, sync
 from temba.utils.analytics import init_analytics
+from django.shortcuts import render
 
 # javascript translation packages
 js_info_dict = {"packages": ()}  # this is empty due to the fact that all translation are in one folder
@@ -36,6 +37,7 @@ urlpatterns = [
     url(r"^", include("temba.request_logs.urls")),
     url(r"^", include("temba.schedules.urls")),
     url(r"^", include("temba.triggers.urls")),
+    url(r"^", include("temba.migrator.urls")),
     url(r"^relayers/relayer/sync/(\d+)/$", sync, {}, "sync"),
     url(r"^relayers/relayer/register/$", register, {}, "register"),
     url(r"^users/", include("smartmin.users.urls")),
@@ -81,15 +83,27 @@ User.track_user = track_user
 AnonymousUser.track_user = track_user
 
 
+def handler404(request, exception):
+    """
+    404 error handler which includes ``request`` in the context.
+
+    Templates: `404.html`
+    """
+    user = request.user
+    brand = user.get_org().get_branding() if not user.is_anonymous else getattr(settings, "BRANDING")
+    context = dict(request=request, brand=brand)
+
+    return render(request, "404.html", context=context, status=404)  # pragma: needs cover
+
+
 def handler500(request):
     """
     500 error handler which includes ``request`` in the context.
 
     Templates: `500.html`
-    Context: None
     """
-    from django.template import loader
-    from django.http import HttpResponseServerError
+    user = request.user
+    brand = user.get_org().get_branding() if not user.is_anonymous else getattr(settings, "BRANDING")
+    context = dict(request=request, brand=brand)
 
-    t = loader.get_template("500.html")
-    return HttpResponseServerError(t.render({"request": request}))  # pragma: needs cover
+    return render(request, "500.html", context=context, status=500)  # pragma: needs cover

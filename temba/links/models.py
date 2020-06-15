@@ -96,7 +96,7 @@ class Link(TembaModel):
         if search:
             try:
                 contacts = Contact.objects.filter(
-                    models.Q(name__contains=search), id__in=contacts.values_list("contact__id")
+                    models.Q(name__icontains=search), id__in=contacts.values_list("contact__id")
                 ).only("id")
             except SearchException as e:
                 self.search_error = str(e.message)
@@ -183,11 +183,7 @@ class ExportLinksTask(BaseExportTask):
     def write_export(self):
         fields, scheme_counts = self.get_export_fields_and_schemes()
 
-        contact_ids = (
-            self.link.contacts.all()
-            .order_by("contact__name", "contact__id")
-            .values_list("id", flat=True)
-        )
+        contact_ids = self.link.contacts.all().order_by("contact__name", "contact__id").values_list("id", flat=True)
 
         # create our exporter
         exporter = TableExporter(self, "Links", [f["label"] for f in fields])

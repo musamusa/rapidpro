@@ -109,9 +109,10 @@ BRANDING["rapidpro.io"]["link"] = os.environ.get("BRANDING_LINK", f"https://{HOS
 BRANDING["rapidpro.io"]["api_link"] = os.environ.get("BRANDING_API_LINK", f"https://{HOSTNAME}")
 BRANDING["rapidpro.io"]["domain"] = f"{HOSTNAME}"
 BRANDING["rapidpro.io"]["email"] = os.environ.get("BRANDING_EMAIL", "")
-BRANDING["rapidpro.io"]["support_email"] = os.environ.get("BRANDING_EMAIL_SUPPORT", "")
+BRANDING["rapidpro.io"]["support_email"] = os.environ.get("BRANDING_EMAIL_SUPPORT", "support@communityconnectlabs.com")
 BRANDING["rapidpro.io"]["colors"] = dict(primary=os.environ.get("BRANDING_PRIMARY_COLOR", "#569D9B"))
 BRANDING["rapidpro.io"]["favico"] = os.environ.get("BRANDING_FAVICO", "brands/rapidpro/icon.png")
+BRANDING["rapidpro.io"]["logo"] = os.environ.get("BRANDING_LOGO", "brands/rapidpro/cc-logo.png")
 BRANDING["rapidpro.io"]["allow_signups"] = os.environ.get("BRANDING_ALLOW_SIGNUPS", "false") == "true"
 BRANDING["rapidpro.io"]["welcome_packs"] = [dict(size=500, name="Trial"),
                                             dict(size=2500, name="Bronze"),
@@ -142,7 +143,7 @@ if AWS_S3_ENABLED:
     # bucket where archives files are stored
     ARCHIVE_BUCKET = os.environ.get("ARCHIVE_BUCKET", "")
 
-    AWS_BUCKET_DOMAIN = f"s3.amazonaws.com/{AWS_STORAGE_BUCKET_NAME}"
+    AWS_BUCKET_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     MEDIA_URL = f"https://{AWS_BUCKET_DOMAIN}/media/"
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 else:
@@ -183,3 +184,38 @@ PARSE_URL = os.environ.get("PARSE_URL", "")
 PARSE_APP_ID = os.environ.get("PARSE_APP_ID", "")
 PARSE_REST_KEY = os.environ.get("PARSE_REST_KEY", "")
 PARSE_MASTER_KEY = os.environ.get("PARSE_MASTER_KEY", "")
+
+# WebSocket URL server for Webchat channel
+WIDGET_COMPILED_FILE = os.environ.get("WIDGET_COMPILED_FILE", "https://ccl-web-surveyor.s3-us-west-1.amazonaws.com/latest/ccl-web-surveyor.min.js")
+WEBSOCKET_SERVER_URL = os.environ.get("WEBSOCKET_SERVER_URL", "http://localhost:9090")
+
+# Recaptcha configuration
+RECAPTCHA_SITE_KEY = os.environ.get("RECAPTCHA_SITE_KEY", "")
+RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY", "")
+
+# Authy configuration
+AUTHY_API_KEY = os.environ.get("AUTHY_API_KEY", "")
+AUTHY_MAGIC_PASS = os.environ.get("AUTHY_MAGIC_PASS", "")
+
+MAX_ORG_CONTACTGROUPS = int(os.environ.get("MAX_ORG_CONTACTGROUPS", 250))
+
+# Migration config
+_ccl_v1_database_config = {
+    "ENGINE": "django.contrib.gis.db.backends.postgis",
+    "NAME": os.environ.get("MIGRATION_DB_NAME", ""),
+    "USER": os.environ.get("MIGRATION_DB_USER", ""),
+    "PASSWORD": os.environ.get("MIGRATION_DB_PASSWORD", ""),
+    "HOST": os.environ.get("MIGRATION_DB_HOST", ""),
+    "PORT": int(os.environ.get("MIGRATION_DB_PORT", "5432")),
+    "ATOMIC_REQUESTS": os.environ.get("MIGRATION_DB_ATOMIC_REQUESTS", "true") == "true",
+    "CONN_MAX_AGE": int(os.environ.get("MIGRATION_DB_CONN_MAX_AGE", 60)),
+    "OPTIONS": json.loads(os.environ.get("MIGRATION_DB_OPTIONS", "{}")),
+}
+_ccl_v1_direct_database_config = _ccl_v1_database_config.copy()
+_ccl_v1_direct_database_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+
+DB_MIGRATION = os.environ.get("MIGRATION_CONNECTION_NAME", "live_server")
+
+DATABASES[DB_MIGRATION] = _ccl_v1_direct_database_config
+
+MIGRATION_FROM_URL = os.environ.get("MIGRATION_SERVER_URL", "https://live.communityconnectlabs.com")

@@ -292,7 +292,7 @@ class LinkCRUDL(SmartCRUDL):
         fields = ("name", "modified_on")
         default_template = "links/link_list.html"
         default_order = "-created_on"
-        search_fields = ("name__icontains",)
+        search_fields = ("name__icontains", "destination__icontains")
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
@@ -355,7 +355,11 @@ class LinkHandler(RedirectView):
         link = Link.objects.filter(uuid=self.kwargs.get("uuid")).only("id", "clicks_count").first()
         contact = Contact.objects.filter(uuid=self.request.GET.get("contact")).only("id").first()
 
-        if link and contact:
+        # Whether the contact is from the simulator
+        if not contact:
+            return link.destination
+
+        elif link and contact:
             x_forwarded_for = self.request.META.get("HTTP_X_FORWARDED_FOR")
             ip = x_forwarded_for.split(",")[0] if x_forwarded_for else self.request.META.get("REMOTE_ADDR")
 
