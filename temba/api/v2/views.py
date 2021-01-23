@@ -42,11 +42,12 @@ from temba.contacts.models import Contact, ContactField, ContactGroup, ContactGr
 from temba.contacts.tasks import release_group_task
 from temba.flows.models import Flow, FlowRun, FlowStart
 from temba.globals.models import Global
+from temba.orgs.models import Org
 from temba.locations.models import AdminBoundary, BoundaryAlias
 from temba.msgs.models import Broadcast, Label, LabelCount, Msg, SystemLabel
 from temba.templates.models import Template, TemplateTranslation
 from temba.tickets.models import Ticketer
-from temba.utils import on_transaction_commit, splitting_getlist, str_to_bool, dates
+from temba.utils import on_transaction_commit, splitting_getlist, str_to_bool, dates, get_anonymous_user
 
 from ..models import SSLPermission
 from ..support import InvalidQueryError
@@ -4309,3 +4310,58 @@ class ParseDatabaseRecordsEndpoint(ParseDatabaseEndpoint):
         return Response(
             response.json(), status=status.HTTP_202_ACCEPTED if response.status_code == 200 else response.status_code
         )
+
+
+class ESignatureIOEndpoint(BaseAPIView):
+    """
+    This URL allows you handle a eSignature.io webhook event.
+
+    POST /api/v2/esignature_webhook_event
+    """
+
+    def post(self, request, *args, **kwargs):
+        org_id = None
+        contact_uuid = None
+        payload = request.data
+
+        contract_status = payload.get("status")
+        data = payload.get("data", {})
+
+        if not data:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        placeholder_fields = []
+
+        if contract_status == "contract-signed":
+            placeholder_fields = data.get("placeholder_fields", [])
+        elif contract_status == "signer-signed":
+            contract = data.get("contract", {})
+            placeholder_fields = contract.get("placeholder_fields", [])
+
+        if not placeholder_fields:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        for field in placeholder_fields:
+            if field.get("api_key") not in ["org_id", "contact_uuid"]:
+                continue
+
+            if field.get("api_key") == "org_id":
+                org_id = int(field.get("value"))
+            elif field.get("api_key") == "contact_uuid":
+                contact_uuid = field.get("value")
+
+        if not org_id:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        org = Org.objects.filter(id=org_id).first()
+        contact = Contact.objects.filter(org=org, uuid=contact_uuid).first()
+        if not contact:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if contract_status == "contract-signed":
+            contract_url_pdf = str(data.get("contract_pdf_url")).replace("\u0026", "&")
+            contract_field = ContactField.get_or_create(org=org, user=get_anonymous_user(), key="contract_pdf_url")
+            mods = contact.update_fields({contract_field: contract_url_pdf})
+            contact.modify(get_anonymous_user(), mods)
+
+        return Response(status=status.HTTP_200_OK)

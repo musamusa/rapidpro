@@ -36,6 +36,7 @@ from .views import (
     WorkspaceEndpoint,
     ParseDatabaseEndpoint,
     ParseDatabaseRecordsEndpoint,
+    ESignatureIOEndpoint,
 )
 
 urlpatterns = [
@@ -74,6 +75,7 @@ urlpatterns = [
     url(r"^ticketers$", TicketersEndpoint.as_view(), name="api.v2.ticketers"),
     url(r"^workspace$", WorkspaceEndpoint.as_view(), name="api.v2.workspace"),
     url(r"^validate_attachment_url$", ValidateUrlAttachmentEndpoint.as_view(), name="api.v2.attachments_validation"),
+    url(r"^esignature_webhook_event$", ESignatureIOEndpoint.as_view(), name="api.v2.esignature_webhook_event"),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=["json", "api"])
