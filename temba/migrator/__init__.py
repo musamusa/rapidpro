@@ -305,6 +305,19 @@ class Migrator(object):
         count = self.get_count("msgs_msg", condition=condition_string)
         return self.get_results_paginated(query_string=query_string, count=count), count
 
+    def get_org_msgs_joining_urns(self) -> (list, int):
+        condition_string = f"org_id = {self.org_id}"
+        query_string = f"""
+            SELECT mm.*, urn.identity as urn_identity
+            FROM public.msgs_msg as mm
+            INNER JOIN public.contacts_contacturn as urn
+            ON (mm.contact_urn_id = urn.id)
+            WHERE mm.{condition_string}
+            ORDER BY mm.id ASC
+        """
+        count = self.get_count("msgs_msg", condition=condition_string)
+        return self.get_results_paginated(query_string=query_string, count=count), count
+
     def get_msg_labels(self, msg_id) -> list:
         count = self.get_count("msgs_msg_labels", condition=f"msg_id = {msg_id}")
         return self.get_results_paginated(
