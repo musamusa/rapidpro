@@ -449,6 +449,21 @@ class Migrator(object):
         count = self.get_count("flows_flowrun", condition=condition_string)
         return self.get_results_paginated(query_string=query_string, count=count)
 
+    def get_flow_runs_join_contacts(self, flow_id, start_date=None, end_date=None) -> list:
+        condition_string = f"""
+            flow_id = {flow_id} 
+            {"AND (created_on >= '%s' AND created_on <= '%s')" % (start_date, end_date) if start_date else ""}
+        """
+        query_string = f"""
+            SELECT fr.*, (SELECT identity FROM public.contacts_contacturn WHERE contact_id = cc.id ORDER BY id DESC LIMIT 1) as urn_identity
+            FROM public.flows_flowrun as fr
+            INNER JOIN public.contacts_contact as cc ON (fr.contact_id = cc.id)
+            WHERE flow_id = {flow_id} {"AND (created_on >= '%s' AND created_on <= '%s')" % (start_date, end_date) if start_date else ""}
+            ORDER BY fr.id ASC
+        """
+        count = self.get_count("flows_flowrun", condition=condition_string)
+        return self.get_results_paginated(query_string=query_string, count=count)
+
     def get_flow_run_events(self, flow_run_id) -> list:
         count_query = self.make_query_one(
             query_string=f"SELECT count(ffs.*) FROM public.flows_flowstep as ffs INNER JOIN public.flows_flowrun as ffr "
