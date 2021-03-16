@@ -3893,6 +3893,8 @@ class ExportFlowResultsTask(BaseExportTask):
 
         for run in runs:
             contact = contacts_by_uuid.get(run["contact"]["uuid"])
+            if not contact:
+                continue
 
             # get this run's results by node name(ruleset label)
             run_values = run["values"]
