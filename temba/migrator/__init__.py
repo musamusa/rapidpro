@@ -305,6 +305,19 @@ class Migrator(object):
         count = self.get_count("msgs_msg", condition=condition_string)
         return self.get_results_paginated(query_string=query_string, count=count), count
 
+    def get_org_msgs_joining_urns(self) -> (list, int):
+        condition_string = f"org_id = {self.org_id}"
+        query_string = f"""
+            SELECT mm.*, urn.identity as urn_identity
+            FROM public.msgs_msg as mm
+            INNER JOIN public.contacts_contacturn as urn
+            ON (mm.contact_urn_id = urn.id)
+            WHERE mm.{condition_string}
+            ORDER BY mm.id ASC
+        """
+        count = self.get_count("msgs_msg", condition=condition_string)
+        return self.get_results_paginated(query_string=query_string, count=count), count
+
     def get_msg_labels(self, msg_id) -> list:
         count = self.get_count("msgs_msg_labels", condition=f"msg_id = {msg_id}")
         return self.get_results_paginated(
@@ -433,6 +446,21 @@ class Migrator(object):
             {"AND (created_on >= '%s' AND created_on <= '%s')" % (start_date, end_date) if start_date else ""}
         """
         query_string = f"SELECT * FROM public.flows_flowrun WHERE {condition_string} ORDER BY id ASC"
+        count = self.get_count("flows_flowrun", condition=condition_string)
+        return self.get_results_paginated(query_string=query_string, count=count)
+
+    def get_flow_runs_join_contacts(self, flow_id, start_date=None, end_date=None) -> list:
+        condition_string = f"""
+            flow_id = {flow_id} 
+            {"AND (created_on >= '%s' AND created_on <= '%s')" % (start_date, end_date) if start_date else ""}
+        """
+        query_string = f"""
+            SELECT fr.*, (SELECT identity FROM public.contacts_contacturn WHERE contact_id = cc.id ORDER BY id DESC LIMIT 1) as urn_identity
+            FROM public.flows_flowrun as fr
+            INNER JOIN public.contacts_contact as cc ON (fr.contact_id = cc.id)
+            WHERE flow_id = {flow_id} {"AND (created_on >= '%s' AND created_on <= '%s')" % (start_date, end_date) if start_date else ""}
+            ORDER BY fr.id ASC
+        """
         count = self.get_count("flows_flowrun", condition=condition_string)
         return self.get_results_paginated(query_string=query_string, count=count)
 
