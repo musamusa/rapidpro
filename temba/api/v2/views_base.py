@@ -11,6 +11,7 @@ from django.db import transaction
 from temba.api.models import APIPermission, SSLPermission
 from temba.api.support import InvalidQueryError
 from temba.contacts.models import URN
+from temba.utils import str_to_bool
 from temba.utils.views import NonAtomicMixin
 
 from .serializers import BulkActionFailure
@@ -34,9 +35,18 @@ class BaseAPIView(NonAtomicMixin, generics.GenericAPIView):
         """
         return self.http_method_not_allowed(request, *args, **kwargs)
 
-    def get_queryset(self):
+    def derive_queryset(self):
         org = self.request.user.get_org()
         return getattr(self.model, self.model_manager).filter(org=org)
+
+    def get_queryset(self):
+        qs = self.derive_queryset()
+
+        # if this is a get request, fetch from readonly database
+        if self.request.method == "GET":
+            qs = qs.using("readonly")
+
+        return qs
 
     def get_lookup_values(self):
         """
@@ -147,11 +157,11 @@ class ListAPIMixin(mixins.ListModelMixin):
         page = super().paginate_queryset(queryset)
 
         # give views a chance to prepare objects for serialization
-        self.prepare_for_serialization(page)
+        self.prepare_for_serialization(page, using=queryset.db)
 
         return page
 
-    def prepare_for_serialization(self, page):
+    def prepare_for_serialization(self, page, using: str):
         """
         Views can override this to do things like bulk cache initialization of result objects
         """
@@ -243,7 +253,7 @@ class DeleteAPIMixin(mixins.DestroyModelMixin):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_destroy(self, instance):
-        instance.release()
+        instance.release(self.request.user)
 
 
 class CreatedOnCursorPagination(CursorPagination):
@@ -252,10 +262,15 @@ class CreatedOnCursorPagination(CursorPagination):
 
 
 class ModifiedOnCursorPagination(CursorPagination):
-    ordering = ("-modified_on", "-id")
+    def get_ordering(self, request, queryset, view):
+        if str_to_bool(request.GET.get("reverse")):
+            return "modified_on", "id"
+        else:
+            return "-modified_on", "-id"
+
     offset_cutoff = 1000000
 
 
-class OpenedOnCursorPagination(CursorPagination):
-    ordering = ("-opened_on", "-id")
+class DateJoinedCursorPagination(CursorPagination):
+    ordering = ("-date_joined", "-id")
     offset_cutoff = 1000000

@@ -3,12 +3,9 @@ import resource
 from itertools import islice
 
 import iso8601
-from django_countries import countries
 
 from django.conf import settings
 from django.db import transaction
-
-DTONE_COUNTRY_NAMES = {"Democratic Republic of the Congo": "CD", "Ivory Coast": "CI", "United States": "US"}
 
 
 def str_to_bool(text):
@@ -161,21 +158,12 @@ def print_max_mem_usage(msg=None):
     print("=" * 80)
 
 
-def get_country_code_by_name(name):
-    code = countries.by_name(name)
-
-    if not code:
-        code = DTONE_COUNTRY_NAMES.get(name, None)
-
-    return code if code else None
-
-
 def on_transaction_commit(func):
     """
     Requests that the given function be called after the current transaction has been committed. However function will
-    be called immediately if CELERY_ALWAYS_EAGER is True or if there is no active transaction.
+    be called immediately if CELERY_TASK_ALWAYS_EAGER is True or if there is no active transaction.
     """
-    if getattr(settings, "CELERY_ALWAYS_EAGER", False):
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
         func()
     else:
         transaction.on_commit(func)

@@ -16,16 +16,12 @@ from celery.schedules import crontab
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 
 
-def traces_sampler(sampling_context):  # pragma: no cover
-    return 0 if ("shell" in sys.argv) else 1.0
-
-
 if SENTRY_DSN:  # pragma: no cover
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration(), CeleryIntegration(), LoggingIntegration()],
         send_default_pii=True,
-        traces_sampler=traces_sampler,
+        traces_sample_rate=0,
     )
     ignore_logger("django.security.DisallowedHost")
 
@@ -46,6 +42,11 @@ if TESTING:
 
 ADMINS = (("RapidPro", "code@yourdomain.io"),)
 MANAGERS = ADMINS
+
+# -----------------------------------------------------------------------------------
+# Location support
+# -----------------------------------------------------------------------------------
+LOCATION_SUPPORT = True
 
 # hardcode the postgis version so we can do reset db's from a blank database
 POSTGIS_VERSION = (2, 1)
@@ -106,14 +107,14 @@ LANGUAGE_CODE = "en-us"
 # -----------------------------------------------------------------------------------
 LANGUAGES = (
     ("en-us", _("English")),
-    ("pt-br", _("Portuguese")),
-    ("fr", _("French")),
+    ("cs", _("Czech")),
     ("es", _("Spanish")),
+    ("fr", _("French")),
+    ("mn", _("Mongolian")),
+    ("pt-br", _("Portuguese")),
     ("ru", _("Russian")),
 )
-
 DEFAULT_LANGUAGE = "en-us"
-DEFAULT_SMS_LANGUAGE = "en-us"
 
 SITE_ID = 1
 
@@ -141,9 +142,6 @@ STATICFILES_FINDERS = (
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = "your own secret key"
 
-EMAIL_CONTEXT_PROCESSORS = ("temba.utils.email.link_components",)
-
-
 # -----------------------------------------------------------------------------------
 # Directory Configuration
 # -----------------------------------------------------------------------------------
@@ -156,6 +154,7 @@ STATICFILES_DIRS = (
     os.path.join(PROJECT_DIR, "../static"),
     os.path.join(PROJECT_DIR, "../media"),
     os.path.join(PROJECT_DIR, "../node_modules/@nyaruka/flow-editor/build"),
+    os.path.join(PROJECT_DIR, "../node_modules/@nyaruka/temba-components/dist/static"),
     os.path.join(PROJECT_DIR, "../node_modules"),
     os.path.join(PROJECT_DIR, "../node_modules/react/umd"),
     os.path.join(PROJECT_DIR, "../node_modules/react-dom/umd"),
@@ -177,7 +176,7 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
             os.path.join(PROJECT_DIR, "../templates"),
-            os.path.join(PROJECT_DIR, "../node_modules/@nyaruka/temba-components/build/templates"),
+            os.path.join(PROJECT_DIR, "../node_modules/@nyaruka/temba-components/dist/templates"),
         ],
         "OPTIONS": {
             "context_processors": [
@@ -190,6 +189,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "temba.context_processors.branding",
                 "temba.context_processors.analytics",
+                "temba.context_processors.config",
                 "temba.orgs.context_processors.user_group_perms_processor",
                 "temba.channels.views.channel_status_processor",
                 "temba.orgs.context_processors.settings_includer",
@@ -282,6 +282,7 @@ INSTALLED_APPS = (
     "temba.contacts",
     "temba.channels",
     "temba.msgs",
+    "temba.notifications",
     "temba.flows",
     "temba.tickets",
     "temba.triggers",
@@ -309,6 +310,7 @@ LOGGING = {
         "pycountry": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         "django.security.DisallowedHost": {"handlers": ["null"], "propagate": False},
         "django.db.backends": {"level": "ERROR", "handlers": ["console"], "propagate": False},
+        "temba.formax": {"level": "DEBUG" if DEBUG else "ERROR", "handlers": ["console"], "propagate": False},
     },
 }
 
@@ -342,6 +344,7 @@ BRANDING = {
         "logo": "brands/rapidpro/logo.png",
         "allow_signups": True,
         "flow_types": ["M", "V", "B", "S"],  # see Flow.FLOW_TYPES
+        "location_support": True,
         "tiers": dict(multi_user=0, multi_org=0),
         "bundles": [],
         "welcome_packs": [dict(size=5000, name="Demo Account"), dict(size=100000, name="UNICEF Account")],
@@ -384,6 +387,7 @@ PERMISSIONS = {
         "stopped",
         "filter",
         "history",
+        "menu",
         "omnibox",
         "restore",
         "search",
@@ -391,25 +395,23 @@ PERMISSIONS = {
         "update_fields",
         "update_fields_input",
     ),
-    "contacts.contactfield": ("api", "json", "update_priority", "featured", "filter_by_type", "detail"),
-    "contacts.contactgroup": ("api",),
+    "contacts.contactfield": ("api", "json", "menu", "update_priority", "featured", "filter_by_type"),
+    "contacts.contactgroup": ("api", "menu"),
     "contacts.contactimport": ("preview",),
     "ivr.ivrcall": ("start",),
     "archives.archive": ("api", "run", "message"),
-    "globals.global": ("api", "unused", "detail"),
+    "globals.global": ("api", "unused"),
     "locations.adminboundary": ("alias", "api", "boundaries", "geometry"),
     "orgs.org": (
         "accounts",
         "smtp_server",
         "api",
         "country",
-        "chatbase",
         "clear_cache",
         "create_login",
         "create_sub_org",
         "dashboard",
         "download",
-        "dtone_account",
         "edit",
         "edit_sub_org",
         "export",
@@ -422,6 +424,8 @@ PERMISSIONS = {
         "manage",
         "manage_accounts",
         "manage_accounts_sub_org",
+        "manage_integrations",
+        "menu",
         "vonage_account",
         "vonage_connect",
         "plan",
@@ -431,6 +435,7 @@ PERMISSIONS = {
         "resthooks",
         "service",
         "signup",
+        "spa",
         "sub_orgs",
         "surveyor",
         "transfer_credits",
@@ -449,8 +454,7 @@ PERMISSIONS = {
         "create_caller",
         "errors",
         "facebook_whitelist",
-        "search_vonage",
-        "search_numbers",
+        "menu",
     ),
     "channels.channellog": ("connection",),
     "channels.channelevent": ("api", "calls"),
@@ -468,7 +472,6 @@ PERMISSIONS = {
         "change_language",
         "copy",
         "editor",
-        "editor_next",
         "export",
         "export_translation",
         "download_translation",
@@ -494,30 +497,21 @@ PERMISSIONS = {
         "flow",
         "inbox",
         "label",
+        "menu",
         "outbox",
         "sent",
         "update",
     ),
     "msgs.broadcast": ("api", "detail", "schedule", "schedule_list", "schedule_read", "send"),
-    "msgs.label": ("api", "create", "create_folder"),
+    "msgs.label": ("api", "create_folder", "delete_folder"),
     "orgs.topup": ("manage",),
     "policies.policy": ("admin", "history", "give_consent"),
-    "request_logs.httplog": ("classifier", "ticketer"),
+    "request_logs.httplog": ("webhooks", "classifier", "ticketer"),
     "templates.template": ("api",),
-    "tickets.ticket": ("api", "open", "closed", "filter", "update"),
+    "tickets.ticket": ("api", "assign", "assignee", "menu", "note"),
     "tickets.ticketer": ("api", "connect", "configure"),
-    "triggers.trigger": (
-        "archived",
-        "catchall",
-        "follow",
-        "inbound_call",
-        "keyword",
-        "missed_call",
-        "new_conversation",
-        "referral",
-        "register",
-        "schedule",
-    ),
+    "tickets.topic": ("api",),
+    "triggers.trigger": ("archived", "type"),
 }
 
 
@@ -525,7 +519,7 @@ PERMISSIONS = {
 GROUP_PERMISSIONS = {
     "Service Users": ("flows.flow_assets", "msgs.msg_create"),  # internal Temba services have limited permissions
     "Alpha": (),
-    "Beta": (),
+    "Beta": ("tickets.ticket_list",),
     "Dashboard": ("orgs.org_dashboard",),
     "Surveyors": (
         "contacts.contact_api",
@@ -534,6 +528,7 @@ GROUP_PERMISSIONS = {
         "flows.flow_api",
         "locations.adminboundary_api",
         "orgs.org_api",
+        "orgs.org_spa",
         "orgs.org_surveyor",
         "msgs.msg_api",
     ),
@@ -553,14 +548,15 @@ GROUP_PERMISSIONS = {
         "flows.flow_editor",
         "flows.flow_revisions",
         "flows.flowrun_delete",
-        "flows.flow_editor_next",
         "flows.flowsession_json",
+        "notifications.log_list",
         "orgs.org_dashboard",
         "orgs.org_delete",
         "orgs.org_grant",
         "orgs.org_manage",
         "orgs.org_update",
         "orgs.org_service",
+        "orgs.org_spa",
         "orgs.topup_create",
         "orgs.topup_manage",
         "orgs.topup_update",
@@ -568,20 +564,14 @@ GROUP_PERMISSIONS = {
         "policies.policy_update",
         "policies.policy_admin",
         "policies.policy_history",
-        "request_logs.httplog_read",
-        "request_logs.httplog_classifier",
-        "request_logs.httplog_ticketer",
     ),
     "Administrators": (
         "airtime.airtimetransfer_list",
         "airtime.airtimetransfer_read",
         "api.apitoken_refresh",
         "api.resthook_api",
-        "api.resthook_list",
         "api.resthooksubscriber_api",
         "api.webhookevent_api",
-        "api.webhookresult_list",
-        "api.webhookresult_read",
         "archives.archive.*",
         "campaigns.campaign.*",
         "campaigns.campaignevent.*",
@@ -603,6 +593,7 @@ GROUP_PERMISSIONS = {
         "contacts.contact_filter",
         "contacts.contact_history",
         "contacts.contact_list",
+        "contacts.contact_menu",
         "contacts.contact_omnibox",
         "contacts.contact_read",
         "contacts.contact_restore",
@@ -622,15 +613,14 @@ GROUP_PERMISSIONS = {
         "locations.adminboundary_api",
         "locations.adminboundary_boundaries",
         "locations.adminboundary_geometry",
+        "notifications.notification_list",
         "orgs.org_accounts",
         "orgs.org_smtp_server",
         "orgs.org_api",
         "orgs.org_country",
-        "orgs.org_chatbase",
         "orgs.org_create_sub_org",
         "orgs.org_dashboard",
         "orgs.org_download",
-        "orgs.org_dtone_account",
         "orgs.org_edit",
         "orgs.org_edit_sub_org",
         "orgs.org_export",
@@ -639,6 +629,8 @@ GROUP_PERMISSIONS = {
         "orgs.org_languages",
         "orgs.org_manage_accounts",
         "orgs.org_manage_accounts_sub_org",
+        "orgs.org_manage_integrations",
+        "orgs.org_menu",
         "orgs.org_vonage_account",
         "orgs.org_vonage_connect",
         "orgs.org_plan",
@@ -646,6 +638,7 @@ GROUP_PERMISSIONS = {
         "orgs.org_profile",
         "orgs.org_prometheus",
         "orgs.org_resthooks",
+        "orgs.org_spa",
         "orgs.org_sub_orgs",
         "orgs.org_transfer_credits",
         "orgs.org_twilio_account",
@@ -664,9 +657,8 @@ GROUP_PERMISSIONS = {
         "channels.channel_facebook_whitelist",
         "channels.channel_delete",
         "channels.channel_list",
+        "channels.channel_menu",
         "channels.channel_read",
-        "channels.channel_search_vonage",
-        "channels.channel_search_numbers",
         "channels.channel_update",
         "channels.channelevent.*",
         "channels.channellog_list",
@@ -691,26 +683,25 @@ GROUP_PERMISSIONS = {
         "msgs.msg_flow",
         "msgs.msg_inbox",
         "msgs.msg_label",
+        "msgs.msg_menu",
         "msgs.msg_outbox",
         "msgs.msg_sent",
         "msgs.msg_update",
         "policies.policy_read",
         "policies.policy_list",
         "policies.policy_give_consent",
-        "request_logs.httplog_classifier",
+        "request_logs.httplog_list",
         "request_logs.httplog_read",
+        "request_logs.httplog_webhooks",
         "templates.template_api",
         "tickets.ticket.*",
-        "tickets.ticketer_api",
-        "tickets.ticketer_configure",
-        "tickets.ticketer_connect",
-        "tickets.ticketer_delete",
+        "tickets.ticketer.*",
+        "tickets.topic.*",
         "triggers.trigger.*",
     ),
     "Editors": (
         "api.apitoken_refresh",
         "api.resthook_api",
-        "api.resthook_list",
         "api.resthooksubscriber_api",
         "api.webhookevent_api",
         "api.webhookevent_list",
@@ -735,6 +726,7 @@ GROUP_PERMISSIONS = {
         "contacts.contact_filter",
         "contacts.contact_history",
         "contacts.contact_list",
+        "contacts.contact_menu",
         "contacts.contact_omnibox",
         "contacts.contact_read",
         "contacts.contact_restore",
@@ -754,13 +746,16 @@ GROUP_PERMISSIONS = {
         "locations.adminboundary_api",
         "locations.adminboundary_boundaries",
         "locations.adminboundary_geometry",
+        "notifications.notification_list",
         "orgs.org_api",
         "orgs.org_download",
         "orgs.org_export",
         "orgs.org_home",
         "orgs.org_import",
+        "orgs.org_menu",
         "orgs.org_profile",
         "orgs.org_resthooks",
+        "orgs.org_spa",
         "orgs.org_two_factor",
         "orgs.org_token",
         "orgs.topup_list",
@@ -774,8 +769,8 @@ GROUP_PERMISSIONS = {
         "channels.channel_create_caller",
         "channels.channel_delete",
         "channels.channel_list",
+        "channels.channel_menu",
         "channels.channel_read",
-        "channels.channel_search_numbers",
         "channels.channel_update",
         "channels.channelevent.*",
         "flows.flow.*",
@@ -797,23 +792,21 @@ GROUP_PERMISSIONS = {
         "msgs.msg_flow",
         "msgs.msg_inbox",
         "msgs.msg_label",
+        "msgs.msg_menu",
         "msgs.msg_outbox",
         "msgs.msg_sent",
         "msgs.msg_update",
         "policies.policy_read",
         "policies.policy_list",
         "policies.policy_give_consent",
+        "request_logs.httplog_webhooks",
         "templates.template_api",
-        "tickets.ticket_api",
-        "tickets.ticket_closed",
-        "tickets.ticket_filter",
-        "tickets.ticket_open",
-        "tickets.ticket_update",
+        "tickets.ticket.*",
         "tickets.ticketer_api",
+        "tickets.topic_api",
         "triggers.trigger.*",
     ),
     "Viewers": (
-        "api.resthook_list",
         "campaigns.campaign_archived",
         "campaigns.campaign_list",
         "campaigns.campaign_read",
@@ -828,23 +821,32 @@ GROUP_PERMISSIONS = {
         "contacts.contact_filter",
         "contacts.contact_history",
         "contacts.contact_list",
+        "contacts.contact_menu",
         "contacts.contact_read",
         "contacts.contact_stopped",
         "contacts.contactfield_api",
+        "contacts.contactfield_read",
         "contacts.contactgroup_api",
+        "contacts.contactgroup_list",
+        "contacts.contactgroup_menu",
+        "contacts.contactgroup_read",
         "contacts.contactimport_read",
         "globals.global_api",
         "locations.adminboundary_boundaries",
         "locations.adminboundary_geometry",
         "locations.adminboundary_alias",
+        "notifications.notification_list",
         "orgs.org_download",
         "orgs.org_export",
         "orgs.org_home",
+        "orgs.org_menu",
         "orgs.org_profile",
+        "orgs.org_spa",
         "orgs.org_two_factor",
         "orgs.topup_list",
         "orgs.topup_read",
         "channels.channel_list",
+        "channels.channel_menu",
         "channels.channel_read",
         "channels.channelevent_calls",
         "flows.flow_activity",
@@ -858,7 +860,6 @@ GROUP_PERMISSIONS = {
         "flows.flow_filter",
         "flows.flow_list",
         "flows.flow_editor",
-        "flows.flow_editor_next",
         "flows.flow_recent_messages",
         "flows.flow_results",
         "flows.flow_revisions",
@@ -868,26 +869,47 @@ GROUP_PERMISSIONS = {
         "msgs.broadcast_schedule_list",
         "msgs.broadcast_schedule_read",
         "msgs.label_api",
+        "msgs.label_read",
         "msgs.msg_archived",
         "msgs.msg_export",
         "msgs.msg_failed",
         "msgs.msg_filter",
         "msgs.msg_flow",
         "msgs.msg_inbox",
+        "msgs.msg_menu",
         "msgs.msg_outbox",
         "msgs.msg_sent",
+        "orgs.org_menu",
         "policies.policy_read",
         "policies.policy_list",
         "policies.policy_give_consent",
-        "tickets.ticket_api",
-        "tickets.ticket_closed",
-        "tickets.ticket_filter",
-        "tickets.ticket_open",
         "tickets.ticketer_api",
+        "tickets.topic_api",
         "triggers.trigger_archived",
         "triggers.trigger_list",
+        "triggers.trigger_type",
     ),
-    "Agents": (),
+    "Agents": (
+        "contacts.contact_api",
+        "contacts.contact_history",
+        "contacts.contactfield_api",
+        "contacts.contactgroup_api",
+        "globals.global_api",
+        "msgs.broadcast_api",
+        "notifications.notification_list",
+        "tickets.ticket_api",
+        "tickets.ticket_assign",
+        "tickets.ticket_assignee",
+        "tickets.ticket_list",
+        "tickets.ticket_menu",
+        "tickets.ticket_note",
+        "tickets.topic_api",
+        "orgs.org_home",
+        "orgs.org_menu",
+        "orgs.org_profile",
+        "orgs.org_spa",
+        "policies.policy_give_consent",
+    ),
     "Prometheus": (),
 }
 
@@ -926,40 +948,67 @@ _default_database_config = {
     "ATOMIC_REQUESTS": True,
     "CONN_MAX_AGE": 60,
     "OPTIONS": {},
+    "DISABLE_SERVER_SIDE_CURSORS": True,
 }
 
-_direct_database_config = _default_database_config.copy()
-_default_database_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+# installs can provide a default connection and an optional read-only connection (e.g. a separate read replica) which
+# will be used for certain fetch operations
+DATABASES = {"default": _default_database_config, "readonly": _default_database_config.copy()}
 
-DATABASES = {"default": _default_database_config, "direct": _direct_database_config}
-
-# If we are testing, set both our connections as the same, Django seems to get
-# confused on Python 3.6 with transactional tests otherwise
-if TESTING:
-    DATABASES["default"] = _direct_database_config
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 INTERNAL_IPS = iptools.IpRangeList("127.0.0.1", "192.168.0.10", "192.168.0.0/24", "0.0.0.0")  # network block
 
+HOSTNAME = "localhost"
+
+# The URL and port of the proxy server to use when needed (if any, in requests format)
+OUTGOING_PROXIES = {}
+
 # -----------------------------------------------------------------------------------
-# Crontab Settings ..
+# Caching using Redis
 # -----------------------------------------------------------------------------------
-CELERYBEAT_SCHEDULE = {
+REDIS_HOST = "localhost"
+REDIS_PORT = 6379
+REDIS_DB = 10 if TESTING else 15  # we use a redis db of 10 for testing so that we maintain caches for dev
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://%s:%s/%s" % (REDIS_HOST, REDIS_PORT, REDIS_DB),
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
+
+# -----------------------------------------------------------------------------------
+# Async tasks using Celery
+# -----------------------------------------------------------------------------------
+CELERY_RESULT_BACKEND = None
+CELERY_BROKER_URL = "redis://%s:%d/%d" % (REDIS_HOST, REDIS_PORT, REDIS_DB)
+
+# by default, celery doesn't have any timeout on our redis connections, this fixes that
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_timeout": 5}
+
+CELERY_BEAT_SCHEDULE = {
     "check-channels": {"task": "check_channels_task", "schedule": timedelta(seconds=300)},
     "check-credits": {"task": "check_credits_task", "schedule": timedelta(seconds=900)},
     "check-elasticsearch-lag": {"task": "check_elasticsearch_lag", "schedule": timedelta(seconds=300)},
     "check-topup-expiration": {"task": "check_topup_expiration_task", "schedule": crontab(hour=2, minute=0)},
+    "delete-orgs": {"task": "delete_orgs_task", "schedule": crontab(hour=4, minute=0)},
     "fail-old-messages": {"task": "fail_old_messages", "schedule": crontab(hour=0, minute=0)},
     "resolve-twitter-ids-task": {"task": "resolve_twitter_ids_task", "schedule": timedelta(seconds=900)},
     "retry-errored-messages": {"task": "retry_errored_messages", "schedule": timedelta(seconds=60)},
     "refresh-jiochat-access-tokens": {"task": "refresh_jiochat_access_tokens", "schedule": timedelta(seconds=3600)},
     "refresh-wechat-access-tokens": {"task": "refresh_wechat_access_tokens", "schedule": timedelta(seconds=3600)},
-    "refresh-whatsapp-tokens": {"task": "refresh_whatsapp_tokens", "schedule": timedelta(hours=24)},
+    "refresh-whatsapp-tokens": {"task": "refresh_whatsapp_tokens", "schedule": crontab(hour=6, minute=0)},
     "refresh-whatsapp-templates": {"task": "refresh_whatsapp_templates", "schedule": timedelta(seconds=900)},
+    "send-notification-emails": {"task": "send_notification_emails", "schedule": timedelta(seconds=60)},
     "squash-channelcounts": {"task": "squash_channelcounts", "schedule": timedelta(seconds=60)},
     "squash-contactgroupcounts": {"task": "squash_contactgroupcounts", "schedule": timedelta(seconds=60)},
     "squash-flowcounts": {"task": "squash_flowcounts", "schedule": timedelta(seconds=60)},
     "squash-msgcounts": {"task": "squash_msgcounts", "schedule": timedelta(seconds=60)},
+    "squash-notificationcounts": {"task": "squash_notificationcounts", "schedule": timedelta(seconds=60)},
     "squash-topupcredits": {"task": "squash_topupcredits", "schedule": timedelta(seconds=60)},
+    "squash-ticketcounts": {"task": "squash_ticketcounts", "schedule": timedelta(seconds=60)},
     "suspend-topup-orgs": {"task": "suspend_topup_orgs_task", "schedule": timedelta(hours=1)},
     "sync-classifier-intents": {"task": "sync_classifier_intents", "schedule": timedelta(seconds=300)},
     "sync-old-seen-channels": {"task": "sync_old_seen_channels_task", "schedule": timedelta(seconds=600)},
@@ -972,44 +1021,6 @@ CELERYBEAT_SCHEDULE = {
     "trim-sync-events": {"task": "trim_sync_events_task", "schedule": crontab(hour=3, minute=0)},
     "trim-webhook-event": {"task": "trim_webhook_event_task", "schedule": crontab(hour=3, minute=0)},
     "update-org-activity": {"task": "update_org_activity_task", "schedule": crontab(hour=3, minute=5)},
-}
-
-# Mapping of task name to task function path, used when CELERY_ALWAYS_EAGER is set to True
-CELERY_TASK_MAP = {"send_msg_task": "temba.channels.tasks.send_msg_task"}
-
-# -----------------------------------------------------------------------------------
-# Async tasks with celery
-# -----------------------------------------------------------------------------------
-REDIS_HOST = "localhost"
-REDIS_PORT = 6379
-
-# we use a redis db of 10 for testing so that we maintain caches for dev
-REDIS_DB = 10 if TESTING else 15
-
-BROKER_URL = "redis://%s:%d/%d" % (REDIS_HOST, REDIS_PORT, REDIS_DB)
-
-# by default, celery doesn't have any timeout on our redis connections, this fixes that
-BROKER_TRANSPORT_OPTIONS = {"socket_timeout": 5}
-
-CELERY_RESULT_BACKEND = None
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-
-IS_PROD = False
-HOSTNAME = "localhost"
-
-# The URL and port of the proxy server to use when needed (if any, in requests format)
-OUTGOING_PROXIES = {}
-
-# -----------------------------------------------------------------------------------
-# Cache to Redis
-# -----------------------------------------------------------------------------------
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://%s:%s/%s" % (REDIS_HOST, REDIS_PORT, REDIS_DB),
-        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-    }
 }
 
 # -----------------------------------------------------------------------------------
@@ -1079,6 +1090,11 @@ SEND_EMAILS = False
 # Whether to send receipts on TopUp purchases
 SEND_RECEIPTS = True
 
+INTEGRATION_TYPES = [
+    "temba.orgs.integrations.dtone.DTOneType",
+    "temba.orgs.integrations.chatbase.ChatbaseType",
+]
+
 CLASSIFIER_TYPES = [
     "temba.classifiers.types.wit.WitType",
     "temba.classifiers.types.luis.LuisType",
@@ -1095,7 +1111,6 @@ TICKETER_TYPES = [
 CHANNEL_TYPES = [
     "temba.channels.types.arabiacell.ArabiaCellType",
     "temba.channels.types.whatsapp.WhatsAppType",
-    "temba.channels.types.textit_whatsapp.TextItWhatsAppType",
     "temba.channels.types.dialog360.Dialog360Type",
     "temba.channels.types.zenvia_whatsapp.ZenviaWhatsAppType",
     "temba.channels.types.twilio.TwilioType",
@@ -1161,6 +1176,9 @@ CHANNEL_TYPES = [
     "temba.channels.types.rocketchat.RocketChatType",
 ]
 
+# set of ISO-639-3 codes of languages to allow in addition to all ISO-639-1 languages
+NON_ISO6391_LANGUAGES = {}
+
 # -----------------------------------------------------------------------------------
 # Store sessions in our cache
 # -----------------------------------------------------------------------------------
@@ -1220,34 +1238,35 @@ FACEBOOK_WEBHOOK_SECRET = os.environ.get("FACEBOOK_WEBHOOK_SECRET", "")
 IP_ADDRESSES = ("172.16.10.10", "162.16.10.20")
 
 # -----------------------------------------------------------------------------------
-# Data model field size limits
+# Data model limits
 # -----------------------------------------------------------------------------------
 MSG_FIELD_SIZE = 640  # used for broadcast text and message campaign events
 FLOW_START_PARAMS_SIZE = 256  # used for params passed to flow start API endpoint
 GLOBAL_VALUE_SIZE = 10_000  # max length of global values
 
-# -----------------------------------------------------------------------------------
-# Installs may choose how long to keep the channel logs in hours
-# by default we keep success logs for 48 hours and error_logs for 30 days(30 * 24 hours)
-# Falsy values to keep the logs forever
-# -----------------------------------------------------------------------------------
-SUCCESS_LOGS_TRIM_TIME = 48
-ALL_LOGS_TRIM_TIME = 24 * 30
+ORG_LIMIT_DEFAULTS = {
+    "fields": 250,
+    "globals": 250,
+    "groups": 250,
+    "labels": 250,
+    "topics": 250,
+}
 
 # -----------------------------------------------------------------------------------
-# Installs can also choose how long to keep EventFires around. By default this is
-# 90 days which fits in nicely with the default archiving behavior.
+# Data retention periods - tasks trim away data older than these settings
 # -----------------------------------------------------------------------------------
-EVENT_FIRE_TRIM_DAYS = 90
+RETENTION_PERIODS = {
+    "channellog": timedelta(days=3),
+    "eventfire": timedelta(days=90),  # matches default rp-archiver behavior
+    "flowsession": timedelta(days=7),
+    "flowstart": timedelta(days=7),
+    "httplog": timedelta(days=3),
+    "syncevent": timedelta(days=7),
+    "webhookevent": timedelta(hours=48),
+}
 
 # -----------------------------------------------------------------------------------
-# Installs can also choose how long to keep FlowSessions around. These are
-# potentially big but really helpful for debugging. Default is 7 days.
-# -----------------------------------------------------------------------------------
-FLOW_SESSION_TRIM_DAYS = 7
-
-# -----------------------------------------------------------------------------------
-# Mailroom - disabled by default, but is where simulation happens
+# Mailroom
 # -----------------------------------------------------------------------------------
 MAILROOM_URL = None
 MAILROOM_AUTH_TOKEN = None
@@ -1261,9 +1280,3 @@ MACHINE_HOSTNAME = socket.gethostname().split(".")[0]
 
 # ElasticSearch configuration (URL RFC-1738)
 ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
-
-
-# Maximum active objects are org can have
-MAX_ACTIVE_CONTACTFIELDS_PER_ORG = 250
-MAX_ACTIVE_CONTACTGROUPS_PER_ORG = 250
-MAX_ACTIVE_GLOBALS_PER_ORG = 250

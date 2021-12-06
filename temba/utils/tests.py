@@ -12,10 +12,10 @@ import intercom.errors
 import pytz
 from django_redis import get_redis_connection
 from openpyxl import load_workbook
-from smartmin.tests import SmartminTestMixin
+from smartmin.tests import SmartminTest, SmartminTestMixin
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.core import checks
 from django.core.management import CommandError, call_command
 from django.db import connection, models
@@ -28,17 +28,18 @@ from celery.app.task import Task
 
 import temba.utils.analytics
 from temba.contacts.models import Contact, ContactField, ContactGroup, ContactGroupCount, ExportContactsTask
-from temba.flows.models import FlowRun
-from temba.orgs.models import Org, UserSettings
+from temba.flows.models import Flow, FlowRun
+from temba.orgs.models import Org
 from temba.tests import ESMockWithScroll, TembaTest, matchers
 from temba.utils import json, uuid
-from temba.utils.json import TembaJsonAdapter
+from temba.utils.templatetags.temba import format_datetime
 
 from . import (
     chunk_list,
+    countries,
     dict_to_struct,
     format_number,
-    get_country_code_by_name,
+    languages,
     percentage,
     redact,
     sizeof_fmt,
@@ -199,14 +200,6 @@ class InitTest(TembaTest):
         self.assertEqual(75, percentage(75, 100))
         self.assertEqual(76, percentage(759, 1000))
 
-    def test_get_country_code_by_name(self):
-        self.assertEqual("RW", get_country_code_by_name("Rwanda"))
-        self.assertEqual("US", get_country_code_by_name("United States of America"))
-        self.assertEqual("US", get_country_code_by_name("United States"))
-        self.assertEqual("GB", get_country_code_by_name("United Kingdom"))
-        self.assertEqual("CI", get_country_code_by_name("Ivory Coast"))
-        self.assertEqual("CD", get_country_code_by_name("Democratic Republic of the Congo"))
-
     def test_remove_control_charaters(self):
         self.assertIsNone(clean_string(None))
         self.assertEqual(clean_string("ngert\x07in."), "ngertin.")
@@ -246,6 +239,14 @@ class DatesTest(TembaTest):
         self.assertEqual(datetime_to_str(d2, "%Y/%m/%d %H:%M", tz=pytz.UTC), "2014/01/02 01:04")
 
 
+class CountriesTest(TembaTest):
+    def test_from_tel(self):
+        self.assertIsNone(countries.from_tel(""))
+        self.assertIsNone(countries.from_tel("123"))
+        self.assertEqual("EC", countries.from_tel("+593979123456"))
+        self.assertEqual("US", countries.from_tel("+1 213 621 0002"))
+
+
 class TimezonesTest(TembaTest):
     def test_field(self):
         field = TimeZoneFormField(help_text="Test field")
@@ -282,19 +283,18 @@ class TemplateTagTest(TembaTest):
         self.assertEqual("", icon(None))
 
     def test_format_datetime(self):
-        import pytz
-        from temba.utils.templatetags.temba import format_datetime
-
         with patch.object(timezone, "now", return_value=datetime.datetime(2015, 9, 15, 0, 0, 0, 0, pytz.UTC)):
             self.org.date_format = "D"
             self.org.save()
 
             # date without timezone and no user org in context
-            test_date = datetime.datetime(2012, 7, 20, 17, 5, 0, 0)
+            test_date = datetime.datetime(2012, 7, 20, 17, 5, 30, 0)
             self.assertEqual("20-07-2012 17:05", format_datetime(dict(), test_date))
+            self.assertEqual("20-07-2012 17:05:30", format_datetime(dict(), test_date, seconds=True))
 
-            test_date = datetime.datetime(2012, 7, 20, 17, 5, 0, 0).replace(tzinfo=pytz.utc)
+            test_date = datetime.datetime(2012, 7, 20, 17, 5, 30, 0).replace(tzinfo=pytz.utc)
             self.assertEqual("20-07-2012 17:05", format_datetime(dict(), test_date))
+            self.assertEqual("20-07-2012 17:05:30", format_datetime(dict(), test_date, seconds=True))
 
             context = dict(user_org=self.org)
 
@@ -923,7 +923,7 @@ class ExportTest(TembaTest):
 
 
 class MiddlewareTest(TembaTest):
-    def test_org_header(self):
+    def test_org(self):
         response = self.client.get(reverse("public.public_index"))
         self.assertFalse(response.has_header("X-Temba-Org"))
 
@@ -950,17 +950,25 @@ class MiddlewareTest(TembaTest):
         with self.settings(BRANDING=branding):
             self.assertRedirect(self.client.get(reverse("public.public_index")), "/redirect")
 
-    def test_activate_language(self):
-        self.assertContains(self.client.get(reverse("public.public_index")), "Sign Up")
+    def test_language(self):
+        def assert_text(text: str):
+            self.assertContains(self.client.get(reverse("public.public_index")), text)
 
+        # default is English
+        assert_text("Visually build nationally scalable mobile applications")
+
+        # can be overridden in Django settings
+        with override_settings(DEFAULT_LANGUAGE="es"):
+            assert_text("Cree visualmente aplicaciones móviles")
+
+        # if we have an authenticated user, their setting takes priority
         self.login(self.admin)
 
-        self.assertContains(self.client.get(reverse("public.public_index")), "Sign Up")
-        self.assertContains(self.client.get(reverse("contacts.contact_list")), "Import Contacts")
+        user_settings = self.admin.get_settings()
+        user_settings.language = "fr"
+        user_settings.save(update_fields=("language",))
 
-        UserSettings.objects.filter(user=self.admin).update(language="fr")
-
-        self.assertContains(self.client.get(reverse("contacts.contact_list")), "Importer des contacts")
+        assert_text("Créez visuellement des applications mobiles")
 
 
 class MakeTestDBTest(SmartminTestMixin, TransactionTestCase):
@@ -980,17 +988,17 @@ class MakeTestDBTest(SmartminTestMixin, TransactionTestCase):
         )
         assertOrgCounts(ContactField.user_fields.all(), [6, 6, 6])
         assertOrgCounts(ContactGroup.user_groups.all(), [10, 10, 10])
-        assertOrgCounts(Contact.objects.all(), [13, 13, 4])
+        assertOrgCounts(Contact.objects.all(), [10, 11, 9])
 
         org_1_active_contacts = ContactGroup.system_groups.get(org=org1, name="Active")
 
-        self.assertEqual(org_1_active_contacts.contacts.count(), 12)
+        self.assertEqual(org_1_active_contacts.contacts.count(), 9)
         self.assertEqual(
-            list(ContactGroupCount.objects.filter(group=org_1_active_contacts).values_list("count")), [(12,)]
+            list(ContactGroupCount.objects.filter(group=org_1_active_contacts).values_list("count")), [(9,)]
         )
 
         # same seed should generate objects with same UUIDs
-        self.assertEqual(ContactGroup.user_groups.order_by("id").first().uuid, "86f15ec5-3a37-431c-a891-f9f4ff519987")
+        self.assertEqual("f2a3f8c5-e831-4df3-b046-8d8cdb90f178", ContactGroup.user_groups.order_by("id").first().uuid)
 
         # check if contact fields are serialized
         self.assertIsNotNone(Contact.objects.first().fields)
@@ -1053,7 +1061,6 @@ class TestJSONAsTextField(TestCase):
         )
 
     def test_to_python(self):
-
         field = JSONAsTextField(default=dict)
 
         self.assertEqual(field.to_python({}), {})
@@ -1061,7 +1068,6 @@ class TestJSONAsTextField(TestCase):
         self.assertEqual(field.to_python("{}"), {})
 
     def test_default_with_null(self):
-
         model = JsonModelTestDefaultNull()
         model.save()
         model.refresh_from_db()
@@ -1077,7 +1083,6 @@ class TestJSONAsTextField(TestCase):
         self.assertEqual(data[0][1], None)
 
     def test_default_without_null(self):
-
         model = JsonModelTestDefault()
         model.save()
         model.refresh_from_db()
@@ -1102,6 +1107,14 @@ class TestJSONAsTextField(TestCase):
 
         model.field = ""
         self.assertRaises(ValueError, model.save)
+
+    def test_invalid_unicode(self):
+        # invalid unicode escape sequences are stripped out
+        model = JsonModelTestDefault()
+        model.field = {"foo": "bar\u0000"}
+        model.save()
+
+        self.assertEqual({"foo": "bar"}, JsonModelTestDefault.objects.first().field)
 
     def test_write_None_value(self):
         model = JsonModelTestDefault()
@@ -1162,27 +1175,73 @@ class TestJSONField(TembaTest):
     def test_jsonfield_decimal_encoding(self):
         contact = self.create_contact("Xavier", phone="+5939790990001")
 
-        with connection.cursor() as cur:
-            cur.execute(
-                "UPDATE contacts_contact SET fields = %s where id = %s",
-                (
-                    TembaJsonAdapter({"1eaf5c91-8d56-4ca0-8e00-9b1c0b12e722": {"number": Decimal("123.45")}}),
-                    contact.id,
-                ),
+        contact.fields = {"1eaf5c91-8d56-4ca0-8e00-9b1c0b12e722": {"number": Decimal("123.4567890")}}
+        contact.save(update_fields=("fields",))
+
+        contact.refresh_from_db()
+        self.assertEqual(contact.fields, {"1eaf5c91-8d56-4ca0-8e00-9b1c0b12e722": {"number": Decimal("123.4567890")}})
+
+
+class LanguagesTest(TembaTest):
+    def test_get_name(self):
+        with override_settings(NON_ISO6391_LANGUAGES={"acx", "frc", "kir"}):
+            languages.reload()
+            self.assertEqual("French", languages.get_name("fra"))
+            self.assertEqual("Arabic (Omani, ISO-639-3)", languages.get_name("acx"))  # name is overridden
+            self.assertEqual("Cajun French", languages.get_name("frc"))  # non ISO-639-1 lang explicitly included
+            self.assertEqual("Kyrgyz", languages.get_name("kir"))
+
+            self.assertEqual("", languages.get_name("cpi"))  # not in our allowed languages
+            self.assertEqual("", languages.get_name("xyz"))
+
+            # should strip off anything after an open paren or semicolon
+            self.assertEqual("Haitian", languages.get_name("hat"))
+
+        languages.reload()
+
+    def test_search_by_name(self):
+        # check that search returns results and in the proper order
+        self.assertEqual(
+            [
+                {"value": "afr", "name": "Afrikaans"},
+                {"value": "fra", "name": "French"},
+                {"value": "fry", "name": "Western Frisian"},
+            ],
+            languages.search_by_name("Fr"),
+        )
+
+        # usually only return ISO-639-1 languages but can add inclusions in settings
+        with override_settings(NON_ISO6391_LANGUAGES={"afr", "afb", "acx", "frc"}):
+            languages.reload()
+
+            # order is based on name rather than code
+            self.assertEqual(
+                [
+                    {"value": "afr", "name": "Afrikaans"},
+                    {"value": "frc", "name": "Cajun French"},
+                    {"value": "fra", "name": "French"},
+                    {"value": "fry", "name": "Western Frisian"},
+                ],
+                languages.search_by_name("Fr"),
             )
 
-            cur.execute("SELECT cast(fields as text) from contacts_contact where id = %s", (contact.id,))
+            # searching and ordering uses overridden names
+            self.assertEqual(
+                [
+                    {"value": "ara", "name": "Arabic"},
+                    {"value": "afb", "name": "Arabic (Gulf, ISO-639-3)"},
+                    {"value": "acx", "name": "Arabic (Omani, ISO-639-3)"},
+                ],
+                languages.search_by_name("Arabic"),
+            )
 
-            raw_fields = cur.fetchone()[0]
+        languages.reload()
 
-            self.assertEqual(raw_fields, '{"1eaf5c91-8d56-4ca0-8e00-9b1c0b12e722": {"number": 123.45}}')
-
-            cur.execute("SELECT fields from contacts_contact where id = %s", (contact.id,))
-
-            dict_fields = cur.fetchone()[0]
-            number_field = dict_fields.get("1eaf5c91-8d56-4ca0-8e00-9b1c0b12e722", {}).get("number")
-
-            self.assertEqual(number_field, Decimal("123.45"))
+    def alpha2_to_alpha3(self):
+        self.assertEqual("eng", languages.alpha2_to_alpha3("en"))
+        self.assertEqual("eng", languages.alpha2_to_alpha3("en-us"))
+        self.assertEqual("spa", languages.alpha2_to_alpha3("es"))
+        self.assertIsNone(languages.alpha2_to_alpha3("xx"))
 
 
 class MatchersTest(TembaTest):
@@ -1251,7 +1310,7 @@ class JSONTest(TestCase):
         )
 
 
-class AnalyticsTest(TestCase):
+class AnalyticsTest(SmartminTest):
     def setUp(self):
         super().setUp()
 
@@ -1260,22 +1319,13 @@ class AnalyticsTest(TestCase):
             id=1000, name="Some Org", brand="Some Brand", created_on=timezone.now(), account_value=lambda: 1000
         )
         self.admin = SimpleNamespace(
-            username="admin@example.com", first_name="", last_name="", email="admin@example.com"
+            username="admin@example.com", first_name="", last_name="", email="admin@example.com", is_authenticated=True
         )
 
         self.intercom_mock = MagicMock()
         temba.utils.analytics._intercom = self.intercom_mock
         temba.utils.analytics.init_analytics()
 
-    @override_settings(IS_PROD=False)
-    def test_identify_not_prod_env(self):
-        result = temba.utils.analytics.identify(self.admin, "test", self.org)
-
-        self.assertIsNone(result)
-        self.intercom_mock.users.create.assert_not_called()
-        self.intercom_mock.users.save.assert_not_called()
-
-    @override_settings(IS_PROD=True)
     def test_identify_intercom_exception(self):
         self.intercom_mock.users.create.side_effect = Exception("Kimi says bwoah...")
 
@@ -1284,7 +1334,6 @@ class AnalyticsTest(TestCase):
 
         mocked_logging.error.assert_called_with("error posting to intercom", exc_info=True)
 
-    @override_settings(IS_PROD=True)
     def test_identify_intercom(self):
         temba.utils.analytics.identify(self.admin, "test", self.org)
 
@@ -1296,7 +1345,7 @@ class AnalyticsTest(TestCase):
                 "org": self.org.name,
                 "paid": self.org.account_value(),
             },
-            email=self.admin.email,
+            email=self.admin.username,
             name=" ",
         )
         self.assertListEqual(
@@ -1313,32 +1362,29 @@ class AnalyticsTest(TestCase):
         # did we actually call save?
         self.intercom_mock.users.save.assert_called_once()
 
-    @override_settings(IS_PROD=True)
     def test_track_intercom(self):
-        temba.utils.analytics.track(self.admin.email, "test event", properties={"plan": "free"})
+        temba.utils.analytics.track(self.admin, "test event", properties={"plan": "free"})
 
         self.intercom_mock.events.create.assert_called_with(
-            event_name="test event", created_at=mock.ANY, email=self.admin.email, metadata={"plan": "free"}
+            event_name="test event", created_at=mock.ANY, email=self.admin.username, metadata={"plan": "free"}
         )
 
-    @override_settings(IS_PROD=False)
-    def test_track_not_prod_env(self):
-        result = temba.utils.analytics.track(self.admin.email, "test event", properties={"plan": "free"})
+    def test_track_not_anon_user(self):
+        anon = AnonymousUser()
+        result = temba.utils.analytics.track(anon, "test event", properties={"plan": "free"})
 
         self.assertIsNone(result)
 
         self.intercom_mock.events.create.assert_not_called()
 
-    @override_settings(IS_PROD=True)
     def test_track_intercom_exception(self):
         self.intercom_mock.events.create.side_effect = Exception("It's raining today")
 
         with patch("temba.utils.analytics.logger") as mocked_logging:
-            temba.utils.analytics.track(self.admin.email, "test event", properties={"plan": "free"})
+            temba.utils.analytics.track(self.admin, "test event", properties={"plan": "free"})
 
         mocked_logging.error.assert_called_with("error posting to intercom", exc_info=True)
 
-    @override_settings(IS_PROD=True)
     def test_consent_missing_user(self):
         self.intercom_mock.users.find.return_value = None
         temba.utils.analytics.change_consent(self.admin.email, consent=True)
@@ -1347,7 +1393,6 @@ class AnalyticsTest(TestCase):
             email=self.admin.email, custom_attributes=dict(consent=True, consent_changed=mock.ANY)
         )
 
-    @override_settings(IS_PROD=True)
     def test_consent_invalid_user_decline(self):
         self.intercom_mock.users.find.return_value = None
         temba.utils.analytics.change_consent(self.admin.email, consent=False)
@@ -1355,7 +1400,6 @@ class AnalyticsTest(TestCase):
         self.intercom_mock.users.create.assert_not_called()
         self.intercom_mock.users.delete.assert_not_called()
 
-    @override_settings(IS_PROD=True)
     def test_consent_valid_user(self):
 
         # valid user which did not consent
@@ -1367,7 +1411,6 @@ class AnalyticsTest(TestCase):
             email=self.admin.email, custom_attributes=dict(consent=True, consent_changed=mock.ANY)
         )
 
-    @override_settings(IS_PROD=True)
     def test_consent_valid_user_already_consented(self):
         # valid user which did not consent
         self.intercom_mock.users.find.return_value = MagicMock(custom_attributes={"consent": True})
@@ -1376,7 +1419,6 @@ class AnalyticsTest(TestCase):
 
         self.intercom_mock.users.create.assert_not_called()
 
-    @override_settings(IS_PROD=True)
     def test_consent_valid_user_decline(self):
 
         # valid user which did not consent
@@ -1389,7 +1431,6 @@ class AnalyticsTest(TestCase):
         )
         self.intercom_mock.users.delete.assert_called_with(mock.ANY)
 
-    @override_settings(IS_PROD=True)
     def test_consent_exception(self):
         self.intercom_mock.users.find.side_effect = Exception("Kimi says bwoah...")
 
@@ -1397,15 +1438,6 @@ class AnalyticsTest(TestCase):
             temba.utils.analytics.change_consent(self.admin.email, consent=False)
 
         mocked_logging.error.assert_called_with("error posting to intercom", exc_info=True)
-
-    @override_settings(IS_PROD=False)
-    def test_consent_not_prod_env(self):
-        result = temba.utils.analytics.change_consent(self.admin.email, consent=False)
-
-        self.assertIsNone(result)
-        self.intercom_mock.users.find.assert_not_called()
-        self.intercom_mock.users.create.assert_not_called()
-        self.intercom_mock.users.delete.assert_not_called()
 
     def test_get_intercom_user(self):
         temba.utils.analytics.get_intercom_user(email="an email")
@@ -1419,16 +1451,6 @@ class AnalyticsTest(TestCase):
 
         self.assertIsNone(result)
 
-    @override_settings(IS_PROD=False)
-    def test_set_orgs_not_prod_env(self):
-        result = temba.utils.analytics.set_orgs(email="an email", all_orgs=[self.org])
-
-        self.assertIsNone(result)
-
-        self.intercom_mock.users.find.assert_not_called()
-        self.intercom_mock.users.save.assert_not_called()
-
-    @override_settings(IS_PROD=True)
     def test_set_orgs_invalid_user(self):
         self.intercom_mock.users.find.return_value = None
 
@@ -1437,7 +1459,6 @@ class AnalyticsTest(TestCase):
         self.intercom_mock.users.find.assert_called_with(email="an email")
         self.intercom_mock.users.save.assert_not_called()
 
-    @override_settings(IS_PROD=True)
     def test_set_orgs_valid_user_same_company(self):
         intercom_user = MagicMock(companies=[MagicMock(company_id=self.org.id)])
         self.intercom_mock.users.find.return_value = intercom_user
@@ -1450,7 +1471,6 @@ class AnalyticsTest(TestCase):
 
         self.intercom_mock.users.save.assert_called_with(mock.ANY)
 
-    @override_settings(IS_PROD=True)
     def test_set_orgs_valid_user_new_company(self):
         intercom_user = MagicMock(companies=[MagicMock(company_id=-1), MagicMock(company_id=self.org.id)])
         self.intercom_mock.users.find.return_value = intercom_user
@@ -1466,7 +1486,6 @@ class AnalyticsTest(TestCase):
 
         self.intercom_mock.users.save.assert_called_with(mock.ANY)
 
-    @override_settings(IS_PROD=True)
     def test_set_orgs_valid_user_without_a_company(self):
         intercom_user = MagicMock(companies=[MagicMock(company_id=-1), MagicMock(company_id=self.org.id)])
         self.intercom_mock.users.find.return_value = intercom_user
@@ -1482,15 +1501,6 @@ class AnalyticsTest(TestCase):
 
         self.intercom_mock.users.save.assert_called_with(mock.ANY)
 
-    @override_settings(IS_PROD=False)
-    def test_identify_org_not_prod_env(self):
-        result = temba.utils.analytics.identify_org(org=self.org, attributes=None)
-
-        self.assertIsNone(result)
-
-        self.intercom_mock.companies.create.assert_not_called()
-
-    @override_settings(IS_PROD=True)
     def test_identify_org_empty_attributes(self):
         result = temba.utils.analytics.identify_org(org=self.org, attributes=None)
 
@@ -1503,7 +1513,6 @@ class AnalyticsTest(TestCase):
             name=self.org.name,
         )
 
-    @override_settings(IS_PROD=True)
     def test_identify_org_with_attributes(self):
         attributes = dict(
             website="https://example.com",
@@ -1532,11 +1541,38 @@ class AnalyticsTest(TestCase):
 
 
 class IDSliceQuerySetTest(TembaTest):
+    def test_fields(self):
+        # if we don't specify fields, we fetch *
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id], offset=0, total=3)
+
+        self.assertEqual(
+            f"""SELECT t.* FROM auth_user t JOIN (VALUES (1, {self.user.id}), (2, {self.editor.id})) tmp_resultset (seq, model_id) ON t.id = tmp_resultset.model_id ORDER BY tmp_resultset.seq""",
+            users.raw_query,
+        )
+
+        with self.assertNumQueries(1):
+            users = list(users)
+        with self.assertNumQueries(0):  # already fetched
+            users[0].email
+
+        # if we do specify fields, it's like only on a regular queryset
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id], only=("id", "first_name"), offset=0, total=3)
+
+        self.assertEqual(
+            f"""SELECT t.id, t.first_name FROM auth_user t JOIN (VALUES (1, {self.user.id}), (2, {self.editor.id})) tmp_resultset (seq, model_id) ON t.id = tmp_resultset.model_id ORDER BY tmp_resultset.seq""",
+            users.raw_query,
+        )
+
+        with self.assertNumQueries(1):
+            users = list(users)
+        with self.assertNumQueries(1):  # requires fetch
+            users[0].email
+
     def test_slicing(self):
-        empty = IDSliceQuerySet(User, [], 0, 0)
+        empty = IDSliceQuerySet(User, [], offset=0, total=0)
         self.assertEqual(0, len(empty))
 
-        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], 0, 3)
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], offset=0, total=3)
         self.assertEqual(self.user.id, users[0].id)
         self.assertEqual(self.editor.id, users[0:3][1].id)
         self.assertEqual(0, users.offset)
@@ -1554,7 +1590,7 @@ class IDSliceQuerySetTest(TembaTest):
         with self.assertRaises(TypeError):
             users["foo"]
 
-        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], 10, 100)
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], offset=10, total=100)
         self.assertEqual(self.user.id, users[10].id)
         self.assertEqual(self.user.id, users[10:11][0].id)
 
@@ -1565,7 +1601,7 @@ class IDSliceQuerySetTest(TembaTest):
             users[11:15]
 
     def test_filter(self):
-        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], 10, 100)
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id, self.admin.id], offset=10, total=100)
 
         filtered = users.filter(pk=self.user.id)
         self.assertEqual(User, filtered.model)
@@ -1588,10 +1624,18 @@ class IDSliceQuerySetTest(TembaTest):
             users.filter(name="Bob")
 
     def test_none(self):
-        users = IDSliceQuerySet(User, [self.user.id, self.editor.id], 0, 2)
+        users = IDSliceQuerySet(User, [self.user.id, self.editor.id], offset=0, total=2)
         empty = users.none()
         self.assertEqual([], empty.ids)
         self.assertEqual(0, empty.total)
+
+    def test_prefetch_related(self):
+        flow1 = self.create_flow()
+        flow2 = self.create_flow()
+        with self.assertNumQueries(2):
+            flows = list(IDSliceQuerySet(Flow, [flow1.id, flow2.id], offset=0, total=2).prefetch_related("org"))
+            self.assertEqual(self.org, flows[0].org)
+            self.assertEqual(self.org, flows[1].org)
 
 
 class RedactTest(TestCase):

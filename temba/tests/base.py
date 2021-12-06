@@ -1,6 +1,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytz
 import redis
@@ -17,16 +18,18 @@ from django.utils import timezone
 
 from temba.archives.models import Archive
 from temba.channels.models import Channel, ChannelEvent, ChannelLog
-from temba.contacts.models import URN, Contact, ContactField, ContactGroup, ContactImport, ContactURN
+from temba.contacts.models import URN, ContactField, ContactGroup, ContactImport, ContactURN
 from temba.flows.models import Flow, FlowRun, FlowSession, clear_flow_users
 from temba.ivr.models import IVRCall
 from temba.locations.models import AdminBoundary, BoundaryAlias
-from temba.msgs.models import HANDLED, INBOX, INCOMING, OUTGOING, PENDING, SENT, Broadcast, Label, Msg
+from temba.msgs.models import Broadcast, Label, Msg
 from temba.orgs.models import Org, OrgRole
+from temba.tickets.models import Ticket, TicketEvent
 from temba.utils import json
 from temba.utils.uuid import UUID, uuid4
 
-from .mailroom import create_contact_locally, update_field_locally
+from .mailroom import create_contact_locally, decrement_credit, update_field_locally
+from .s3 import jsonlgz_encode
 
 
 def add_testing_flag_to_context(*args):
@@ -34,7 +37,7 @@ def add_testing_flag_to_context(*args):
 
 
 class TembaTestMixin:
-    databases = ("default", "direct")
+    databases = ("default", "readonly")
 
     def setUpOrgs(self):
         # make sure we start off without any service users
@@ -137,6 +140,9 @@ class TembaTestMixin:
 
         self.org.country = self.country
         self.org.save(update_fields=("country",))
+
+    def make_beta(self, user):
+        user.groups.add(Group.objects.get(name="Beta"))
 
     def clear_cache(self):
         """
@@ -242,21 +248,21 @@ class TembaTestMixin:
         channel=None,
         msg_type=None,
         attachments=(),
-        status=HANDLED,
+        status=Msg.STATUS_HANDLED,
         visibility=Msg.VISIBILITY_VISIBLE,
         created_on=None,
         external_id=None,
         surveyor=False,
     ):
-        assert not msg_type or status != PENDING, "pending messages don't have a msg type"
+        assert not msg_type or status != Msg.STATUS_PENDING, "pending messages don't have a msg type"
 
-        if status == HANDLED and not msg_type:
-            msg_type = INBOX
+        if status == Msg.STATUS_HANDLED and not msg_type:
+            msg_type = Msg.TYPE_INBOX
 
         return self._create_msg(
             contact,
             text,
-            INCOMING,
+            Msg.DIRECTION_IN,
             channel,
             msg_type,
             attachments,
@@ -276,17 +282,18 @@ class TembaTestMixin:
         contact,
         text,
         channel=None,
-        msg_type=INBOX,
+        msg_type=Msg.TYPE_INBOX,
         attachments=(),
         quick_replies=(),
-        status=SENT,
+        status=Msg.STATUS_SENT,
         created_on=None,
         sent_on=None,
         high_priority=False,
         response_to=None,
         surveyor=False,
+        next_attempt=None,
     ):
-        if status == SENT and not sent_on:
+        if status in (Msg.STATUS_WIRED, Msg.STATUS_SENT, Msg.STATUS_DELIVERED) and not sent_on:
             sent_on = timezone.now()
 
         metadata = {}
@@ -296,7 +303,7 @@ class TembaTestMixin:
         return self._create_msg(
             contact,
             text,
-            OUTGOING,
+            Msg.DIRECTION_OUT,
             channel,
             msg_type,
             attachments,
@@ -307,6 +314,7 @@ class TembaTestMixin:
             response_to=response_to,
             surveyor=surveyor,
             metadata=metadata,
+            next_attempt=next_attempt,
         )
 
     def _create_msg(
@@ -327,6 +335,7 @@ class TembaTestMixin:
         surveyor=False,
         broadcast=None,
         metadata=None,
+        next_attempt=None,
     ):
         assert not (surveyor and channel), "surveyor messages don't have channels"
         assert not channel or channel.org == contact.org, "channel belong to different org than contact"
@@ -346,7 +355,7 @@ class TembaTestMixin:
                 else:
                     channel = org.channels.filter(is_active=True, schemes__contains=[contact_urn.scheme]).first()
 
-            (topup_id, amount) = org.decrement_credit()
+            topup_id = decrement_credit(org)
 
         return Msg.objects.create(
             org=org,
@@ -367,44 +376,58 @@ class TembaTestMixin:
             sent_on=sent_on,
             broadcast=broadcast,
             metadata=metadata,
+            next_attempt=next_attempt,
         )
 
-    def create_broadcast(self, user, text, contacts=(), groups=(), response_to=None, msg_status=SENT):
-        bcast = Broadcast.create(self.org, user, text, contacts=contacts, groups=groups, status=SENT)
+    def create_broadcast(
+        self,
+        user,
+        text,
+        contacts=(),
+        groups=(),
+        response_to=None,
+        msg_status=Msg.STATUS_SENT,
+        parent=None,
+        schedule=None,
+    ):
+        bcast = Broadcast.create(
+            self.org,
+            user,
+            text,
+            contacts=contacts,
+            groups=groups,
+            status=Msg.STATUS_SENT,
+            parent=parent,
+            schedule=schedule,
+        )
 
         contacts = set(bcast.contacts.all())
         for group in bcast.groups.all():
             contacts.update(group.contacts.all())
 
-        for contact in contacts:
-            self._create_msg(
-                contact,
-                text,
-                OUTGOING,
-                channel=None,
-                msg_type=INBOX,
-                attachments=(),
-                status=msg_status,
-                created_on=timezone.now(),
-                sent_on=timezone.now(),
-                response_to=response_to,
-                broadcast=bcast,
-            )
+        if not schedule:
+            for contact in contacts:
+                self._create_msg(
+                    contact,
+                    text,
+                    Msg.DIRECTION_OUT,
+                    channel=None,
+                    msg_type=Msg.TYPE_INBOX,
+                    attachments=(),
+                    status=msg_status,
+                    created_on=timezone.now(),
+                    sent_on=timezone.now(),
+                    response_to=response_to,
+                    broadcast=bcast,
+                )
 
         return bcast
 
-    def create_flow(self, name="Color Flow", flow_type=Flow.TYPE_MESSAGE, org=None):
+    def create_flow(self, name="Test Flow", *, flow_type=Flow.TYPE_MESSAGE, nodes=None, is_system=False, org=None):
         org = org or self.org
-        flow = Flow.create(org, self.admin, name, flow_type=flow_type)
-        definition = {
-            "uuid": "fc8cfc80-c73c-4d96-82b6-c8ab4ecb1df6",
-            "name": name,
-            "type": Flow.GOFLOW_TYPES[flow_type],
-            "revision": 1,
-            "spec_version": "13.1.0",
-            "expire_after_minutes": Flow.DEFAULT_EXPIRES_AFTER,
-            "language": "eng",
-            "nodes": [
+        flow = Flow.create(org, self.admin, name, flow_type=flow_type, is_system=is_system)
+        if not nodes:
+            nodes = [
                 {
                     "uuid": "f3d5ccd0-fee0-4955-bcb7-21613f049eae",
                     "actions": [
@@ -412,7 +435,16 @@ class TembaTestMixin:
                     ],
                     "exits": [{"uuid": "72a3f1da-bde1-4549-a986-d35809807be8"}],
                 }
-            ],
+            ]
+        definition = {
+            "uuid": str(uuid4()),
+            "name": name,
+            "type": Flow.GOFLOW_TYPES[flow_type],
+            "revision": 1,
+            "spec_version": "13.1.0",
+            "expire_after_minutes": Flow.DEFAULT_EXPIRES_AFTER,
+            "language": "eng",
+            "nodes": nodes,
         }
 
         flow.version_number = definition["spec_version"]
@@ -423,14 +455,14 @@ class TembaTestMixin:
 
         return flow
 
-    def create_incoming_call(self, flow, contact, status=IVRCall.COMPLETED):
+    def create_incoming_call(self, flow, contact, status=IVRCall.STATUS_COMPLETED):
         """
         Create something that looks like an incoming IVR call handled by mailroom
         """
         call = IVRCall.objects.create(
             org=self.org,
             channel=self.channel,
-            direction=IVRCall.INCOMING,
+            direction=IVRCall.DIRECTION_IN,
             contact=contact,
             contact_urn=contact.get_urn(),
             status=status,
@@ -447,16 +479,17 @@ class TembaTestMixin:
             contact_urn=contact.get_urn(),
             text="Hello",
             status="S",
+            sent_on=timezone.now(),
             created_on=timezone.now(),
         )
         ChannelLog.objects.create(
             channel=self.channel,
             connection=call,
             request='{"say": "Hello"}',
-            response='{"status": "%s"}' % ("error" if status == IVRCall.FAILED else "OK"),
+            response='{"status": "%s"}' % ("error" if status == IVRCall.STATUS_FAILED else "OK"),
             url="https://acme-calls.com/reply",
             method="POST",
-            is_error=status == IVRCall.FAILED,
+            is_error=status == IVRCall.STATUS_FAILED,
             response_status=200,
             description="Looks good",
         )
@@ -465,17 +498,21 @@ class TembaTestMixin:
     def create_archive(
         self, archive_type, period, start_date, records=(), needs_deletion=False, rollup_of=(), s3=None, org=None
     ):
-        archive_hash = uuid4().hex
+        org = org or self.org
+        body, md5, size = jsonlgz_encode(records)
         bucket = "s3-bucket"
-        key = f"things/{archive_hash}.jsonl.gz"
+        type_code = "run" if archive_type == Archive.TYPE_FLOWRUN else "message"
+        date_code = start_date.strftime("%Y%m") if period == "M" else start_date.strftime("%Y%m%d")
+        key = f"{org.id}/{type_code}_{period}{date_code}_{md5}.jsonl.gz"
+
         if s3:
-            s3.put_jsonl(bucket, key, records)
+            s3.put_object(bucket, key, body)
 
         archive = Archive.objects.create(
-            org=org or self.org,
+            org=org,
             archive_type=archive_type,
-            size=10,
-            hash=archive_hash,
+            size=size,
+            hash=md5,
             url=f"http://{bucket}.aws.com/{key}",
             record_count=len(records),
             start_date=start_date,
@@ -501,6 +538,34 @@ class TembaTestMixin:
                 modified_by=self.admin,
             )
 
+    def create_channel(
+        self,
+        channel_type: str,
+        name: str,
+        address: str,
+        role=None,
+        schemes=None,
+        country=None,
+        secret=None,
+        config=None,
+        org=None,
+    ):
+        channel_type = Channel.get_type_from_code(channel_type)
+
+        return Channel.objects.create(
+            org=org or self.org,
+            country=country,
+            channel_type=channel_type.code,
+            name=name,
+            address=address,
+            config=config or {},
+            role=role or Channel.DEFAULT_ROLE,
+            secret=secret,
+            schemes=schemes or channel_type.schemes,
+            created_by=self.admin,
+            modified_by=self.admin,
+        )
+
     def create_channel_event(self, channel, urn, event_type, occurred_on=None, extra=None):
         urn_obj = ContactURN.lookup(channel.org, urn, country_code=channel.country)
         if urn_obj:
@@ -519,21 +584,56 @@ class TembaTestMixin:
             extra=extra,
         )
 
+    def create_ticket(
+        self,
+        ticketer,
+        contact,
+        body: str,
+        topic=None,
+        assignee=None,
+        opened_on=None,
+        opened_by=None,
+        closed_on=None,
+        closed_by=None,
+    ):
+        if not opened_on:
+            opened_on = timezone.now()
+
+        ticket = Ticket.objects.create(
+            org=ticketer.org,
+            ticketer=ticketer,
+            contact=contact,
+            topic=topic or ticketer.org.default_ticket_topic,
+            body=body,
+            status=Ticket.STATUS_CLOSED if closed_on else Ticket.STATUS_OPEN,
+            assignee=assignee,
+            opened_on=opened_on,
+            closed_on=closed_on,
+        )
+        TicketEvent.objects.create(
+            org=ticket.org, contact=contact, ticket=ticket, event_type=TicketEvent.TYPE_OPENED, created_by=opened_by
+        )
+        if assignee:
+            TicketEvent.objects.create(
+                org=ticket.org,
+                contact=contact,
+                ticket=ticket,
+                event_type=TicketEvent.TYPE_ASSIGNED,
+                created_by=opened_by,
+            )
+        if closed_on:
+            TicketEvent.objects.create(
+                org=ticket.org,
+                contact=contact,
+                ticket=ticket,
+                event_type=TicketEvent.TYPE_CLOSED,
+                created_by=closed_by,
+            )
+
+        return ticket
+
     def set_contact_field(self, contact, key, value):
         update_field_locally(self.admin, contact, key, value)
-
-    def bulk_release(self, objs, delete=False, user=None):
-        for obj in objs:
-            if user:
-                obj.release(user)
-            else:
-                obj.release()
-
-            if obj.id and delete:
-                obj.delete()
-
-    def releaseContacts(self, delete=False):
-        self.bulk_release(Contact.objects.all(), delete=delete, user=self.admin)
 
     def assertOutbox(self, outbox_index, from_email, subject, body, recipients):
         self.assertEqual(len(mail.outbox), outbox_index + 1)
@@ -573,6 +673,19 @@ class TembaTestMixin:
         for r, row in enumerate(rows):
             self.assertExcelRow(sheet, r, row, tz)
 
+    def assertPathValue(self, container: dict, path: str, expected, msg: str):
+        """
+        Asserts a value at a path in a container, e.g.
+          assertPathValue({"foo": "bar", "zed": 123}, "foo", "bar")
+          assertPathValue({"foo": {"bar": 123}}, "foo__bar", 123)
+        """
+        actual = container
+        for key in path.split("__"):
+            if key not in actual:
+                self.fail(self._formatMessage(msg, f"path {path} not found in {json.dumps(container)}"))
+            actual = actual[key]
+        self.assertEqual(actual, expected, self._formatMessage(msg, f"value mismatch at {path}"))
+
     def assertResponseError(self, response, field, message, status_code=400):
         self.assertEqual(status_code, response.status_code)
         body = response.json()
@@ -597,6 +710,9 @@ class TembaTest(TembaTestMixin, SmartminTest):
     def tearDown(self):
         clear_flow_users()
 
+    def mockReadOnly(self, assert_models: set = None):
+        return MockReadOnly(self, assert_models=assert_models)
+
 
 class TembaNonAtomicTest(TembaTestMixin, SmartminTestMixin, TransactionTestCase):
     """
@@ -606,7 +722,7 @@ class TembaNonAtomicTest(TembaTestMixin, SmartminTestMixin, TransactionTestCase)
     pass
 
 
-class AnonymousOrg(object):
+class AnonymousOrg:
     """
     Makes the given org temporarily anonymous
     """
@@ -621,6 +737,34 @@ class AnonymousOrg(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.org.is_anon = False
         self.org.save(update_fields=("is_anon",))
+
+
+class MockReadOnly:
+    """
+    Context manager which mocks calls to .using("readonly") on querysets and records the model types.
+    """
+
+    def __init__(self, test_class, assert_models: set = None):
+        self.test_class = test_class
+        self.assert_models = assert_models
+        self.actual_models = set()
+
+    def __enter__(self):
+        self.patch_using = patch("django.db.models.query.QuerySet.using", autospec=True)
+        mock_using = self.patch_using.start()
+
+        def using(qs, alias):
+            if alias == "readonly":
+                self.actual_models.add(qs.model)
+            return qs
+
+        mock_using.side_effect = using
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.patch_using.stop()
+
+        if self.assert_models:
+            self.test_class.assertEqual(self.assert_models, self.actual_models)
 
 
 class MigrationTest(TembaTest):

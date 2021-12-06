@@ -16,7 +16,8 @@ from django.utils.translation import ugettext, ugettext_lazy as _, ungettext_laz
 
 from temba.utils.dates import datetime_to_str
 
-from ...campaigns.models import Campaign
+from ...campaigns.models import Campaign, CampaignEvent
+from ...contacts.models import ContactGroup
 from ...flows.models import Flow
 from ...triggers.models import Trigger
 
@@ -29,6 +30,19 @@ TIME_SINCE_CHUNKS = (
     (60, ungettext_lazy("%d minute", "%d minutes")),
     (1, ungettext_lazy("%d second", "%d seconds")),
 )
+
+
+OBJECT_URLS = {
+    Flow: lambda o: reverse("flows.flow_editor", args=[o.uuid]),
+    Campaign: lambda o: reverse("campaigns.campaign_read", args=[o.id]),
+    CampaignEvent: lambda o: reverse("campaigns.campaign_read", args=[o.id]),
+    ContactGroup: lambda o: reverse("contacts.contact_filter", args=[o.uuid]),
+}
+
+
+@register.filter
+def object_class_name(obj):
+    return obj.__class__.__name__
 
 
 @register.filter
@@ -62,6 +76,13 @@ def icon(o):
         return "icon-flow"
 
     return ""
+
+
+@register.filter
+def object_url(o):
+    assert type(o) in OBJECT_URLS
+
+    return OBJECT_URLS[type(o)](o)
 
 
 @register.filter
@@ -138,7 +159,7 @@ def delta_filter(delta):
             seconds2, name2 = TIME_SINCE_CHUNKS[i + 1]
             count2 = (since - (seconds * count)) // seconds2
             if count2 != 0:
-                result += ugettext(", ") + name2 % count2
+                result += ", " + name2 % count2
         return result
 
     except Exception:
@@ -230,18 +251,21 @@ def short_datetime(context, dtime):
 
 
 @register.simple_tag(takes_context=True)
-def format_datetime(context, dtime):
-    if dtime.tzinfo is None:
-        dtime = dtime.replace(tzinfo=pytz.utc)
+def format_datetime(context, dt, seconds: bool = False):
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=pytz.utc)
 
     tz = pytz.UTC
     org = context.get("user_org")
     if org:
         tz = org.timezone
-    dtime = dtime.astimezone(tz)
+    dt = dt.astimezone(tz)
+
     if org:
-        return org.format_datetime(dtime)
-    return datetime_to_str(dtime, "%d-%m-%Y %H:%M", tz)
+        return org.format_datetime(dt, seconds=seconds)
+
+    fmt = "%d-%m-%Y %H:%M:%S" if seconds else "%d-%m-%Y %H:%M"
+    return datetime_to_str(dt, fmt, tz)
 
 
 @register.filter

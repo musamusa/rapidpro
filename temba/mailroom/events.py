@@ -7,13 +7,13 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 
 from temba.airtime.models import AirtimeTransfer
-from temba.api.models import WebHookResult
 from temba.campaigns.models import EventFire
 from temba.channels.models import ChannelEvent
 from temba.flows.models import FlowExit, FlowRun
 from temba.ivr.models import IVRCall
 from temba.msgs.models import Msg
 from temba.orgs.models import Org
+from temba.tickets.models import Ticket, TicketEvent, Topic
 
 
 class Event:
@@ -38,7 +38,12 @@ class Event:
     TYPE_MSG_CREATED = "msg_created"
     TYPE_MSG_RECEIVED = "msg_received"
     TYPE_RUN_RESULT_CHANGED = "run_result_changed"
+    TYPE_TICKET_ASSIGNED = "ticket_assigned"
+    TYPE_TICKET_CLOSED = "ticket_closed"
+    TYPE_TICKET_NOTE_ADDED = "ticket_note_added"
+    TYPE_TICKET_TOPIC_CHANGED = "ticket_topic_changed"
     TYPE_TICKET_OPENED = "ticket_opened"
+    TYPE_TICKET_REOPENED = "ticket_reopened"
     TYPE_WEBHOOK_CALLED = "webhook_called"
 
     # additional events
@@ -46,6 +51,15 @@ class Event:
     TYPE_CAMPAIGN_FIRED = "campaign_fired"
     TYPE_CHANNEL_EVENT = "channel_event"
     TYPE_FLOW_EXITED = "flow_exited"
+
+    ticket_event_types = {
+        TicketEvent.TYPE_OPENED: TYPE_TICKET_OPENED,
+        TicketEvent.TYPE_ASSIGNED: TYPE_TICKET_ASSIGNED,
+        TicketEvent.TYPE_NOTE_ADDED: TYPE_TICKET_NOTE_ADDED,
+        TicketEvent.TYPE_TOPIC_CHANGED: TYPE_TICKET_TOPIC_CHANGED,
+        TicketEvent.TYPE_CLOSED: TYPE_TICKET_CLOSED,
+        TicketEvent.TYPE_REOPENED: TYPE_TICKET_REOPENED,
+    }
 
     @classmethod
     def from_history_item(cls, org: Org, user: User, item) -> dict:
@@ -63,12 +77,11 @@ class Event:
         Reconstructs an engine event from a msg instance. Properties which aren't part of regular events are prefixed
         with an underscore.
         """
-        from temba.msgs.models import INCOMING, IVR
 
         channel_log = obj.get_last_log()
         logs_url = _url_for_user(org, user, "channels.channellog_read", args=[channel_log.id]) if channel_log else None
 
-        if obj.direction == INCOMING:
+        if obj.direction == Msg.DIRECTION_IN:
             return {
                 "type": cls.TYPE_MSG_RECEIVED,
                 "created_on": get_event_time(obj).isoformat(),
@@ -89,24 +102,26 @@ class Event:
                 "recipient_count": obj.broadcast.get_message_count(),
                 "logs_url": logs_url,
             }
-        elif obj.msg_type == IVR:
-            return {
-                "type": cls.TYPE_IVR_CREATED,
-                "created_on": get_event_time(obj).isoformat(),
-                "msg": _msg_out(obj),
-                # additional properties
-                "status": obj.status,
-                "logs_url": logs_url,
-            }
         else:
-            return {
-                "type": cls.TYPE_MSG_CREATED,
+            msg_event = {
+                "type": cls.TYPE_IVR_CREATED if obj.msg_type == Msg.TYPE_IVR else cls.TYPE_MSG_CREATED,
                 "created_on": get_event_time(obj).isoformat(),
                 "msg": _msg_out(obj),
                 # additional properties
                 "status": obj.status,
                 "logs_url": logs_url,
             }
+
+            if obj.broadcast and obj.broadcast.created_by:
+                user = obj.broadcast.created_by
+                msg_event["msg"]["created_by"] = {
+                    "id": user.id,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                }
+
+            return msg_event
 
     @classmethod
     def from_flow_run(cls, org: Org, user: User, obj: FlowRun) -> dict:
@@ -140,7 +155,7 @@ class Event:
             "type": cls.TYPE_CALL_STARTED,
             "created_on": get_event_time(obj).isoformat(),
             "status": obj.status,
-            "status_display": obj.get_status_display(),
+            "status_display": obj.status_display,
             "logs_url": logs_url,
         }
 
@@ -161,18 +176,24 @@ class Event:
         }
 
     @classmethod
-    def from_webhook_result(cls, org: Org, user: User, obj: WebHookResult) -> dict:
-        logs_url = _url_for_user(org, user, "api.webhookresult_read", args=[obj.id])
-
+    def from_ticket_event(cls, org: Org, user: User, obj: TicketEvent) -> dict:
+        ticket = obj.ticket
         return {
-            "type": cls.TYPE_WEBHOOK_CALLED,
+            "type": cls.ticket_event_types[obj.event_type],
+            "note": obj.note,
+            "topic": _topic(obj.topic) if obj.topic else None,
+            "assignee": _user(obj.assignee) if obj.assignee else None,
+            "ticket": {
+                "uuid": str(ticket.uuid),
+                "opened_on": ticket.opened_on.isoformat(),
+                "closed_on": ticket.closed_on.isoformat() if ticket.closed_on else None,
+                "topic": _topic(ticket.topic) if ticket.topic else None,
+                "status": ticket.status,
+                "body": ticket.body,
+                "ticketer": {"uuid": str(ticket.ticketer.uuid), "name": ticket.ticketer.name},
+            },
             "created_on": get_event_time(obj).isoformat(),
-            "url": obj.url,
-            "status": "success" if obj.is_success else "response_error",
-            "status_code": obj.status_code,
-            "elapsed_ms": obj.request_time,
-            # additional properties
-            "logs_url": logs_url,
+            "created_by": _user(obj.created_by) if obj.created_by else None,
         }
 
     @classmethod
@@ -239,6 +260,19 @@ def _base_msg(obj) -> dict:
     return d
 
 
+def _user(user: User) -> dict:
+    return {
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+    }
+
+
+def _topic(topic: Topic) -> dict:
+    return {"uuid": str(topic.uuid), "name": topic.name}
+
+
 # map of history item types to methods to render them as events
 event_renderers = {
     AirtimeTransfer: Event.from_airtime_transfer,
@@ -248,7 +282,7 @@ event_renderers = {
     FlowRun: Event.from_flow_run,
     IVRCall: Event.from_ivr_call,
     Msg: Event.from_msg,
-    WebHookResult: Event.from_webhook_result,
+    TicketEvent: Event.from_ticket_event,
 }
 
 # map of history item types to a callable which can extract the event time from that type
@@ -258,6 +292,7 @@ event_time.update(
         dict: lambda e: iso8601.parse_date(e["created_on"]),
         EventFire: lambda e: e.fired,
         FlowExit: lambda e: e.run.exited_on,
+        Ticket: lambda e: e.closed_on,
     },
 )
 
