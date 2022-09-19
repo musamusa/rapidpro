@@ -62,11 +62,8 @@ def refresh_whatsapp_contacts(channel_id):
 
             start = timezone.now()
             resp = requests.post(url, json=payload, headers=headers)
-            elapsed = (timezone.now() - start).total_seconds() * 1000
 
-            HTTPLog.create_from_response(
-                HTTPLog.WHATSAPP_CONTACTS_REFRESHED, url, resp, channel=channel, request_time=elapsed
-            )
+            HTTPLog.from_response(HTTPLog.WHATSAPP_CONTACTS_REFRESHED, resp, start, timezone.now(), channel=channel)
 
             # if we had an error, break out
             if resp.status_code != 200:
@@ -168,7 +165,7 @@ def refresh_whatsapp_templates():
 
     with r.lock("refresh_whatsapp_templates", 1800):
         # for every whatsapp channel
-        for channel in Channel.objects.filter(is_active=True, channel_type__in=["WA", "D3"]):
+        for channel in Channel.objects.filter(is_active=True, channel_type__in=["WA", "D3", "WAC"]):
 
             # update the version only when have it set in the config
             if channel.config.get("version"):
@@ -177,7 +174,7 @@ def refresh_whatsapp_templates():
             # fetch all our templates
             try:
 
-                templates_data, valid = channel.get_type().get_api_templates(channel)
+                templates_data, valid = channel.type.get_api_templates(channel)
                 if not valid:
                     continue
 

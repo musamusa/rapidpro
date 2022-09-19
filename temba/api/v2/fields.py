@@ -9,6 +9,7 @@ from temba.contacts.models import URN, Contact, ContactField as ContactFieldMode
 from temba.flows.models import Flow
 from temba.msgs.models import Label, Msg
 from temba.tickets.models import Ticket, Ticketer, Topic
+from temba.utils.uuid import is_uuid
 
 # default maximum number of items in a posted list or dict
 DEFAULT_MAX_LIST_ITEMS = 100
@@ -154,8 +155,18 @@ class TembaModelField(serializers.RelatedField):
         return manager.filter(**kwargs)
 
     def get_object(self, value):
-        query = Q()
+        # ignore lookup fields that can't be queryed with the given value
+        lookup_fields = []
         for lookup_field in self.lookup_fields:
+            if lookup_field != "uuid" or is_uuid(value):
+                lookup_fields.append(lookup_field)
+
+        # if we have no possible lookup fields left, there's no matching object
+        if not lookup_fields:
+            return None  # pragma: no cover
+
+        query = Q()
+        for lookup_field in lookup_fields:
             ignore_case = lookup_field in self.ignore_case_for_fields
             lookup = "%s__%s" % (lookup_field, "iexact" if ignore_case else "exact")
             query |= Q(**{lookup: value})
@@ -200,16 +211,27 @@ class ContactField(TembaModelField):
     model = Contact
     lookup_fields = ("uuid", "urns__urn")
 
-    def __init__(self, **kwargs):
-        self.with_urn = kwargs.pop("with_urn", False)
+    def __init__(self, as_summary=False, **kwargs):
+        self.as_summary = as_summary
         super().__init__(**kwargs)
 
     def to_representation(self, obj):
-        if self.with_urn and not self.context["org"].is_anon:
-            urn = obj.urns.first()
-            return {"uuid": obj.uuid, "urn": urn.identity if urn else None, "name": obj.name}
+        rep = {"uuid": str(obj.uuid), "name": obj.name}
+        org = self.context["org"]
 
-        return {"uuid": obj.uuid, "name": obj.name}
+        if self.as_summary:
+            urn = obj.get_urn()
+            if urn:
+                urn_str, urn_display = urn.get_for_api(), obj.get_urn_display() if not org.is_anon else None
+            else:
+                urn_str, urn_display = None, None
+
+            rep.update({"urn": urn_str, "urn_display": urn_display})
+
+            if org.is_anon:
+                rep["anon_display"] = obj.anon_display
+
+        return rep
 
     def get_queryset(self):
         return self.model.objects.filter(org=self.context["org"], is_active=True)
@@ -231,16 +253,11 @@ class ContactFieldField(TembaModelField):
     lookup_fields = ("key",)
 
     def to_representation(self, obj):
-        return {"key": obj.key, "label": obj.label}
-
-    def get_queryset(self):
-        manager = getattr(self.model, "all_fields")
-        return manager.filter(org=self.context["org"], is_active=True)
+        return {"key": obj.key, "label": obj.name}
 
 
 class ContactGroupField(TembaModelField):
     model = ContactGroup
-    model_manager = "user_groups"
     lookup_fields = ("uuid", "name")
     ignore_case_for_fields = ("name",)
 
@@ -251,10 +268,13 @@ class ContactGroupField(TembaModelField):
     def to_internal_value(self, data):
         obj = super().to_internal_value(data)
 
-        if not self.allow_dynamic and obj.is_dynamic:
-            raise serializers.ValidationError("Contact group must not be dynamic: %s" % data)
+        if not self.allow_dynamic and obj.is_smart:
+            raise serializers.ValidationError("Contact group must not be query based: %s" % data)
 
         return obj
+
+    def get_queryset(self):
+        return ContactGroup.get_groups(org=self.context["org"])
 
 
 class FlowField(TembaModelField):
@@ -263,7 +283,6 @@ class FlowField(TembaModelField):
 
 class LabelField(TembaModelField):
     model = Label
-    model_manager = "label_objects"
     lookup_fields = ("uuid", "name")
     ignore_case_for_fields = ("name",)
 
@@ -276,7 +295,9 @@ class MessageField(TembaModelField):
     require_exists = False
 
     def get_queryset(self):
-        return self.model.objects.filter(org=self.context["org"]).exclude(visibility=Msg.VISIBILITY_DELETED)
+        return self.model.objects.filter(
+            org=self.context["org"], visibility__in=(Msg.VISIBILITY_VISIBLE, Msg.VISIBILITY_ARCHIVED)
+        )
 
 
 class TicketerField(TembaModelField):
@@ -306,8 +327,8 @@ class UserField(TembaModelField):
     def get_queryset(self):
         org = self.context["org"]
         if self.assignable_only:
-            qs = org.get_users_with_perm(Ticket.ASSIGNEE_PERMISSION)
+            qs = org.get_users(with_perm=Ticket.ASSIGNEE_PERMISSION)
         else:
             qs = org.get_users()
 
-        return qs.filter(is_active=True)
+        return qs

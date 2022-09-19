@@ -23,7 +23,7 @@
             -if org_perms.triggers.trigger_create
               .w-64.mr-5
                 .button-primary.block(onclick="goto(event)" href="{% url 'triggers.trigger_create' %}")
-                  -trans "Create Trigger"
+                  -trans "New Trigger"
 
           .lp-nav.upper
             -for folder in main_folders
@@ -131,7 +131,8 @@
               -block extra-rows
 
             -block paginator
-              -include "includes/pagination.haml"
+              .mt-3
+                -include "includes/pagination.haml"
   
   %temba-modax#update-trigger
 -block extra-script

@@ -1,7 +1,7 @@
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -10,7 +10,10 @@ from ...views import ClaimViewMixin
 class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
         title = forms.CharField(
-            required=True, label=_("FreshChat Environment Title"), help_text=_("The name of your environment")
+            max_length=64,
+            required=True,
+            label=_("FreshChat Environment Title"),
+            help_text=_("The name of your environment"),
         )
 
         webhook_key = forms.CharField(

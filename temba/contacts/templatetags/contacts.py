@@ -3,7 +3,7 @@ from django.utils.safestring import mark_safe
 
 from temba.campaigns.models import EventFire
 from temba.channels.models import ChannelEvent
-from temba.contacts.models import URN, ContactField, ContactURN
+from temba.contacts.models import URN, ContactURN
 from temba.flows.models import FlowRun
 from temba.ivr.models import IVRCall
 from temba.mailroom.events import Event
@@ -15,7 +15,6 @@ URN_SCHEME_ICONS = {
     URN.TEL_SCHEME: "icon-phone",
     URN.TWITTER_SCHEME: "icon-twitter",
     URN.TWITTERID_SCHEME: "icon-twitter",
-    URN.TWILIO_SCHEME: "icon-twilio_original",
     URN.EMAIL_SCHEME: "icon-envelop",
     URN.FACEBOOK_SCHEME: "icon-facebook",
     URN.TELEGRAM_SCHEME: "icon-telegram",
@@ -81,7 +80,7 @@ MISSING_VALUE = "--"
 
 @register.filter
 def contact_field(contact, arg):
-    field = ContactField.get_by_key(contact.org, arg.lower())
+    field = contact.org.fields.filter(is_active=True, key=arg).first()
     if field is None:
         return MISSING_VALUE
 
@@ -99,7 +98,7 @@ def name(contact, org):
     if contact.name:
         return contact.name
     elif org.is_anon:
-        return contact.anon_identifier
+        return contact.anon_display
     else:
         return MISSING_VALUE
 
@@ -132,6 +131,36 @@ def format_contact(contact, org):  # pragma: needs cover
 @register.filter
 def urn_icon(urn):
     return URN_SCHEME_ICONS.get(urn.scheme, "")
+
+
+@register.filter
+def msg_status_badge(msg) -> str:
+
+    display = {}
+
+    if msg.status == Msg.STATUS_DELIVERED:
+        display = {"background": "#efffe0", "icon": "check", "icon_color": "rgb(var(--success-rgb))"}
+
+    if msg.direction == Msg.DIRECTION_IN or msg.status == Msg.STATUS_WIRED:
+        display = {"background": "#f9f9f9", "icon": "check", "icon_color": "var(--color-primary-dark)"}
+
+    if msg.status == Msg.STATUS_ERRORED or msg.status == Msg.STATUS_FAILED:
+        display = {"background": "#fff4f4", "icon": "x", "icon_color": "var(--color-error)"}
+
+        # we are still working on errored messages, slightly different icon
+        if msg.status == Msg.STATUS_ERRORED:
+            display["icon"] = "refresh-cw"
+
+    if len(display) >= 3:
+        return mark_safe(
+            """
+            <div class="flex items-center flex-row p-1 rounded-lg" style="background:%(background)s">
+                <temba-icon name="%(icon)s" style="--icon-color:%(icon_color)s"></temba-icon>
+            </div>
+        """
+            % display
+        )
+    return ""
 
 
 @register.filter

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from smartmin.views import SmartCRUDL, SmartFormView, SmartListView, SmartReadView, SmartTemplateView, SmartUpdateView
 
 from django import forms
@@ -5,18 +7,29 @@ from django.contrib.auth.models import User
 from django.db.models.aggregates import Max
 from django.http import JsonResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.html import mark_safe
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.msgs.models import Msg
 from temba.notifications.views import NotificationTargetMixin
 from temba.orgs.views import DependencyDeleteModal, ModalMixin, OrgObjPermsMixin, OrgPermsMixin
 from temba.utils.dates import datetime_to_timestamp, timestamp_to_datetime
+from temba.utils.export import response_from_workbook
 from temba.utils.fields import InputWidget, SelectWidget
-from temba.utils.views import ComponentFormMixin, SpaMixin
+from temba.utils.views import ComponentFormMixin, ContentMenuMixin, SpaMixin
 
-from .models import AllFolder, MineFolder, Ticket, TicketCount, Ticketer, TicketFolder, UnassignedFolder
+from .models import (
+    AllFolder,
+    MineFolder,
+    Ticket,
+    TicketCount,
+    Ticketer,
+    TicketFolder,
+    UnassignedFolder,
+    export_ticket_stats,
+)
 
 
 class BaseConnectView(ComponentFormMixin, OrgPermsMixin, SmartFormView):
@@ -74,7 +87,7 @@ class NoteForm(forms.ModelForm):
 
 class TicketCRUDL(SmartCRUDL):
     model = Ticket
-    actions = ("list", "folder", "note", "assign", "menu")
+    actions = ("list", "folder", "note", "assign", "menu", "export_stats")
 
     class List(SpaMixin, OrgPermsMixin, NotificationTargetMixin, SmartListView):
         """
@@ -371,14 +384,24 @@ class TicketCRUDL(SmartCRUDL):
 
             return self.render_modal_response(form)
 
+    class ExportStats(OrgPermsMixin, SmartTemplateView):
+        def render_to_response(self, context, **response_kwargs):
+            num_days = self.request.GET.get("days", 90)
+            today = timezone.now().date()
+            workbook = export_ticket_stats(
+                self.request.org, today - timedelta(days=num_days), today + timedelta(days=1)
+            )
+
+            return response_from_workbook(workbook, f"ticket-stats-{timezone.now().strftime('%Y-%m-%d')}.xlsx")
+
 
 class TicketerCRUDL(SmartCRUDL):
     model = Ticketer
     actions = ("connect", "read", "delete")
 
-    class Connect(OrgPermsMixin, SmartTemplateView):
-        def get_gear_links(self):
-            return [dict(title=_("Home"), style="button-light", href=reverse("orgs.org_home"))]
+    class Connect(ContentMenuMixin, OrgPermsMixin, SmartTemplateView):
+        def build_content_menu(self, menu):
+            menu.add_link(_("Home"), reverse("orgs.org_home"))
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)

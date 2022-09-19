@@ -3,30 +3,50 @@
 
 -block page-top
 -block header
--block footer
 
+-block auto-route
+  :javascript
+    function leaveNewInterface() {
+      document.cookie = "nav=1; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/;";
+      document.location = "/msg/inbox";
+    }
+
+-block interface-option
+  
 -block extra-style
   {{block.super}}
 
   :css
+    temba-menu > div {
+      display: none;
+    }
+    .shadow {
+      --tw-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 40px 0 rgba(0, 0, 0, 0.09);
+    }
+
     html {
       --color-text-dark: #555;
-      --temba-textinput-font-size: 1.125rem;
+      --temba-textinput-font-size: 1;
       --temba-textinput-padding: 0.6em .8em;
       --widget-box-shadow: rgba(0, 0, 0, 0.05) 0px 3px 7px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
       --widget-box-shadow-focused: 0 0 0 3px rgba(164, 202, 254, .45), rgba(0, 0, 0, 0.05) 0px 3px 7px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
 
-      --button-y: 0.39em;
+      --button-y: 0.2em;
       --button-x: 1.5em;
       
       --temba-select-selected-font-size: 1em;
       --temba-select-selected-padding: .6em .8em;
       --temba-select-selected-line-height: 1.2em;
+      overflow: hidden;
 
     }
 
+    temba-modax, temba-dialog {
+      --button-y: 0.5em;
+    }
+
     temba-button {
-      --button-shadow: rgba(0, 0, 0, 0.15) 0px 3px 14px 0px, rgba(0, 0, 0, 0.25) 0px 1px 2px 0px;
+      --button-shadow: 0 0px 0px 1px rgba(0, 0, 0, 0.02), 0 1px 9px 0 rgba(0, 0, 0, 0.2);
     }
 
     temba-button.light {
@@ -35,33 +55,62 @@
 
 
     .list-buttons-container {
-      position: fixed;
-      z-index: 1000;
-      height: inherit;
-      padding: 0.5em;
-      padding-top:1em;
-      background: rgba(0,0,0,.2);
-      border-radius: var(--curvature);
-      right: 20px;
-      transition: top 300ms var(--bounce);
-      top: -5em;
-      display: block;
-      box-shadow: var(--shadow);
+      --icon-color: #666;
     }
 
     .list-buttons-container.visible {
-      top: -1em;
     }
     
     .spa-container {
-      background: #e9e9e9;
+      background: #f7f7f7;
       overflow-y:auto;
+      
     }
+
+    .spa-container.loading .spa-content{
+      opacity: .3;
+      pointer-events: none;
+    }
+
+    .widget-container.loading .spa-loader, .spa-container.loading .spa-loader {
+      display: block;
+    }
+
+    .widget-container.loading .folders, .widget-container.loading .spa-content, .widget-container.loading .org-chooser  {
+      opacity: .3;
+      pointer-events: none;
+    }
+
+    .org-chooser {
+      background:rgba(0,0,0,.02);
+      box-shadow: 0px 0px 15px 0px rgba(0,0,0,.1) inset;
+      color:rgba(0,0,0,.6);
+      --color-widget-border:transparent;
+      --color-widget-bg:transparent;
+      --temba-select-selected-padding:0em;
+      --color-widget-bg-focused:transparent;
+      --color-focus:transparent;
+      --widget-box-shadow-focused:transparent;
+    }
+
+    temba-loading {
+      z-index: 1000;
+    }
+
+    .title-text {
+      transition: opacity 100ms linear;
+    }
+
+    .loading .title-text {
+      opacity: 0;
+    }
+    
 
     .spa-content {
       display: flex;
       flex-direction: column;
-      height:100%;
+      flex-grow: 1;
+      transition: opacity 200ms linear;
     }
 
     .bg-gradient {
@@ -199,10 +248,10 @@
     }
 
     .spa-container {
+      height:100%;
     }
 
     .folders {
-      box-shadow: 3px 0 13px -3px rgba(0, 0, 0, 0.15);
       z-index:1;
     }
 
@@ -223,11 +272,101 @@
       margin-left: 0 !important;
       margin-right: 0 !important;
     }
+
+    .spa-content {
+      margin-bottom: -2em;
+      padding-bottom: 2em;
+    }
+    
+    .spa-footer {
+      margin-bottom: 2.5em;
+      padding-top: 0.5em;
+
+    }
+}
+
      
 -block full-page-script
-  %script{src:"{{ STATIC_URL }}js/labels.js?4"}
+
+  %script(src="{{ STATIC_URL }}js/labels.js?4")
+  %script(src="{{ STATIC_URL }}bower/highcharts/highcharts.js")
+  %script(src="{{ STATIC_URL }}bower/highcharts/modules/drilldown.js")
+
+  -include "full_page_script.haml"
 
   :javascript
+
+    var static_url = "{{STATIC_URL}}";
+    var pendingRequests = [];
+    function fetchAjax(url, container, options) {
+
+      if (options["cancel"]) {
+        pendingRequests.forEach(function(controller){
+          controller.abort();
+        });
+        pendingRequests = [];
+      }
+
+      options = options || {};
+
+      // hijack any pjax requests made from spa pages and route the content there instead
+      if (container == "#pjax" && document.querySelector(".spa-content")) {
+        container = ".spa-content";
+        options["headers"] = (options["headers"] || {})
+        options["headers"]["TEMBA-SPA"] = 1;
+        options["headers"]["X-PJAX"] = 1;
+      }
+
+      var controller = new AbortController();
+      pendingRequests.push(controller);
+      options["signal"] = controller.signal;
+      fetch(url, options).then(function(response) {
+
+        // remove our controller
+        pendingRequests = pendingRequests.filter(
+          function (controller) {
+            return response.controller === controller;
+          }
+        );
+
+        if (response.status < 200 || response.status > 299) {
+          return;
+        }
+
+        // we may have redirected
+        if (response.url) {
+          window.lastFetch = response.url;
+        }
+
+        response.text().then(function (body){
+          var containerEle = document.querySelector(container);
+          var scriptsEle = document.querySelector(".ajax-scripts");
+
+          // remove any existing children
+          while (containerEle.firstChild) {
+            containerEle.removeChild(containerEle.firstChild);
+          }
+
+          while (scriptsEle.firstChild) {
+            scriptsEle.removeChild(scriptsEle.firstChild);
+          }
+
+          // TODO: Replace this with non-jquery replacement
+          $(containerEle).html(body);
+
+          if (options) {
+            if ('onSuccess' in options) {
+              options['onSuccess']();
+            }
+          }
+          
+        });
+      }).catch(function(e) {
+
+        // canceled
+      })
+    }
+
     function fetchPJAXContent(url, container, options) {
 
       options = options || {};
@@ -300,8 +439,8 @@
           if ('followRedirects' in options && options['followRedirects'] == true) {
               var redirect = jqXHR.getResponseHeader('REDIRECT');
               if (redirect) {
-                  window.document.location.href = redirect;
-                  return;
+                window.document.location.href = redirect;
+                return;
               }
           }
 
@@ -338,12 +477,21 @@
     });
   
   :javascript
-
-    document.addEventListener("DOMContentLoaded", function() {
+    function handleMenuReady() {
       var selection = window.location.pathname.split("/").filter(function(path){ return !!path});
       var menu = document.querySelector("temba-menu");
-      menu.setSelection(selection);
-    });
+      if (menu) {
+        menu.setSelection(selection);
+
+        menu.addEventListener("temba-button-clicked", function(event) {
+          showModax(event.detail.title, event.detail.href, event.detail.on_submit);
+        });
+    
+        window.addEventListener('resize', function() {
+          // menu.collapsed = !!window.matchMedia("(max-width: 800px)").matches
+        });
+      }
+    }
 
     document.addEventListener("temba-pjax-complete", function() {
       hideLoading();
@@ -351,32 +499,64 @@
     })
 
     document.querySelector(".spa-content").addEventListener("click", function(evt) {
-      var target = evt.target
+      var target = evt.target;
       if (target.href && target.href.indexOf("xlsx") > -1) {
         return;
       }
 
-      if((target.classList.contains("label-checkbox") || target.classList.contains("button-action")) && !target.classList.contains("no-loading")) {
+      if((target.classList.contains("show-loading") || target.classList.contains("label-checkbox") || target.classList.contains("button-action")) && !target.classList.contains("no-loading")) {
         showLoading();
       }
 
       var a = target.closest("a");
+      if (!a) {
+        if (evt.path) {
+          a = evt.path.find(function(ele){ return  ele.tagName == "A" });
+        }
+      }
+
       if (a && a.href) {
+        if (a.classList.contains("posterize")) {
+          evt.stopPropagation();
+          evt.preventDefault();
+          return;
+        }
+
         evt.stopPropagation();
         evt.preventDefault();
-        fetchURL(a.href);
+        const url = new URL(a.href);
+
+        if (a.target) {
+          window.open(url, a.target, {popup: true});
+        } else {
+          fetchURL(url.pathname + url.search);
+        }
       } 
     });
-
+    
     document.querySelector(".spa-content").addEventListener("submit", function(evt) {
       var formEle = evt.target;
+      if(formEle.closest(".formax-section")) {
+        return;
+      }
+
       if (formEle.method.toLowerCase() !== "post") {
         evt.stopPropagation();
         evt.preventDefault();
         var formData = new FormData(formEle);
         let queryString = new URLSearchParams(formData).toString();
         showLoading();
-        fetchPJAXContent(window.lastFetch + "?" + queryString, ".spa-content", { 
+
+        var url = window.lastFetch;
+        if (queryString) {
+          if (url.indexOf("?") > 0) {
+            url += "&" + queryString;
+          } else {
+            url += "?" + queryString;
+          }
+        }
+
+        fetchPJAXContent(url, ".spa-content", { 
             "headers": { "TEMBA-SPA": "1"}, 
             "onSuccess": hideLoading,  
         });
@@ -392,33 +572,25 @@
         });
       }
     });
-
     
     window.addEventListener("popstate", function (event){
       let state = event.state;
-      if (state) {
+      if (state && state.url && state.show) {
         showLoading();
-
-        fetchPJAXContent(state.url, ".spa-content", { "headers": { 
-          "TEMBA-SPA": "1", 
-          "TEMBA-REFERER-PATH": state.path,
-          "TEMBA-PATH": state.path
-          }, 
-        "onSuccess": hideLoading, "ignoreEvents": false
-        });
-
+        gotoURL(state.url, state.show, false, true);
+        var menu = document.querySelector("temba-menu");
+        menu.setFocusedItem(state.show);
       }
     });
-
-
 
     function goto(event, ele) {
       if (!ele) {
         ele = event.target;
       }
 
-
       event.stopPropagation();
+      event.preventDefault();
+
       if (ele.setActive) {
           ele.setActive();
       }
@@ -436,20 +608,63 @@
           } else {
               fetchURL(href);
           }
+      }    
+    }
+
+    function showLoading(full) {
+      if (full) {
+        document.querySelector(".widget-container").classList.add("loading");
+      } else {
+        document.querySelector(".spa-container").classList.add("loading");
       }
-    
     }
 
-    function showSupportWidget() {
-        Intercom("show")
+    function updatePageTitle() {
+      var spaTitle = document.querySelector(".spa-title .title-text");
+      if (spaTitle) {
+        spaTitle = spaTitle.innerText;
+      }
+      
+      if (!spaTitle) {
+        var menu = document.querySelector("temba-menu");
+        if (menu) {
+          var item = menu.getMenuItem();
+
+          if (item) {
+            spaTitle = item.name;
+          }
+        }
+      }
+
+      document.title = spaTitle || "";
     }
 
-    function showLoading() {
-      document.getElementById("load-container").classList.remove("hide");
+    function refreshMenu() {
+      var menu = document.querySelector("temba-menu");
+      if (menu) {
+        menu.refresh();
+      }
     }
 
     function hideLoading() {
-      document.getElementById("load-container").classList.add("hide");
+      var containers = document.querySelectorAll(".spa-container, .widget-container");
+      for(container of containers) {
+        container.classList.remove("loading");
+      }
+
+      // scroll our content to the top if needed
+      var content = document.querySelector(".spa-content");
+      content.scrollTo(0, 0);
+      
+      updatePageTitle();
+      var menu = document.querySelector("temba-menu");
+      // menu.refresh();
+
+      document.querySelectorAll(".posterize").forEach(function(ele){
+        ele.addEventListener("click", function(){ 
+          handlePosterize(ele);
+        });
+      });
     }
 
     function handleUpdateComplete() {
@@ -462,41 +677,70 @@
           behavior: 'smooth'}
         );
       }
-
-      // refresh our menu  
-      var menu = document.querySelector("temba-menu");
-      menu.refresh();
     }
 
-    function gotoURL(urlToGo, urlToShow, ignoreEvents) {
-        var refererPath = window.location.pathname;
-        window.lastFetch = urlToGo;
-        window.history.pushState({ url: urlToGo,  },"", urlToShow);
-        fetchPJAXContent(urlToGo, ".spa-content", { "headers": { 
-            "TEMBA-SPA": "1", 
-            "TEMBA-REFERER-PATH": refererPath,
-            "TEMBA-PATH": urlToShow
-            }, 
-          "onSuccess": hideLoading, "ignoreEvents": ignoreEvents
-        });
+    function gotoURL(urlToGo, urlToShow, ignoreEvents, ignoreHistory) {
+      var refererPath = window.location.pathname;
+      window.lastFetch = urlToGo;
+
+      if (!ignoreHistory) {
+        window.history.pushState({ url: urlToGo, show: urlToShow }, "", urlToShow);
+      }
+
+      fetchAjax(urlToGo, ".spa-content", { "headers": { 
+          "TEMBA-SPA": "1", 
+          "TEMBA-REFERER-PATH": refererPath,
+          "TEMBA-PATH": urlToShow
+          }, 
+        "onSuccess": hideLoading, "ignoreEvents": ignoreEvents, "cancel": true
+      });
+    }
+
+    var toMap = /(msg|contact|flow|ticket|channels|triggers|campaign|org|user|settings|httplog).*/;
+
+    function handleNoPath(event) {
+      var details = event.detail;
+      var menu = document.querySelector("temba-menu");
+
+      var pathBits = details.path.split("?");
+      var path = details.selection + "/" + pathBits[0];
+      if (path[path.length-1] != "/") {
+        path += "/";
+      }
+
+      // add our query string if we have one
+      if (pathBits.length > 1) {
+        path += "?" + pathBits[1];
+      }
+
+      var mapped = mapUrl(path, true);
+
+      if (path != mapped){
+        gotoURL(mapped, path);
+      } else {
+        // set our menu to the proper focus, pruning the extras
+        menu.setFocusedItem(details.selection + "/" + details.path);
+      }
     }
 
     function fetchURL(url, triggerEvents) {
+ 
       showLoading();
       var refererPath = window.location.pathname;
       window.lastFetch = url;
       var menu = document.querySelector("temba-menu");
-      var path = "/" + menu.getSelection().join("/") + "/";
 
-      if (url.indexOf("/contact/read/") == 0) {
-        path = url.replace("/contact/read/", "/contacts/read/");
+      var dest = {
+        url: url,
+        path: url,
       }
 
-      if (url.indexOf("/contact/filter/") == 0) {
-        path = url.replace("/contact/filter/", "/contacts/filter/");
+      // migrate our old urls
+      if (dest.path.match(toMap)) {
+        dest.path = mapUrl(dest.path);
       }
-
-      gotoURL(url, path, !triggerEvents);
+      gotoURL(dest.url, dest.path, !triggerEvents);
+      menu.setFocusedItem(dest.path);
     }
    
     function handleMenuChanged(event) {
@@ -504,7 +748,10 @@
       var menuItem = event.target.getMenuItem();
       var body = document.querySelector(".spa-content");
       if (menuItem && menuItem.href) {
-        fetchURL(menuItem.href)
+        var menu = document.querySelector("temba-menu");
+        var path = "/" + menu.getSelection().join("/") + "/";
+        showLoading();
+        gotoURL(menuItem.href, path);
       }
 
       if (selection.length > 1) {
@@ -517,10 +764,46 @@
       }
     }
 
-    function handleNoPath(event) {
-      var details = event.detail;
-      if (details.item == "contacts") {
-        gotoURL("/contact/" + details.path, "/" + details.item + "/" + details.path);
+    function showModax(header, endpoint, onSubmit) {
+      var modax = document.querySelector("temba-modax#shared-modax");
+      if (onSubmit) {
+        modax["-temba-submitted"] = Function(onSubmit);
+      } else {
+        modax["-temba-submitted"] = undefined;
+      }
+
+      modax["-temba-redirected"] = refreshMenu;
+
+      modax.header = header;
+      modax.endpoint = endpoint;
+      modax.headers = { "TEMBA-SPA": 1}
+      modax.open = true;
+    }
+
+    var currentOrg = {{user_org.id}};
+    function handleWorkspaceChanged(evt) {
+
+      // remove any options with an icon
+      var options = event.target.getStaticOptions();
+      options = options.filter(function(option) {
+        return !option.icon;
+      });
+      event.target.setOptions(options)
+
+      var orgId = evt.target.value.value;
+      if (currentOrg != orgId) {
+        currentOrg = orgId;
+        showLoading(true);
+        var store = document.querySelector("temba-store");
+        store.postUrl("/org/choose/", "organization=" + orgId, {}, 'application/x-www-form-urlencoded').then(function(response) {
+          if (response.status >= 200 && response.status < 400) {
+            store.reset();
+            var menu = document.querySelector("temba-menu");
+            menu.reset();
+          } else {
+            document.location.reload();
+          }
+        });
       }
     }
 
@@ -537,24 +820,74 @@
       });
     }
 
-
 -block temba-store
-  %temba-store(
-    completion="/mr/docs/{{ LANGUAGE_CODE }}/editor.json"
-    fields="/api/v2/fields.json"
-    globals="/api/v2/globals.json"
-    groups="/api/v2/groups.json")
-      
+  -if org
+    %temba-store(
+      completion="/mr/docs/{{ LANGUAGE_CODE }}/editor.json"
+      languages="/org/languages/"
+      fields="/api/v2/fields.json"
+      globals="/api/v2/globals.json"
+      groups="/api/v2/groups.json"
+      workspace="/api/v2/workspace.json"
+    )
+   
+
 -block page-container
-  #load-container.hide
-    .absolute(style="display:flex;background:rgba(255,255,255,0);z-index:100000;width:100vw;")
-      .wrapper(style="margin: auto; margin-top:10px;border-radius:99999px;")
-        %temba-loading(size=10 units=6)
+  -include "includes/frame_top.html"
+  %temba-modax#shared-modax
+  %temba-dialog#shared-dialog
+  .ajax-scripts
 
   .flex-col
-    .flex.widget-container(style="height:100vh;")
+    .flex.widget-container(style="height:100vh;overflow:hidden")
       .folders       
-        %temba-menu(style="height:100%" endpoint="{% url 'orgs.org_menu' %}" onchange="handleMenuChanged(event)" wait="true" -temba-no-path="handleNoPath(event)")
-      .flex-grow.text-lg.spa-container.p-5
-        .spa-content
+        %temba-menu(style="height:100%" endpoint="{% url 'orgs.org_menu' %}" onchange="handleMenuChanged(event)" wait="true" -temba-no-path="handleNoPath(event)" -temba-ready="handleMenuReady")
+          -block menu-header
+
+      .flex-grow.spa-container.flex.flex-col
+        .spa-loader.hide.absolute
+          .wrapper(style="display:flex;z-index:100000;margin-top:0.1em;margin-left:1em")
+            %temba-loading(size=16 units=6)
+
+        -if user_orgs|length > 1 or request.user.is_staff
+          .flex.org-chooser
+            .flex-grow
+            .pr-5.py-2.selection
+              %temba-select.w-full(onchange="handleWorkspaceChanged(event)" option-width="250" anchor-right="true")
+                -if user_org not in user_orgs               
+                  %temba-option(icon="agent" name='{{ user_org.name }}' value="{{user_org.id}}" selected="true")
+                -else
+                  %temba-option(name='{{ user_org.name }}' value="{{user_org.id}}" selected="true")
+                -for other_org in user_orgs
+                  -if other_org.id != user_org.id
+                    %temba-option(name='{{ other_org.name }}' value="{{other_org.id}}")
+
+        .spa-content.p-5.overflow-y-auto.overflow-x-hidden
+
+        -block footer
+          .spa-footer.text-center.text-gray-500.mt-4
+            :plain
+              <!--
+                This software is licensed under AGPL v3. Please review the full license:
+                https://github.com/rapidpro/rapidpro/blob/main/LICENSE
+                
+                WARNING!
+
+                Hey, we get it. This is neat software, and it would be great to slap
+                the name of your company on it. While you can copyright your modifications,
+                which they themselves require careful consideration of the AGPL license,
+                you cannot claim copyright for work that is not yours. Any modified source code
+                must be shared publicly. Any related copyrights of such work much make notice
+                that it is based on this AGPL software, and also include the below notice.
+                
+                DO NOT illegally claim copyright of this work. If you want to edit the 
+                presentation of the below copyright, please contact us at legal@textit.com 
+                to discuss attribution requirements for this software.
+              -->
+              Copyright © 2012-2022 TextIt, UNICEF
   
+  .bottom-strip.absolute.bottom-0.text-sm.text-center.text-white.p-1(style="background:rgba(0,0,0,.7); z-index:100000;width:100%;")
+    Go back to the
+    %span.linked(onclick="leaveNewInterface()" style="color:#43b1ff")<
+      old interface
+      

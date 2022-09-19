@@ -105,6 +105,12 @@ class ClassifierCRUDLTest(TembaTest, CRUDLTestMixin):
         self.flow = self.create_flow("Color Flow")
         self.flow.classifier_dependencies.add(self.c1)
 
+    def test_menu(self):
+        menu_url = reverse("classifiers.classifier_menu")
+        response = self.assertListFetch(menu_url, allow_viewers=True, allow_editors=True, allow_agents=False)
+        menu = response.json()["results"]
+        self.assertEqual(3, len(menu))
+
     def test_views(self):
         # fetch org home page
         self.login(self.admin)
@@ -165,6 +171,8 @@ class ClassifierCRUDLTest(TembaTest, CRUDLTestMixin):
         self.assertContains(response, "book_flight")
         self.assertNotContains(response, "book_hotel")
         self.assertContains(response, "book_car")
+
+        self.assertContentMenu(read_url, self.admin, ["Log", "Sync", "Delete"])
 
     def test_delete(self):
         delete_url = reverse("classifiers.classifier_delete", args=[self.c2.uuid])

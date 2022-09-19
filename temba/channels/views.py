@@ -31,22 +31,22 @@ from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonRespons
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_bytes, force_text
+from django.utils.encoding import force_bytes, force_str
 from django.utils.functional import cached_property
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 
 from temba.contacts.models import URN
 from temba.msgs.models import Msg, SystemLabel
 from temba.msgs.views import InboxView
-from temba.notifications.views import NotificationTargetMixin
 from temba.orgs.models import Org
-from temba.orgs.views import AnonMixin, DependencyDeleteModal, ModalMixin, OrgObjPermsMixin, OrgPermsMixin
+from temba.orgs.views import DependencyDeleteModal, MenuMixin, ModalMixin, OrgObjPermsMixin, OrgPermsMixin
 from temba.utils import analytics, countries, json
 from temba.utils.fields import SelectWidget
 from temba.utils.models import patch_queryset_count
-from temba.utils.views import ComponentFormMixin, SpaMixin
+from temba.utils.views import ComponentFormMixin, ContentMenuMixin, SpaMixin
 
+from ..ivr.models import IVRCall
 from .models import (
     Alert,
     Channel,
@@ -70,12 +70,10 @@ def get_channel_read_url(channel):
 def channel_status_processor(request):
     status = dict()
     user = request.user
+    org = request.org
 
     if user.is_superuser or user.is_anonymous:
         return status
-
-    # from the logged in user get the channel
-    org = user.get_org()
 
     allowed = False
     if org:
@@ -257,11 +255,12 @@ def sync(request, channel_id):
                     urn = URN.from_tel(cmd["phone"])
                     try:
                         ChannelEvent.create_relayer_event(
-                            channel, urn, cmd["type"], date, extra=dict(duration=duration)
+                            channel, urn, cmd["type"], date, extra={"duration": duration}
                         )
                     except ValueError:
                         # in some cases Android passes us invalid URNs, in those cases just ignore them
                         pass
+
                     unique_calls.add(call_tuple)
                 handled = True
 
@@ -325,7 +324,7 @@ def register(request):
     if request.method != "POST":
         return HttpResponse(status=500, content=_("POST Required"))
 
-    client_payload = json.loads(force_text(request.body))
+    client_payload = json.loads(force_str(request.body))
     cmds = client_payload["cmds"]
 
     try:
@@ -349,6 +348,18 @@ class ClaimViewMixin(SpaMixin, OrgPermsMixin, ComponentFormMixin):
             self.request = kwargs.pop("request")
             self.channel_type = kwargs.pop("channel_type")
             super().__init__(**kwargs)
+
+        def clean(self):
+            count, limit = Channel.get_org_limit_progress(self.request.user.get_org())
+            if limit is not None and count >= limit:
+                raise forms.ValidationError(
+                    _(
+                        "This workspace has reached its limit of %(limit)d channels. "
+                        "You must delete existing ones before you can create new ones."
+                    ),
+                    params={"limit": limit},
+                )
+            return super().clean()
 
     def __init__(self, channel_type):
         self.channel_type = channel_type
@@ -614,14 +625,18 @@ class BaseClaimNumberMixin(ClaimViewMixin):
                 return self.form_invalid(form)
 
         # don't add the same number twice to the same account
-        existing = org.channels.filter(is_active=True, address=data["phone_number"]).first()
+        existing = org.channels.filter(
+            is_active=True, address=data["phone_number"], schemes__overlap=list(self.channel_type.schemes)
+        ).first()
         if existing:  # pragma: needs cover
             form._errors["phone_number"] = form.error_class(
                 [_("That number is already connected (%s)" % data["phone_number"])]
             )
             return self.form_invalid(form)
 
-        existing = Channel.objects.filter(is_active=True, address=data["phone_number"]).first()
+        existing = Channel.objects.filter(
+            is_active=True, address=data["phone_number"], schemes__overlap=list(self.channel_type.schemes)
+        ).first()
         if existing:  # pragma: needs cover
             form._errors["phone_number"] = form.error_class(
                 [
@@ -741,8 +756,8 @@ class ChannelCRUDL(SmartCRUDL):
     )
     permissions = True
 
-    class Menu(OrgPermsMixin, SmartTemplateView):  # pragma: no cover
-        def render_to_response(self, context, **response_kwargs):
+    class Menu(MenuMixin, OrgPermsMixin, SmartTemplateView):  # pragma: no cover
+        def derive_menu(self):
             org = self.request.user.get_org()
 
             menu = []
@@ -751,162 +766,107 @@ class ChannelCRUDL(SmartCRUDL):
 
                 channels = Channel.objects.filter(org=org, is_active=True, parent=None).order_by("-role")
                 for channel in channels:
-                    icon = channel.get_type().icon.replace("icon-", "")
+                    icon = channel.type.icon.replace("icon-", "")
                     icon = icon.replace("power-cord", "box")
+
                     menu.append(
-                        {
-                            "id": channel.uuid,
-                            "name": channel.name,
-                            "href": get_channel_read_url(channel),
-                            "icon": icon,
-                        }
+                        self.create_menu_item(
+                            menu_id=channel.uuid,
+                            name=channel.name,
+                            href=get_channel_read_url(channel),
+                            icon=icon,
+                        )
                     )
 
-            menu.append(
-                {
-                    "id": "claim",
-                    "href": reverse("channels.channel_claim"),
-                    "name": _("Add Channel"),
-                }
-            )
+            menu.append(self.create_menu_item(menu_id="claim", name=_("Add Channel"), href="channels.channel_claim"))
 
-            return JsonResponse({"results": menu})
+            return menu
 
-    class Read(SpaMixin, OrgObjPermsMixin, NotificationTargetMixin, SmartReadView):
+    class Read(SpaMixin, OrgObjPermsMixin, ContentMenuMixin, SmartReadView):
         slug_url_kwarg = "uuid"
         exclude = ("id", "is_active", "created_by", "modified_by", "modified_on")
-
-        def get_notification_scope(self) -> tuple:
-            return "channel:alert", str(self.object.uuid)
 
         def get_queryset(self):
             return Channel.objects.filter(is_active=True)
 
-        def get_gear_links(self):
-            links = []
+        def build_content_menu(self, menu):
+            obj = self.get_object()
 
-            extra_links = self.object.get_type().extra_links
-            if extra_links:
-                for extra in extra_links:
-                    links.append(dict(title=extra["name"], href=reverse(extra["link"], args=[self.object.uuid])))
+            for extra in obj.type.extra_links or ():
+                menu.add_link(extra["label"], reverse(extra["view_name"], args=[obj.uuid]))
 
-            if self.object.parent:
-                links.append(
-                    dict(
-                        title=_("Android Channel"),
-                        style="button-primary",
-                        href=reverse("channels.channel_read", args=[self.object.parent.uuid]),
-                    )
-                )
+            if obj.parent:
+                menu.add_link(_("Android Channel"), reverse("channels.channel_read", args=[obj.parent.uuid]))
 
-            if self.object.get_type().show_config_page:
-                links.append(
-                    dict(title=_("Settings"), href=reverse("channels.channel_configuration", args=[self.object.uuid]))
-                )
+            if obj.type.show_config_page:
+                menu.add_link(_("Settings"), reverse("channels.channel_configuration", args=[obj.uuid]))
 
-            if not self.object.is_android():
-                sender = self.object.get_sender()
-                caller = self.object.get_caller()
+            if not self.is_spa() and not obj.is_android():
+                sender = obj.get_sender()
+                caller = obj.get_caller()
 
                 if sender:
-                    links.append(
-                        dict(title=_("Channel Log"), href=reverse("channels.channellog_list", args=[sender.uuid]))
-                    )
-                elif Channel.ROLE_RECEIVE in self.object.role:
-                    links.append(
-                        dict(title=_("Channel Log"), href=reverse("channels.channellog_list", args=[self.object.uuid]))
-                    )
+                    menu.add_link(_("Channel Log"), reverse("channels.channellog_list", args=[sender.uuid]))
+                elif Channel.ROLE_RECEIVE in obj.role:
+                    menu.add_link(_("Channel Log"), reverse("channels.channellog_list", args=[obj.uuid]))
 
                 if caller and caller != sender:
-                    links.append(
-                        dict(
-                            title=_("Call Log"),
-                            href=f"{reverse('channels.channellog_list', args=[caller.uuid])}?sessions=1",
-                        )
+                    menu.add_link(
+                        _("Call Log"), f"{reverse('channels.channellog_list', args=[caller.uuid])}?sessions=1"
                     )
 
             if self.has_org_perm("channels.channel_update"):
-                links.append(
-                    dict(
-                        id="update-channel",
-                        title=_("Edit"),
-                        href=reverse("channels.channel_update", args=[self.object.id]),
-                        modax=_("Edit Channel"),
-                    )
+                menu.add_modax(
+                    _("Edit"),
+                    "update-channel",
+                    reverse("channels.channel_update", args=[obj.id]),
+                    title=_("Edit Channel"),
                 )
 
-                if self.object.is_android() or (self.object.parent and self.object.parent.is_android()):
+                if obj.is_android() or (obj.parent and obj.parent.is_android()):
+                    sender = obj.get_sender()
 
-                    sender = self.object.get_sender()
                     if sender and sender.is_delegate_sender():
-                        links.append(
-                            dict(
-                                id="disable-sender",
-                                title=_("Disable Bulk Sending"),
-                                modax=_("Disable Bulk Sending"),
-                                href=reverse("channels.channel_delete", args=[sender.uuid]),
-                            )
+                        menu.add_modax(
+                            _("Disable Bulk Sending"),
+                            "disable-sender",
+                            reverse("channels.channel_delete", args=[sender.uuid]),
                         )
-                    elif self.object.is_android():
-                        links.append(
-                            dict(
-                                title=_("Enable Bulk Sending"),
-                                href="%s?channel=%d"
-                                % (reverse("channels.channel_bulk_sender_options"), self.object.id),
-                            )
+                    elif obj.is_android():
+                        menu.add_link(
+                            _("Enable Bulk Sending"),
+                            f"{reverse('channels.channel_bulk_sender_options')}?channel={obj.id}",
                         )
 
-                    caller = self.object.get_caller()
+                    caller = obj.get_caller()
+
                     if caller and caller.is_delegate_caller():
-                        links.append(
-                            dict(
-                                id="disable-voice",
-                                title=_("Disable Voice Calling"),
-                                modax=_("Disable Voice Calling"),
-                                href=reverse("channels.channel_delete", args=[caller.uuid]),
-                            )
+                        menu.add_modax(
+                            _("Disable Voice Calling"),
+                            "disable-voice",
+                            reverse("channels.channel_delete", args=[caller.uuid]),
                         )
-                    elif self.object.org.is_connected_to_twilio():
-                        links.append(
-                            dict(
-                                id="enable-voice",
-                                title=_("Enable Voice Calling"),
-                                js_class="posterize",
-                                href=f"{reverse('channels.channel_create_caller')}?channel={self.object.id}",
-                            )
+                    elif obj.org.is_connected_to_twilio():
+                        menu.add_url_post(
+                            _("Enable Voice Calling"),
+                            f"{reverse('channels.channel_create_caller')}?channel={obj.id}",
                         )
 
             if self.has_org_perm("channels.channel_delete"):
-                links.append(
-                    dict(
-                        id="delete-channel",
-                        title=_("Delete Channel"),
-                        modax=_("Delete Channel"),
-                        href=reverse("channels.channel_delete", args=[self.object.uuid]),
-                    )
+                menu.add_modax(_("Delete"), "delete-channel", reverse("channels.channel_delete", args=[obj.uuid]))
+
+            if obj.channel_type == "FB" and self.has_org_perm("channels.channel_facebook_whitelist"):
+                menu.add_modax(
+                    _("Whitelist Domain"),
+                    "fb-whitelist",
+                    reverse("channels.channel_facebook_whitelist", args=[obj.uuid]),
                 )
 
-            if self.object.channel_type == "FB" and self.has_org_perm("channels.channel_facebook_whitelist"):
-                links.append(
-                    dict(
-                        id="fb-whitelist",
-                        title=_("Whitelist Domain"),
-                        modax=_("Whitelist Domain"),
-                        href=reverse("channels.channel_facebook_whitelist", args=[self.object.uuid]),
-                    )
+            if self.request.user.is_staff:
+                menu.add_url_post(
+                    _("Service"),
+                    f'{reverse("orgs.org_service")}?organization={obj.org_id}&redirect_url={reverse("channels.channel_read", args=[obj.uuid])}',
                 )
-
-            user = self.get_user()
-            if user.is_superuser or user.is_staff:
-                links.append(
-                    dict(
-                        title=_("Service"),
-                        posterize=True,
-                        href=f'{reverse("orgs.org_service")}?organization={self.object.org_id}&redirect_url={reverse("channels.channel_read", args=[self.object.uuid])}',
-                    )
-                )
-
-            return links
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
@@ -1248,6 +1208,9 @@ class ChannelCRUDL(SmartCRUDL):
             return obj
 
     class Claim(SpaMixin, OrgPermsMixin, SmartTemplateView):
+
+        title = _("Add Channel")
+
         def channel_types_groups(self):
             user = self.request.user
 
@@ -1271,6 +1234,10 @@ class ChannelCRUDL(SmartCRUDL):
             org = user.get_org()
             context["org_timezone"] = str(org.timezone)
             context["brand"] = org.get_branding()
+
+            channel_count, org_limit = Channel.get_org_limit_progress(org)
+            context["total_count"] = channel_count
+            context["total_limit"] = org_limit
 
             # fetch channel types, sorted by category and name
             recommended_channels, types_by_category, only_regional_channels = self.channel_types_groups()
@@ -1303,9 +1270,9 @@ class ChannelCRUDL(SmartCRUDL):
             connection = forms.CharField(max_length=2, widget=forms.HiddenInput, required=False)
             channel = forms.IntegerField(widget=forms.HiddenInput, required=False)
 
-            def __init__(self, *args, **kwargs):
-                self.org = kwargs["org"]
-                del kwargs["org"]
+            def __init__(self, org, *args, **kwargs):
+                self.org = org
+
                 super().__init__(*args, **kwargs)
 
             def clean_connection(self):
@@ -1326,14 +1293,12 @@ class ChannelCRUDL(SmartCRUDL):
 
         def get_form_kwargs(self, *args, **kwargs):
             form_kwargs = super().get_form_kwargs(*args, **kwargs)
-            form_kwargs["org"] = Org.objects.get(pk=self.request.user.get_org().pk)
+            form_kwargs["org"] = self.request.org
             return form_kwargs
 
         def form_valid(self, form):
-            user = self.request.user
-
             channel = form.cleaned_data["channel"]
-            Channel.add_vonage_bulk_sender(user, channel)
+            Channel.add_vonage_bulk_sender(self.request.org, self.request.user, channel)
             return super().form_valid(form)
 
         def form_invalid(self, form):
@@ -1391,7 +1356,7 @@ class ChannelCRUDL(SmartCRUDL):
             channel = self.form.cleaned_data["channel"]
             return reverse("channels.channel_read", args=[channel.uuid])
 
-    class Configuration(OrgObjPermsMixin, SmartReadView):
+    class Configuration(SpaMixin, OrgObjPermsMixin, SmartReadView):
         slug_url_kwarg = "uuid"
 
         def get_context_data(self, **kwargs):
@@ -1456,7 +1421,7 @@ class ChannelEventCRUDL(SmartCRUDL):
     class Calls(InboxView):
         title = _("Calls")
         fields = ("contact", "event_type", "channel", "occurred_on")
-        default_order = "-occurred_on"
+        default_order = ("-occurred_on",)
         search_fields = ("contact__urns__path__icontains", "contact__name__icontains")
         system_label = SystemLabel.TYPE_CALLS
         select_related = ("contact", "channel")
@@ -1473,9 +1438,10 @@ class ChannelEventCRUDL(SmartCRUDL):
 
 class ChannelLogCRUDL(SmartCRUDL):
     model = ChannelLog
-    actions = ("list", "read", "connection")
+    path = "logs"  # urls like /channels/logs/
+    actions = ("list", "read", "msg", "call")
 
-    class List(OrgPermsMixin, SmartListView):
+    class List(SpaMixin, OrgPermsMixin, ContentMenuMixin, SmartListView):
         fields = ("channel", "description", "created_on")
         link_fields = ("channel", "description", "created_on")
         paginate_by = 50
@@ -1496,20 +1462,18 @@ class ChannelLogCRUDL(SmartCRUDL):
             else:
                 return self.FOLDER_MESSAGES
 
-        def get_gear_links(self):
+        def build_content_menu(self, menu):
             list_url = reverse("channels.channellog_list", args=[self.channel.uuid])
-            links = []
 
-            if self.folder != self.FOLDER_MESSAGES:
-                links.append(dict(title=_("Messages"), href=list_url))
-            if self.folder != self.FOLDER_CALLS and self.channel.supports_ivr():
-                links.append(dict(title=_("Calls"), href=f"{list_url}?calls=1"))
-            if self.folder != self.FOLDER_OTHERS:
-                links.append(dict(title=_("Other Interactions"), href=f"{list_url}?others=1"))
-            if self.folder != self.FOLDER_ERRORS:
-                links.append(dict(title=_("Errors"), href=f"{list_url}?errors=1"))
-
-            return links
+            if not self.is_spa():
+                if self.folder != self.FOLDER_MESSAGES:
+                    menu.add_link(_("Messages"), list_url)
+                if self.folder != self.FOLDER_CALLS and self.channel.supports_ivr():
+                    menu.add_link(_("Calls"), f"{list_url}?calls=1")
+                if self.folder != self.FOLDER_OTHERS:
+                    menu.add_link(_("Other Interactions"), f"{list_url}?others=1")
+                if self.folder != self.FOLDER_ERRORS:
+                    menu.add_link(_("Errors"), f"{list_url}?errors=1")
 
         @classmethod
         def derive_url_pattern(cls, path, action):
@@ -1556,35 +1520,89 @@ class ChannelLogCRUDL(SmartCRUDL):
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
             context["channel"] = self.channel
+            context["folder"] = self.folder
             return context
 
-    class Connection(AnonMixin, SmartReadView):
-        model = ChannelConnection
+    class Read(SpaMixin, OrgObjPermsMixin, ContentMenuMixin, SmartReadView):
+        """
+        Detail view for a single channel log
+        """
 
-        def get_gear_links(self):
-            return [
-                dict(
-                    title=_("More Calls"),
-                    style="button-light",
-                    href=reverse("channels.channellog_list", args=[self.get_object().channel.uuid]) + "?connections=1",
-                )
-            ]
-
-    class Read(SpaMixin, OrgObjPermsMixin, SmartReadView):
         fields = ("description", "created_on")
 
-        def get_gear_links(self):
-            return [
-                dict(
-                    title=_("Channel Log"),
-                    style="button-light",
-                    href=reverse("channels.channellog_list", args=[self.get_object().channel.uuid]),
-                )
-            ]
+        def build_content_menu(self, menu):
+            obj = self.get_object()
+            if not self.is_spa():
+                menu.add_link(_("Channel Log"), reverse("channels.channellog_list", args=[obj.channel.uuid]))
 
         def get_object_org(self):
             return self.get_object().channel.org
 
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context["log"] = self.object.get_display(self.request.user)
+            return context
+
+    class Msg(SpaMixin, OrgObjPermsMixin, ContentMenuMixin, SmartListView):
+        """
+        All channel logs for a message
+        """
+
+        permission = "channels.channellog_read"
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^(?P<channel_uuid>[0-9a-f-]+)/%s/%s/(?P<msg_id>\d+)/$" % (path, action)
+
+        @cached_property
+        def msg(self):
+            return get_object_or_404(Msg, pk=self.kwargs["msg_id"])
+
+        def build_content_menu(self, menu):
+            if not self.is_spa():
+                menu.add_link(_("More Logs"), reverse("channels.channellog_list", args=[self.msg.channel.uuid]))
+
+        def get_object_org(self):
+            return self.msg.org
+
         def derive_queryset(self, **kwargs):
-            queryset = super().derive_queryset(**kwargs)
-            return queryset.order_by("-created_on")
+            return super().derive_queryset(**kwargs).filter(msg=self.msg).order_by("-created_on")
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context["msg"] = self.msg
+            context["logs"] = [log.get_display(self.request.user) for log in context["object_list"]]
+            return context
+
+    class Call(SpaMixin, OrgObjPermsMixin, ContentMenuMixin, SmartListView):
+        """
+        All channel logs for a call
+        """
+
+        permission = "channels.channellog_read"
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^(?P<channel_uuid>[0-9a-f-]+)/%s/%s/(?P<call_id>\d+)/$" % (path, action)
+
+        @cached_property
+        def call(self):
+            return get_object_or_404(IVRCall, pk=self.kwargs["call_id"])
+
+        def build_content_menu(self, menu):
+            menu.add_link(
+                _("More Calls"),
+                reverse("channels.channellog_list", args=[self.call.channel.uuid]) + "?calls=1",
+            )
+
+        def get_object_org(self):
+            return self.call.org
+
+        def derive_queryset(self, **kwargs):
+            return super().derive_queryset(**kwargs).filter(connection=self.call).order_by("-created_on")
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context["call"] = self.call
+            context["logs"] = [log.get_display(self.request.user) for log in context["object_list"]]
+            return context
