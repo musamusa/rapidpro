@@ -1,7 +1,7 @@
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -15,9 +15,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = Form
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
         cleaned_data = form.cleaned_data
-
         config = {
             "jiochat_app_id": cleaned_data.get("app_id"),
             "jiochat_app_secret": cleaned_data.get("app_secret"),
@@ -25,7 +23,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         }
 
         self.object = Channel.create(
-            org, self.request.user, None, self.channel_type, name="", address="", config=config
+            self.request.org, self.request.user, None, self.channel_type, name="", address="", config=config
         )
 
         return super().form_valid(form)

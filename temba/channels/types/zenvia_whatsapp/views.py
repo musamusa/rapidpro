@@ -1,8 +1,9 @@
 import phonenumbers
+import requests
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.utils.fields import SelectWidget
 
@@ -44,13 +45,26 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             else:  # pragma: needs cover
                 return number
 
+        def clean_token(self):
+            token = self.data["token"]
+            headers = {
+                "X-API-TOKEN": token,
+                "Content-Type": "application/json",
+            }
+
+            conf_url = "https://api.zenvia.com/v2/subscriptions"
+
+            resp = requests.get(conf_url, headers=headers)
+
+            if resp.status_code != 200:
+                raise forms.ValidationError(_("Invalid token. Please check your Zenvia account settings."))
+
+            return token
+
     form_class = Form
 
     def form_valid(self, form):
-        user = self.request.user
         data = form.cleaned_data
-        org = user.get_org()
-
         config = {Channel.CONFIG_API_KEY: data["token"]}
 
         channel_type_name = ""
@@ -60,8 +74,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             channel_type_name = "SMS"
 
         self.object = Channel.create(
-            org,
-            user,
+            self.request.org,
+            self.request.user,
             data["country"],
             self.channel_type,
             name=f"Zenvia {channel_type_name}: {data['number']}",

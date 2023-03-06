@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.views import AuthenticatedExternalClaimView
 from temba.contacts.models import URN
@@ -26,7 +26,6 @@ class MbloxType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 459
-    attachment_support = False
 
     configuration_blurb = _("As a last step you'll need to set the following callback URL on your Mblox account.")
 

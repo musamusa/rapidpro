@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel, ChannelType
 from .views import ClaimView, UpdateForm
@@ -25,7 +25,6 @@ class ExternalType(ChannelType):
 
     schemes = None  # can be any scheme
     max_length = 160
-    attachment_support = False
 
     CONFIG_SEND_AUTHORIZATION = "send_authorization"
     CONFIG_MAX_LENGTH = "max_length"

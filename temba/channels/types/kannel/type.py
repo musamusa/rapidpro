@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.types.kannel.views import ClaimView
 from temba.contacts.models import URN
@@ -27,5 +27,3 @@ class KannelType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 1600
-
-    attachment_support = False

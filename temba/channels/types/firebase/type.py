@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -26,7 +26,6 @@ class FirebaseCloudMessagingType(ChannelType):
 
     schemes = [URN.FCM_SCHEME]
     max_length = 10000
-    attachment_support = False
     free_sending = True
     quick_reply_text_size = 36
 

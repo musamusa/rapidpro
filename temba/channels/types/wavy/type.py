@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -37,7 +37,6 @@ class WavyType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 160
-    attachment_support = False
 
     claim_view = ClaimView
     claim_blurb = _("If you have an %(link)s number, you can quickly connect it using their APIs.") % {

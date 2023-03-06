@@ -1,6 +1,6 @@
 import requests
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 from temba.triggers.models import Trigger
@@ -31,7 +31,6 @@ class FacebookType(ChannelType):
 
     schemes = [URN.FACEBOOK_SCHEME]
     max_length = 320
-    attachment_support = True
     free_sending = True
 
     def deactivate(self, channel):
@@ -51,7 +50,7 @@ class FacebookType(ChannelType):
         if trigger.trigger_type == Trigger.TYPE_NEW_CONVERSATION:
             self._set_call_to_action(trigger.channel, None)
 
-    def is_available_to(self, user):
+    def is_available_to(self, org, user):
         return False, False
 
     @staticmethod
@@ -70,5 +69,5 @@ class FacebookType(ChannelType):
             url, json=body, params={"access_token": access_token}, headers={"Content-Type": "application/json"}
         )
 
-        if response.status_code != 200:  # pragma: no cover
+        if payload and response.status_code != 200:  # pragma: no cover
             raise Exception("Unable to update call to action: %s" % response.text)

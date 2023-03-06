@@ -2,7 +2,7 @@ import requests
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -35,11 +35,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = Form
 
     def form_valid(self, form):
-        user = self.request.user
-        org = user.get_org()
-
         data = form.cleaned_data
-
         config = {
             Channel.CONFIG_USERNAME: data["username"],
             Channel.CONFIG_PASSWORD: data["password"],
@@ -47,8 +43,8 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         }
 
         self.object = Channel.create(
-            org,
-            user,
+            self.request.org,
+            self.request.user,
             data["country"],
             self.channel_type,
             name="DMark Mobile: %s" % data["shortcode"],

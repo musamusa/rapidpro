@@ -1,5 +1,5 @@
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import Channel
 from temba.channels.views import AuthenticatedExternalClaimView, ClaimViewMixin
@@ -11,7 +11,7 @@ class ClaimView(AuthenticatedExternalClaimView):
             max_length=14,
             min_length=1,
             label=_("Number"),
-            help_text=_("The shortcode you have been assigned by Globe Labs " "ex: 15543"),
+            help_text=_("The short code you have been assigned by Globe Labs ex: 15543"),
         )
         app_id = forms.CharField(label=_("Application Id"), help_text=_("The id of your Globe Labs application"))
         app_secret = forms.CharField(
@@ -27,11 +27,9 @@ class ClaimView(AuthenticatedExternalClaimView):
         return "PH"
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
-
         data = form.cleaned_data
         self.object = Channel.add_config_external_channel(
-            org,
+            self.request.org,
             self.request.user,
             "PH",
             data["number"],

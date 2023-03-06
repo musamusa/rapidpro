@@ -3,6 +3,53 @@ if (typeof console == 'undefined') {
     this.console = { log: function (msg) {} };
 }
 
+function downloadFile(evt, url) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    window.open(url, "_download");
+}  
+
+function openWindow(evt, url, target) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    window.open(url, target);
+}
+
+function showPreview(evt, ele) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var dialog = document.querySelector("#shared-dialog");
+    dialog.width = "initial";
+    dialog.primaryButtonName = null;
+    dialog.cancelButtonName = "Ok";
+
+    var container = document.createElement("div");
+    container.style = "text-align:center;line-height:0px;padding:0px";
+    container.innerHTML = ele.getAttribute("attachment");
+    dialog.body = container;
+    dialog.open = true;
+}
+
+function getModax(id) {
+    var modax = document.querySelector(id);
+    if (!modax) {
+        modax = document.querySelector("#shared-modax")
+    }
+    return modax
+}
+
+function checkInner(event) {
+    if (event.target) {
+        var checkbox = event.target.querySelector("temba-checkbox");
+        if (checkbox) {
+            checkbox.click();
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+}
+
 function goto(event, ele) {
     if (!ele) {
         ele = event.target;
@@ -68,18 +115,6 @@ $.ajaxSetup({
 });
 
 $(document).ready(function () {
-    $('iframe').each(function () {
-        /*fix youtube z-index*/
-        var url = $(this).attr('src');
-        if (url.indexOf('youtube.com') >= 0) {
-            if (url.indexOf('?') >= 0) {
-                $(this).attr('src', url + '&wmode=transparent');
-            } else {
-                $(this).attr('src', url + '?wmode=transparent');
-            }
-        }
-    });
-
     $('ul.nav li.dropdown').hover(
         function () {
             $(this).find('.dropdown-menu').stop(true, true).delay(200).fadeIn();
@@ -459,3 +494,24 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 });
+
+var setInnerHTML = function(ele, html) {
+
+    var scripts = ele.parentNode.querySelectorAll("script");
+    scripts.forEach(function(script){
+        script.parentNode.removeChild(script);
+    })
+
+    ele.innerHTML = html;
+
+    Array.from(ele.querySelectorAll("script")).forEach(function(oldScript) {
+
+        oldScript.parentNode.removeChild(oldScript);
+
+        var newScript = document.createElement("script");
+        Array.from(oldScript.attributes)
+            .forEach(function(attr){ newScript.setAttribute(attr.name, attr.value) });
+        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        ele.parentNode.appendChild(newScript);
+    });
+  }

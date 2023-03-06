@@ -3,7 +3,7 @@ from smartmin.views import SmartFormView
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin, UpdateChannelForm
@@ -25,7 +25,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = Form
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
+        org = self.request.org
         auth_token = form.cleaned_data["auth_token"]
 
         response = requests.post("https://chatapi.viber.com/pa/get_account_info", json={"auth_token": auth_token})
@@ -58,9 +58,9 @@ class UpdateForm(UpdateChannelForm):
                     "seconds to take effect"
                 ),
             ),
-            "",
+            default="",
         )
 
     class Meta(UpdateChannelForm.Meta):
-        fields = "name", "address", "alert_email"
+        fields = ("name", "address", "alert_email")
         readonly = ("address",)

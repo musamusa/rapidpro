@@ -1,10 +1,11 @@
-from django.utils.translation import ugettext_lazy as _
+from django.urls import re_path
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import Channel, ChannelType
 from temba.contacts.models import URN
 from temba.utils.timezones import timezone_to_country_code
 
-from .views import ClaimView, UpdateForm
+from .views import ClaimView, SearchView, UpdateForm
 
 RECOMMENDED_COUNTRIES = {
     "US",
@@ -65,8 +66,6 @@ class VonageType(ChannelType):
     max_length = 1600
     max_tps = 1
 
-    ivr_protocol = ChannelType.IVRProtocol.IVR_PROTOCOL_NCCO
-
     configuration_blurb = _(
         "Your Vonage configuration URLs are as follows. These should have been set up automatically when claiming your "
         "number, but if not you can set them from your Vonage dashboard."
@@ -92,13 +91,14 @@ class VonageType(ChannelType):
         ),
     )
 
-    def is_recommended_to(self, user):
-        org = user.get_org()
-        country_code = timezone_to_country_code(org.timezone)
-        return country_code in RECOMMENDED_COUNTRIES
+    def is_recommended_to(self, org, user):
+        return timezone_to_country_code(org.timezone) in RECOMMENDED_COUNTRIES
 
     def deactivate(self, channel):
         app_id = channel.config.get(Channel.CONFIG_VONAGE_APP_ID)
         if app_id:
             client = channel.org.get_vonage_client()
             client.delete_application(app_id)
+
+    def get_urls(self):
+        return [self.get_claim_url(), re_path(r"^search$", SearchView.as_view(), name="search")]

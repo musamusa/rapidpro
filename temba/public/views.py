@@ -3,9 +3,9 @@ from urllib.parse import parse_qs, urlencode
 from smartmin.views import SmartCreateView, SmartCRUDL, SmartFormView, SmartListView, SmartReadView, SmartTemplateView
 
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import RedirectView, View
 
@@ -74,8 +74,8 @@ class Welcome(SmartTemplateView):
         context = super().get_context_data(**kwargs)
 
         user = self.request.user
-        org = user.get_org()
-        brand = self.request.branding["slug"]
+        org = self.request.org
+        brand = self.request.branding
 
         if org:
             analytics.identify(user, brand, org=org)
@@ -157,16 +157,23 @@ class Blog(RedirectView):
     url = "http://blog." + settings.HOSTNAME
 
 
-class GenerateCoupon(View):
+class DemoGenerateCoupon(View):
+    """
+    Used to demo webhook calls from sample flow
+    """
+
     def post(self, *args, **kwargs):
-        # return a generated coupon
-        return HttpResponse(json.dumps(dict(coupon=random_string(6))))
+        return JsonResponse({"coupon": random_string(6)})
 
     def get(self, *args, **kwargs):
         return self.post(*args, **kwargs)
 
 
-class OrderStatus(View):
+class DemoOrderStatus(View):
+    """
+    Used to demo webhook calls from sample flow
+    """
+
     def post(self, request, *args, **kwargs):
         if request.method == "POST":
             request_body = json.loads(request.body)
@@ -209,7 +216,7 @@ class OrderStatus(View):
         else:
             response = dict(status="Invalid")
 
-        return HttpResponse(json.dumps(response))
+        return JsonResponse(response)
 
     def get(self, *args, **kwargs):
         return self.post(*args, **kwargs)

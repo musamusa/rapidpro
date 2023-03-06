@@ -5,9 +5,9 @@ from django.forms import model_to_dict
 
 class CRUDLTestMixin:
     def get_test_users(self):
-        return self.user, self.editor, self.admin, self.admin2
+        return self.user, self.editor, self.agent, self.admin, self.admin2
 
-    def requestView(self, url, user, *, post_data=None, checks=()):
+    def requestView(self, url, user, *, post_data=None, checks=(), choose_org=None, **kwargs):
         """
         Requests the given URL as a specific user and runs a set of checks
         """
@@ -19,23 +19,25 @@ class CRUDLTestMixin:
 
         self.client.logout()
         if user:
-            self.login(user)
+            self.login(user, True, choose_org)
 
         for check in checks:
             check.pre_check(self, pre_msg_prefix)
 
-        response = self.client.post(url, post_data) if method == "POST" else self.client.get(url)
+        response = self.client.post(url, post_data, **kwargs) if method == "POST" else self.client.get(url, **kwargs)
 
         for check in checks:
             check.check(self, response, msg_prefix)
 
         return response
 
-    def assertReadFetch(self, url, *, allow_viewers, allow_editors, context_object=None, status=200):
+    def assertReadFetch(
+        self, url, *, allow_viewers, allow_editors, allow_agents=False, context_object=None, status=200
+    ):
         """
         Fetches a read view as different users
         """
-        viewer, editor, admin, org2_admin = self.get_test_users()
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -50,13 +52,23 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         as_user(viewer, allowed=allow_viewers)
         as_user(editor, allowed=allow_editors)
+        as_user(agent, allowed=allow_agents)
         as_user(org2_admin, allowed=False)
         return as_user(admin, allowed=True)
 
     def assertListFetch(
-        self, url, *, allow_viewers, allow_editors, context_objects=None, context_object_count=None, status=200
+        self,
+        url,
+        *,
+        allow_viewers,
+        allow_editors,
+        allow_agents=False,
+        allow_org2=True,  # by default list view URLs are not org specific
+        context_objects=None,
+        context_object_count=None,
+        status=200,
     ):
-        viewer, editor, admin, org2_admin = self.get_test_users()
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -74,15 +86,18 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         as_user(viewer, allowed=allow_viewers)
         as_user(editor, allowed=allow_editors)
-        as_user(org2_admin, allowed=True)
+        as_user(agent, allowed=allow_agents)
+        as_user(org2_admin, allowed=allow_org2)
         return as_user(admin, allowed=True)
 
-    def assertCreateFetch(self, url, *, allow_viewers, allow_editors, form_fields, status=200):
-        viewer, editor, admin, org2_admin = self.get_test_users()
+    def assertCreateFetch(self, url, *, allow_viewers, allow_editors, allow_agents=False, form_fields=(), status=200):
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
                 checks = [StatusCode(status), FormFields(form_fields)]
+                if isinstance(form_fields, dict):
+                    checks.append(FormInitialValues(form_fields))
             else:
                 checks = [LoginRedirect()]
 
@@ -91,13 +106,14 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         as_user(viewer, allowed=allow_viewers)
         as_user(editor, allowed=allow_editors)
+        as_user(agent, allowed=allow_agents)
         as_user(org2_admin, allowed=True)
         return as_user(admin, allowed=True)
 
     def assertCreateSubmit(self, url, data, *, form_errors=None, new_obj_query=None, success_status=302):
         assert form_errors or new_obj_query is not None, "must specify form_errors or new_obj_query"
 
-        viewer, editor, admin, org2_admin = self.get_test_users()
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -115,12 +131,16 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         return as_user(admin, allowed=True)
 
-    def assertUpdateFetch(self, url, *, allow_viewers, allow_editors, form_fields, status=200):
-        viewer, editor, admin, org2_admin = self.get_test_users()
+    def assertUpdateFetch(
+        self, url, *, allow_viewers, allow_editors, allow_agents=False, allow_org2=False, form_fields=(), status=200
+    ):
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
                 checks = [StatusCode(status), FormFields(form_fields)]
+                if isinstance(form_fields, dict):
+                    checks.append(FormInitialValues(form_fields))
             else:
                 checks = [LoginRedirect()]
 
@@ -129,13 +149,14 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         as_user(viewer, allowed=allow_viewers)
         as_user(editor, allowed=allow_editors)
-        as_user(org2_admin, allowed=False)
+        as_user(agent, allowed=allow_agents)
+        as_user(org2_admin, allowed=allow_org2)
         return as_user(admin, allowed=True)
 
     def assertUpdateSubmit(self, url, data, *, form_errors=None, object_unchanged=None, success_status=302):
         assert not form_errors or object_unchanged, "if form_errors specified, must also specify object_unchanged"
 
-        viewer, editor, admin, org2_admin = self.get_test_users()
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -149,11 +170,20 @@ class CRUDLTestMixin:
             return self.requestView(url, user, post_data=data, checks=checks)
 
         as_user(None, allowed=False)
-        as_user(org2_admin, allowed=False)
         return as_user(admin, allowed=True)
 
-    def assertDeleteFetch(self, url, *, allow_viewers=False, allow_editors=False, status=200):
-        viewer, editor, admin, org2_admin = self.get_test_users()
+    def assertDeleteFetch(
+        self,
+        url,
+        *,
+        allow_viewers=False,
+        allow_editors=False,
+        allow_agents=False,
+        status=200,
+        choose_org=None,
+        as_modal=False,
+    ):
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -161,11 +191,15 @@ class CRUDLTestMixin:
             else:
                 checks = [LoginRedirect()]
 
-            return self.requestView(url, user, checks=checks)
+            if as_modal:
+                return self.requestView(url, user, checks=checks, choose_org=choose_org, HTTP_X_PJAX=True)
+            else:
+                return self.requestView(url, user, checks=checks, choose_org=choose_org)
 
         as_user(None, allowed=False)
         as_user(viewer, allowed=allow_viewers)
         as_user(editor, allowed=allow_editors)
+        as_user(agent, allowed=allow_agents)
         as_user(org2_admin, allowed=False)
         return as_user(admin, allowed=True)
 
@@ -176,7 +210,7 @@ class CRUDLTestMixin:
             object_unchanged or object_deleted or object_deactivated
         ), "must specify object_unchanged or object_deleted or object_deactivated"
 
-        viewer, editor, admin, org2_admin = self.get_test_users()
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
 
         def as_user(user, allowed):
             if allowed:
@@ -194,6 +228,37 @@ class CRUDLTestMixin:
         as_user(None, allowed=False)
         as_user(org2_admin, allowed=False)
         return as_user(admin, allowed=True)
+
+    def assertStaffOnly(self, url: str):
+        viewer, editor, agent, admin, org2_admin = self.get_test_users()
+
+        self.requestView(url, None, checks=[LoginRedirect()])
+        self.requestView(url, agent, checks=[LoginRedirect()])
+        self.requestView(url, viewer, checks=[LoginRedirect()])
+        self.requestView(url, editor, checks=[LoginRedirect()])
+        self.requestView(url, admin, checks=[LoginRedirect()])
+
+        return self.requestView(url, self.customer_support, checks=[StatusCode(200)])
+
+    def assertContentMenu(self, url: str, user, labels: list, spa: bool = False):
+
+        headers = {"HTTP_TEMBA_CONTENT_MENU": 1}
+
+        if spa:
+            headers["HTTP_TEMBA_SPA"] = 1
+
+        response = self.requestView(url, user, checks=[StatusCode(200), ContentType("application/json")], **headers)
+
+        self.assertEqual(labels, [item.get("label", "-") for item in response.json()["items"]])
+
+        # for now menu is also stuffed into context in old gear links format
+        headers = {}
+        if spa:
+            headers["HTTP_TEMBA_SPA"] = 1
+
+        response = self.requestView(url, user, checks=[StatusCode(200)], **headers)
+        links = response.context.get("content_menu_buttons", []) + response.context.get("content_menu_links", [])
+        self.assertEqual(labels, [i.get("title", "-") for i in links])
 
 
 class BaseCheck:
@@ -301,11 +366,25 @@ class FormFields(BaseCheck):
 
     def check(self, test_cls, response, msg_prefix):
         form = self.get_context_item(test_cls, response, "form", msg_prefix)
-
         fields = list(form.fields.keys())
         fields.remove("loc")
 
-        test_cls.assertEqual(list(self.fields), fields, msg=f"{msg_prefix}: form fields mismatch")
+        test_cls.assertEqual(list(self.fields), list(fields), msg=f"{msg_prefix}: form fields mismatch")
+
+
+class FormInitialValues(BaseCheck):
+    def __init__(self, fields: dict):
+        self.fields = fields
+
+    def check(self, test_cls, response, msg_prefix):
+        form = self.get_context_item(test_cls, response, "form", msg_prefix)
+        for field_key, value in self.fields.items():
+            actual = form.initial[field_key] if field_key in form.initial else form.fields[field_key].initial
+            test_cls.assertEqual(
+                actual,
+                value,
+                msg=f"{msg_prefix}: form field '{field_key}' initial value mismatch",
+            )
 
 
 class FormErrors(BaseCheck):
@@ -313,8 +392,11 @@ class FormErrors(BaseCheck):
         self.form_errors = form_errors
 
     def check(self, test_cls, response, msg_prefix):
-        for field_key, message in self.form_errors.items():
-            test_cls.assertFormError(response, "form", field_key, message, msg_prefix=msg_prefix)
+        actual = {}
+        for field_key, errors in response.context["form"].errors.items():
+            actual[field_key] = errors[0] if len(errors) == 1 else errors
+
+        test_cls.assertEqual(actual, self.form_errors, msg=f"{msg_prefix}: form errors mismatch")
 
 
 class NoFormErrors(BaseCheck):
@@ -331,11 +413,21 @@ class LoginRedirect(BaseCheck):
 
 
 class StatusCode(BaseCheck):
-    def __init__(self, status):
+    def __init__(self, status: int):
         self.status = status
 
     def check(self, test_cls, response, msg_prefix):
         test_cls.assertEqual(self.status, response.status_code, msg=f"{msg_prefix}: status code mismatch")
+
+
+class ContentType(BaseCheck):
+    def __init__(self, content_type: str):
+        self.content_type = content_type
+
+    def check(self, test_cls, response, msg_prefix):
+        test_cls.assertEqual(
+            self.content_type, response.headers["content-type"], msg=f"{msg_prefix}: content type mismatch"
+        )
 
 
 class LoginRedirectOr404(BaseCheck):

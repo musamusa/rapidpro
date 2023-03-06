@@ -3,7 +3,7 @@ import requests
 from django.conf import settings
 from django.forms import ValidationError
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import Channel
 from temba.contacts.models import URN
@@ -76,8 +76,6 @@ class SignalWireType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 1600
-
-    attachment_support = True
 
     async_activation = False
 

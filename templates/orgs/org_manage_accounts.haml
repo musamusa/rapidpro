@@ -2,12 +2,6 @@
 -load smartmin temba compress i18n
 
 -block title
-  -if parent
-    {{org.name}}
-  -else
-    {{user_org.name|capfirst}}
-
--block subtitle
   -trans "Manage Logins"
 
 -block extra-style
@@ -16,8 +10,8 @@
     .role .control-group {
       margin-bottom: 0;
     }
-    temba-checkbox {
-      --fa-icon-fill-color: #999;
+    table.list tr td temba-checkbox {
+      --icon-color: #666 !important;
     }
 
 -block fields

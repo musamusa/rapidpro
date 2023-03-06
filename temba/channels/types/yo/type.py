@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.types.yo.views import ClaimView
 from temba.contacts.models import URN
@@ -21,13 +21,12 @@ class YoType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 1600
-    attachment_support = False
 
     available_timezones = ["Africa/Kampala"]
 
     claim_view = ClaimView
     claim_blurb = _(
-        "If you are based in Uganda, you can integrate with %(link)s to send and receive messages on your shortcode."
+        "If you are based in Uganda, you can integrate with %(link)s to send and receive messages on your short code."
     ) % {"link": '<a href="http://www.yo.co.ug/">Yo!</a>'}
 
     configuration_blurb = _(
@@ -39,10 +38,11 @@ class YoType(ChannelType):
             label=_("Inbound SMS URL"),
             url="https://{{ channel.callback_domain }}{% url 'courier.yo' channel.uuid 'receive' %}",
             description=_(
-                "This URL should be called with a GET by Yo! when new incoming messages are received on your shortcode."
+                "This URL should be called with a GET by Yo! when new incoming "
+                "messages are received on your short code."
             ),
         ),
     )
 
-    def is_recommended_to(self, user):
-        return self.is_available_to(user)[0]
+    def is_recommended_to(self, org, user):
+        return self.is_available_to(org, user)[0]

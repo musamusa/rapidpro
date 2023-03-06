@@ -2,7 +2,7 @@ import phonenumbers
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -48,7 +48,6 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = Form
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
         data = form.cleaned_data
         config = {
             Channel.CONFIG_USERNAME: data["username"],
@@ -58,7 +57,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         }
 
         self.object = Channel.create(
-            org=org,
+            org=self.request.org,
             user=self.request.user,
             country=data["country"],
             channel_type=self.channel_type,

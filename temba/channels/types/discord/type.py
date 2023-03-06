@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -34,13 +34,6 @@ class DiscordType(ChannelType):
 
     schemes = [URN.DISCORD_SCHEME]
     max_length = 1600
-    attachment_support = True
     free_sending = True
 
     redact_response_keys = {"first_name", "last_name", "username"}
-
-    def activate(self, channel):
-        pass
-
-    def deactivate(self, channel):
-        pass

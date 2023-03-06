@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.views import AuthenticatedExternalClaimView
 from temba.contacts.models import URN
@@ -27,8 +27,6 @@ class SMSCentralType(ChannelType):
     schemes = [URN.TEL_SCHEME]
     max_length = 1600
     max_tps = 1
-
-    attachment_support = False
 
     configuration_blurb = _(
         "To finish configuring your SMSCentral connection you'll need to notify SMSCentral of the following URL."

@@ -4,9 +4,10 @@ from smartmin.views import SmartFormView, SmartModelActionView
 from django import forms
 from django.conf import settings
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.orgs.views import ModalMixin, OrgObjPermsMixin
+from temba.utils.text import truncate
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -15,9 +16,6 @@ from ...views import ClaimViewMixin
 class ClaimView(ClaimViewMixin, SmartFormView):
     class Form(ClaimViewMixin.Form):
         user_access_token = forms.CharField(min_length=32, required=True, help_text=_("The User Access Token"))
-        fb_user_id = forms.CharField(
-            required=True, help_text=_("The Facebook User ID of the admin that connected the channel")
-        )
         page_name = forms.CharField(required=True, help_text=_("The name of the Facebook page"))
         page_id = forms.IntegerField(required=True, help_text="The Facebook Page ID")
 
@@ -26,32 +24,45 @@ class ClaimView(ClaimViewMixin, SmartFormView):
                 auth_token = self.cleaned_data["user_access_token"]
                 name = self.cleaned_data["page_name"]
                 page_id = self.cleaned_data["page_id"]
-                fb_user_id = self.cleaned_data["fb_user_id"]
 
                 app_id = settings.FACEBOOK_APPLICATION_ID
                 app_secret = settings.FACEBOOK_APPLICATION_SECRET
 
-                # get user long lived access token
-                url = "https://graph.facebook.com/oauth/access_token"
-                params = {
-                    "grant_type": "fb_exchange_token",
-                    "client_id": app_id,
-                    "client_secret": app_secret,
-                    "fb_exchange_token": auth_token,
-                }
+                url = "https://graph.facebook.com/v12.0/debug_token"
+                params = {"access_token": f"{app_id}|{app_secret}", "input_token": auth_token}
 
                 response = requests.get(url, params=params)
-
                 if response.status_code != 200:  # pragma: no cover
-                    raise Exception("Failed to get a user long lived token")
+                    raise Exception("Failed to get user ID")
 
-                long_lived_auth_token = response.json().get("access_token", "")
+                response_json = response.json()
 
-                if long_lived_auth_token == "":  # pragma: no cover
-                    raise Exception("Empty user access token!")
+                fb_user_id = response_json.get("data", dict()).get("user_id")
+                expires_at = response_json.get("data", dict()).get("expires_at")
 
-                url = f"https://graph.facebook.com/v7.0/{fb_user_id}/accounts"
-                params = {"access_token": long_lived_auth_token}
+                if expires_at != 0:
+                    # get user long lived access token
+                    url = "https://graph.facebook.com/oauth/access_token"
+                    params = {
+                        "grant_type": "fb_exchange_token",
+                        "client_id": app_id,
+                        "client_secret": app_secret,
+                        "fb_exchange_token": auth_token,
+                    }
+
+                    response = requests.get(url, params=params)
+                    if response.status_code != 200:  # pragma: no cover
+                        raise Exception("Failed to get a user long lived token")
+
+                    long_lived_auth_token = response.json().get("access_token", "")
+
+                    if long_lived_auth_token == "":  # pragma: no cover
+                        raise Exception("Empty user access token!")
+
+                    auth_token = long_lived_auth_token
+
+                url = f"https://graph.facebook.com/v12.0/{fb_user_id}/accounts"
+                params = {"access_token": auth_token}
 
                 response = requests.get(url, params=params)
 
@@ -70,7 +81,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
                 if page_access_token == "":  # pragma: no cover
                     raise Exception("Empty page access token!")
 
-                url = f"https://graph.facebook.com/v7.0/{page_id}/subscribed_apps"
+                url = f"https://graph.facebook.com/v12.0/{page_id}/subscribed_apps"
                 params = {"access_token": page_access_token}
                 data = {
                     "subscribed_fields": "messages,message_deliveries,messaging_optins,messaging_optouts,messaging_postbacks,message_reads,messaging_referrals,messaging_handovers"
@@ -82,10 +93,12 @@ class ClaimView(ClaimViewMixin, SmartFormView):
                     raise Exception("Failed to subscribe to app for webhook events")
 
                 self.cleaned_data["page_access_token"] = page_access_token
-                self.cleaned_data["name"] = name
+                self.cleaned_data["name"] = truncate(name, Channel._meta.get_field("name").max_length)
 
             except Exception:
-                raise forms.ValidationError(_("Sorry your Facebook channel could not be connected. Please try again"))
+                raise forms.ValidationError(
+                    _("Sorry your Facebook channel could not be connected. Please try again"), code="invalid"
+                )
 
             return self.cleaned_data
 
@@ -95,11 +108,15 @@ class ClaimView(ClaimViewMixin, SmartFormView):
         context = super().get_context_data(**kwargs)
         context["claim_url"] = reverse("channels.types.facebookapp.claim")
         context["facebook_app_id"] = settings.FACEBOOK_APPLICATION_ID
+
+        claim_error = None
+        if context["form"].errors:
+            claim_error = context["form"].errors["__all__"][0]
+        context["claim_error"] = claim_error
+
         return context
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
-
         page_id = form.cleaned_data["page_id"]
         page_access_token = form.cleaned_data["page_access_token"]
         name = form.cleaned_data["name"]
@@ -109,7 +126,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
             Channel.CONFIG_PAGE_NAME: name,
         }
         self.object = Channel.create(
-            org, self.request.user, None, self.channel_type, name=name, address=page_id, config=config
+            self.request.org, self.request.user, None, self.channel_type, name=name, address=page_id, config=config
         )
 
         return super().form_valid(form)
@@ -133,23 +150,33 @@ class RefreshToken(ModalMixin, OrgObjPermsMixin, SmartModelActionView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["refresh_url"] = reverse("channels.types.facebookapp.refresh_token", args=(self.object.uuid,))
-        context["facebook_app_id"] = settings.FACEBOOK_APPLICATION_ID
 
-        resp = requests.get(
-            "https://graph.facebook.com/v7.0/me",
-            params={"access_token": self.object.config[Channel.CONFIG_AUTH_TOKEN]},
-        )
+        app_id = settings.FACEBOOK_APPLICATION_ID
+        app_secret = settings.FACEBOOK_APPLICATION_SECRET
+
+        context["facebook_app_id"] = app_id
+
+        url = "https://graph.facebook.com/v12.0/debug_token"
+        params = {
+            "access_token": f"{app_id}|{app_secret}",
+            "input_token": self.object.config[Channel.CONFIG_AUTH_TOKEN],
+        }
+        resp = requests.get(url, params=params)
 
         error_connect = False
         if resp.status_code != 200:
             error_connect = True
+        else:
+            valid_token = resp.json().get("data", dict()).get("is_valid", False)
+            if not valid_token:
+                error_connect = True
 
         context["error_connect"] = error_connect
 
         return context
 
     def get_queryset(self):
-        return Channel.objects.filter(is_active=True, org=self.request.user.get_org(), channel_type="FBA")
+        return self.request.org.channels.filter(is_active=True, channel_type="FBA")
 
     def execute_action(self):
 
@@ -183,7 +210,7 @@ class RefreshToken(ModalMixin, OrgObjPermsMixin, SmartModelActionView):
         if long_lived_auth_token == "":  # pragma: no cover
             raise Exception("Empty user access token!")
 
-        url = f"https://graph.facebook.com/v7.0/{fb_user_id}/accounts"
+        url = f"https://graph.facebook.com/v12.0/{fb_user_id}/accounts"
         params = {"access_token": long_lived_auth_token}
 
         response = requests.get(url, params=params)
@@ -203,7 +230,7 @@ class RefreshToken(ModalMixin, OrgObjPermsMixin, SmartModelActionView):
         if page_access_token == "":  # pragma: no cover
             raise Exception("Empty page access token!")
 
-        url = f"https://graph.facebook.com/v7.0/{page_id}/subscribed_apps"
+        url = f"https://graph.facebook.com/v12.0/{page_id}/subscribed_apps"
         params = {"access_token": page_access_token}
         data = {
             "subscribed_fields": "messages,message_deliveries,messaging_optins,messaging_optouts,messaging_postbacks,message_reads,messaging_referrals,messaging_handovers"

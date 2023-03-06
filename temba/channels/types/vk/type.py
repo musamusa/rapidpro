@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -32,5 +32,4 @@ class VKType(ChannelType):
 
     schemes = [URN.VK_SCHEME]
     max_length = 320
-    attachment_support = True
     free_sending = True

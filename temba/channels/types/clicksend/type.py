@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.views import AuthenticatedExternalClaimView
 from temba.contacts.models import URN
@@ -58,7 +58,6 @@ class ClickSendType(ChannelType):
     category = ChannelType.Category.PHONE
     schemes = [URN.TEL_SCHEME]
     max_length = 1224
-    attachment_support = False
 
     claim_view = AuthenticatedExternalClaimView
     claim_view_kwargs = {

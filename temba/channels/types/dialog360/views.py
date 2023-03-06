@@ -1,7 +1,7 @@
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 from temba.utils.fields import ExternalURLField
@@ -35,19 +35,15 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = Form
 
     def form_valid(self, form):
-        user = self.request.user
-        org = user.get_org()
-
         data = form.cleaned_data
-
         config = {
             Channel.CONFIG_BASE_URL: data["base_url"],
             Channel.CONFIG_AUTH_TOKEN: data["api_key"],
         }
 
         self.object = Channel.create(
-            org,
-            user,
+            self.request.org,
+            self.request.user,
             data["country"],
             self.channel_type,
             name="WhatsApp: %s" % data["number"],

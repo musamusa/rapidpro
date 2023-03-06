@@ -1,7 +1,7 @@
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.utils.fields import ExternalURLField, SelectWidget
 from temba.utils.uuid import uuid4
@@ -67,7 +67,7 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = KannelClaimForm
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
+        org = self.request.org
         data = form.cleaned_data
 
         country = data["country"]

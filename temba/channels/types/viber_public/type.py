@@ -1,7 +1,7 @@
 import requests
 
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -24,7 +24,6 @@ class ViberPublicType(ChannelType):
 
     schemes = [URN.VIBER_SCHEME]
     max_length = 7000
-    attachment_support = True
     free_sending = True
     quick_reply_text_size = 36
 

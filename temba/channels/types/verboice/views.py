@@ -2,7 +2,7 @@ import phonenumbers
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.views import ALL_COUNTRIES, ClaimViewMixin
 from temba.utils.fields import SelectWidget
@@ -58,11 +58,10 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = VerboiceClaimForm
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
-
         data = form.cleaned_data
+
         self.object = Channel.add_config_external_channel(
-            org,
+            self.request.org,
             self.request.user,
             data["country"],
             data["number"],

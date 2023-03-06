@@ -1,7 +1,7 @@
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -16,15 +16,12 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     form_class = ZVClaimForm
 
     def form_valid(self, form):
-        user = self.request.user
         data = form.cleaned_data
-        org = user.get_org()
-
         config = {Channel.CONFIG_USERNAME: data["username"], Channel.CONFIG_PASSWORD: data["password"]}
 
         self.object = Channel.create(
-            org,
-            user,
+            self.request.org,
+            self.request.user,
             "BR",
             self.channel_type,
             name="Zenvia: %s" % data["shortcode"],

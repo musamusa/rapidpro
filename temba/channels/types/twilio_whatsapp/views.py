@@ -6,15 +6,16 @@ from twilio.base.exceptions import TwilioRestException
 from django import forms
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
+from temba.channels.types.twilio.views import SUPPORTED_COUNTRIES
 from temba.contacts.models import URN
 from temba.orgs.models import Org
 from temba.utils.fields import SelectWidget
 from temba.utils.uuid import uuid4
 
 from ...models import Channel
-from ...views import ALL_COUNTRIES, TWILIO_SUPPORTED_COUNTRIES, BaseClaimNumberMixin, ClaimViewMixin
+from ...views import ALL_COUNTRIES, BaseClaimNumberMixin, ClaimViewMixin
 
 
 class ClaimView(BaseClaimNumberMixin, SmartFormView):
@@ -35,7 +36,7 @@ class ClaimView(BaseClaimNumberMixin, SmartFormView):
         self.client = None
 
     def pre_process(self, *args, **kwargs):
-        org = self.request.user.get_org()
+        org = self.request.org
         try:
             self.client = org.get_twilio_client()
             if not self.client:
@@ -80,15 +81,14 @@ class ClaimView(BaseClaimNumberMixin, SmartFormView):
 
         return numbers
 
-    def is_valid_country(self, country_code):
+    def is_valid_country(self, calling_code: int) -> bool:
         return True
 
-    def is_messaging_country(self, country):
-        return country in [c[0] for c in TWILIO_SUPPORTED_COUNTRIES]
+    def is_messaging_country(self, country_code: str) -> bool:
+        return country_code in SUPPORTED_COUNTRIES
 
     def claim_number(self, user, phone_number, country, role):
-        org = user.get_org()
-
+        org = self.request.org
         client = org.get_twilio_client()
         twilio_phones = client.api.incoming_phone_numbers.stream(phone_number=phone_number)
         channel_uuid = uuid4()

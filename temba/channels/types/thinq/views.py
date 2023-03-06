@@ -2,7 +2,7 @@ import phonenumbers
 from smartmin.views import SmartFormView
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from ...models import Channel
 from ...views import ClaimViewMixin
@@ -31,17 +31,15 @@ class ClaimView(ClaimViewMixin, SmartFormView):
     def form_valid(self, form):
         from .type import ThinQType
 
-        user = self.request.user
-        org = user.get_org()
-
         data = form.cleaned_data
-
         config = {
             ThinQType.CONFIG_ACCOUNT_ID: str(data["account_id"]),
             ThinQType.CONFIG_API_TOKEN_USER: data["token_user"],
             ThinQType.CONFIG_API_TOKEN: data["token"],
         }
 
-        self.object = Channel.create(org, user, data["country"], ThinQType.code, address=data["number"], config=config)
+        self.object = Channel.create(
+            self.request.org, self.request.user, data["country"], ThinQType.code, address=data["number"], config=config
+        )
 
         return super().form_valid(form)

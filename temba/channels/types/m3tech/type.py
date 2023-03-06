@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.views import AuthenticatedExternalClaimView
 from temba.contacts.models import URN
@@ -25,7 +25,6 @@ class M3TechType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 160
-    attachment_support = False
 
     configuration_blurb = _(
         "To finish configuring your connection you'll need to notify M3Tech of the following callback URLs."

@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -18,7 +18,6 @@ class ArabiaCellType(ChannelType):
     category = ChannelType.Category.PHONE
     schemes = [URN.TEL_SCHEME]
     max_length = 1530
-    attachment_support = False
 
     claim_view = ClaimView
     claim_blurb = _("If you have an %(link)s number, you can quickly connect it using their APIs.") % {
@@ -26,7 +25,7 @@ class ArabiaCellType(ChannelType):
     }
 
     configuration_blurb = _(
-        "To finish connecting your channel, you need to have ArabiaCell configure the URL below for your shortcode."
+        "To finish connecting your channel, you need to have ArabiaCell configure the URL below for your short code."
     )
 
     configuration_urls = (

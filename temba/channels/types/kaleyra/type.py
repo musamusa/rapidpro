@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import ChannelType
 from temba.channels.types.kaleyra.views import ClaimView
@@ -22,13 +22,12 @@ class KaleyraType(ChannelType):
     icon = "icon-whatsapp"
 
     claim_blurb = _(
-        """Activate your own enterprise WhatsApp account in Kaleyra to communicate with your contacts. <a href="https://www.kaleyra.com/whatsapp/">Learn more about Kaleyra WhatsApp"""
+        """Activate your own enterprise WhatsApp account in Kaleyra to communicate with your contacts. <a href="https://www.kaleyra.com/whatsapp/">Learn more about Kaleyra WhatsApp</a>"""
     )
     claim_view = ClaimView
 
     schemes = [URN.WHATSAPP_SCHEME]
     max_length = 4096
-    attachment_support = True
 
     configuration_blurb = _(
         "To finish configuring your Kaleyra connection you'll need to set the following callback URL on your Kaleyra "

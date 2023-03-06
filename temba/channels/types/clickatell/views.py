@@ -1,7 +1,7 @@
 import phonenumbers
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import Channel
 from temba.channels.views import ALL_COUNTRIES, AuthenticatedExternalClaimView, ClaimViewMixin
@@ -45,11 +45,9 @@ class ClaimView(AuthenticatedExternalClaimView):
     form_class = ClickatellForm
 
     def form_valid(self, form):
-        org = self.request.user.get_org()
-
         data = form.cleaned_data
         self.object = Channel.add_config_external_channel(
-            org,
+            self.request.org,
             self.request.user,
             data["country"],
             data["number"],

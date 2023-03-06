@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.channels.models import ChannelType
 from temba.channels.types.playmobile.views import ClaimView
@@ -26,8 +26,6 @@ class PlayMobileType(ChannelType):
 
     schemes = [URN.TEL_SCHEME]
     max_length = 160
-
-    attachment_support = False
 
     configuration_blurb = _(
         "To finish configuring your Play Mobile connection you'll need to notify Play Mobile of the following URL."

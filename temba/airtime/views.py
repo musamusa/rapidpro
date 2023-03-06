@@ -2,7 +2,7 @@ from smartmin.views import SmartCRUDL, SmartListView, SmartReadView
 
 from django.db.models import Prefetch
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.airtime.models import AirtimeTransfer
 from temba.contacts.models import URN, ContactURN
@@ -78,5 +78,5 @@ class AirtimeCRUDL(SmartCRUDL):
             user = self.request.user
 
             context = super().get_context_data(**kwargs)
-            context["show_logs"] = not org.is_anon or user.is_superuser or user.is_staff
+            context["show_logs"] = not org.is_anon or user.is_staff
             return context

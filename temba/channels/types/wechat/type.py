@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.contacts.models import URN
 
@@ -13,7 +13,6 @@ class WeChatType(ChannelType):
 
     code = "WC"
     category = ChannelType.Category.SOCIAL_MEDIA
-    beta_only = True
 
     courier_url = r"^wc/(?P<uuid>[a-z0-9\-]+)/?$"
 
@@ -28,7 +27,6 @@ class WeChatType(ChannelType):
 
     schemes = [URN.WECHAT_SCHEME]
     max_length = 1600
-    attachment_support = False
     free_sending = True
 
     show_public_addresses = True

@@ -4,7 +4,7 @@ from smartmin.views import SmartFormView
 
 from django import forms
 from django.forms import ValidationError
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from temba.utils.fields import SelectWidget
 
@@ -78,7 +78,7 @@ class SignalWireClaimView(ClaimViewMixin, SmartFormView):
 
     def form_valid(self, form):
         user = self.request.user
-        org = user.get_org()
+        org = self.request.org
         data = form.cleaned_data
 
         country = data.get("country")

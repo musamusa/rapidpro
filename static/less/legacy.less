@@ -757,7 +757,7 @@ table.list-table {
   position: absolute;
   left: 0;
   top: 0;
-  z-index: 100;
+  z-index: 500;
   padding-left: 30px;
   padding-top: 20px;
 }
@@ -778,7 +778,7 @@ table.list-table {
 
     .submenu-container {
       position: absolute;
-      top: 35px;
+      top: -20px;
       left: -30px;
       padding: 10px 5px;
       padding-bottom: 40px;
@@ -811,9 +811,10 @@ table.list-table {
   @media all and (max-width: 767px) {
     text-align: right;
     right: 25px !important;
-    top: 50px !important;
-    text-align: left;
-    padding: 0;
+    margin-right: 15px;
+    margin-top: -65px !important;
+    padding-bottom: 19px;
+    min-height: 50px !important;
 
     a {
       width: 42px !important;
@@ -951,16 +952,13 @@ a.org-choose {
 .org-header {
 
   z-index: 1039;
-  position: absolute;
-  top: -7px;
-  right: 30px;
+  margin-top: -6px;
+  margin-right: 30px;
+  margin-bottom: -28px;
   text-align: center;
-  float: right;
   background: rgba(0, 0, 0, .15);
-  margin-top: -0px;
   padding-top: 6px;
   font-size: 11px;
-  max-width: 180px;
   .rounded-corners(3px);
 
   cursor: pointer;
@@ -983,12 +981,17 @@ a.org-choose {
 
   .org {
     line-height: 14px;
-    padding: 3px 10px 5px;
-    width: 160px;
+    padding: 3px 0px 5px 8px;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 180px;
   }
 
   .other-orgs {
-    width: 180px;
+    width: 210px;
+    position: absolute;
+    right: 40px;
 
     .account-details {
       padding: 5px 0px;
@@ -1015,6 +1018,9 @@ a.org-choose {
         }
       }
 
+      overflow-x: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       max-width: 200px;
     }
 
@@ -1029,8 +1035,6 @@ a.org-choose {
       display: inline-block;
       .border-radius(0, 0, 3px, 3px);
     }
-
-    .drop-shadow(0, 1px, 1px, 3px, .1, 0);
   }
 
 }
@@ -1481,7 +1485,7 @@ form.smartmin-form ul.errorlist li {
     }
 
     .help-block {
-      color: @color-font-lightgrey  !important;
+      color: @color-font-lightgrey !important;
       font-size: 12px !important;
       margin: 5px 0px 10px 0px !important;
 
@@ -1956,10 +1960,6 @@ input[type='radio'] {
       text-align: right;
       font-weight: 400;
     }
-
-    .account_value {
-      margin-left: 150px;
-    }
   }
 }
 
@@ -2180,6 +2180,7 @@ span.label a {
   position: absolute;
   right: -50px;
   width: 30px;
+  display: none;
 }
 
 .imsg.from:before {
@@ -2188,6 +2189,7 @@ span.label a {
   -webkit-transform: rotateY(180deg);
   -moz-transform: rotateY(180deg);
   transform: rotateY(180deg);
+  display: none;
 }
 
 // completion custom styles
@@ -2260,12 +2262,6 @@ span.label a {
 #intercom-container .intercom-launcher {
   bottom: 60px;
   right: 12px;
-}
-
-.featherlight .featherlight-image {
-  max-width: 100%;
-  max-height: 500px;
-  width: auto;
 }
 
 .image-preview {
@@ -2476,10 +2472,6 @@ span.label a {
 [class*=" icon-"] {
   transition: transform 400ms;
   -webkit-transition: -webkit-transform 400ms;
-}
-
-img.image-full.featherlight-inner {
-  max-height: 80%;
 }
 
 // *****************************************************
